@@ -1,4 +1,4 @@
-import { quoteFreshness } from './_offer_quality.mjs';
+import { quoteFreshness, filterSourceOffers } from './_offer_quality.mjs';
 import { cropCoverage } from './_crop_coverage.mjs';
 import { saveOfferHistory } from './_offer_history.mjs';
 import { extractOfferCandidates } from './_offers.mjs';
@@ -66,7 +66,8 @@ export async function collectPublicSources(label='morning'){
   const checked_at=nowIso();
   try{
    const html=await fetchSource(source);
-   const data=source.id==='fuel'?parseEnkorr(html):parseDirectory(html,source.id);
+   const parsed=source.id==='fuel'?parseEnkorr(html):parseDirectory(html,source.id);
+   const data=source.id==='fuel'?parsed:filterSourceOffers({...source,data:parsed}).data;
    results.push({...source,checked_at,last_success:checked_at,status:'ok',data,error:null});
   }catch(err){
    const old=recorded[source.id];
