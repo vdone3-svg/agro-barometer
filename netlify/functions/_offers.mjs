@@ -1,6 +1,6 @@
 // Conservative E-ZERNO listing parser. Extract only individually attributable, absolutely dated offers.
 // Intentionally no currency/VAT/basis inference, and no extraction from relative "сьогодні/вчора" dates.
-const escEntities = str => String(str).replace(/&nbsp;|&#160;|&#xA0;/gi,' ').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'").replace(/&lt;/gi,'<').replace(/&gt;/gi,'>');
+const escEntities = str => String(str).replace(/&nbsp;|&#160;|&#xA0;/gi,' ').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;|&#x27;|&apos;/gi,"'").replace(/&lt;/gi,'<').replace(/&gt;/gi,'>');
 const textify = h => escEntities(String(h).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ').replace(/<[^>]*>/g,' ').replace(/[\u00a0\u202f]/g,' ')).replace(/\s+/g,' ').trim();
 const iso = s => {const a=s.match(/^(\d{2})\.(\d{2})\.(20\d{2})$/);if(!a)return null;const v=`${a[3]}-${a[2]}-${a[1]}`;return new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v?v:null;};
 const today = () => new Date().toISOString().slice(0,10);
@@ -8,6 +8,12 @@ const regionPattern=/(Кіровоградська|Полтавська|Дніп
 const grainTypes=['Соняшник високоолеїновий','Ріпак не ГМО','Пшениця 2 клас','Пшениця 3 клас','Пшениця 4 клас','Пшениця 2кл.','Пшениця 3кл.','Пшениця 4кл.','Соняшник','Кукурудза','Ячмінь','Ріпак'];
 const fertilizerTypes=['Аміачна селітра','Нітроамофоска','Карбамід','КАС'];
 const safeN=(s)=>{const n=Number(s.replace(/[\s\u00a0\u202f]/g,'').replace(',','.'));return Number.isFinite(n)?n:null};
+
+// Do not publish an offer if its location appears to include another listing.
+// Fail closed: a missing location is preferable to a misattributed commercial quote.
+const spilloverPattern = /(?:Платиновий партнер|Золотий партнер|Срібний партнер|Ціни на|\bТОВ\b|\bAGROP\b|\bLuv\b|\bN:|\bP:|\bK:|(?:Амофос|Суперфосфат|Карбамід|Селітра|Пшениця|Соняшник|Кукурудза|Ріпак|Нітроамофоска|КАС)\s*(?:\(|[0-9]|$))/i;
+const invalidLocation = point => !point || point.length > 65 || spilloverPattern.test(point) || /[<>]|&(?:#|[a-z]+;)/i.test(point) || /\b(?:Черкас|Ізмаїл|Мостиська)\s+[А-ЯA-Z][^,]*$/.test(point);
+
 function findOffers(chunk,kind,company,date,sourceUrl){
  const types=kind==='grain'?grainTypes:fertilizerTypes;
  const escaped=types.map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
@@ -23,6 +29,7 @@ function findOffers(chunk,kind,company,date,sourceUrl){
   const after=tail.slice(rm.index+rm[0].length).trim();
   const next=after.search(new RegExp('(?:'+escaped.join('|')+')\\s*(?:\\(|\\$|€|[0-9])','i'));
   const point=(next>=0?after.slice(0,next):after).replace(/^(?:Україна\s*\/\s*[^ ]+\s*)/,'').trim().slice(0,100);
+  if(invalidLocation(point))continue;
   const rec={kind,company,product,formula:m[2]?.trim()||null,price:val,currency,region:rm[1]+' обл.',point:point||null,quote_date:date,source_url:sourceUrl,vat:'unknown',basis:'unknown',verification:'unverified',quality:'partial',collected_at:null};
   out.push(rec);
  }
