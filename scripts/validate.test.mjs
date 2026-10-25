@@ -12,3 +12,12 @@ test('display has live status panel and no invented crop values',()=>{
  assert.ok(html.includes('market-status'));
  assert.ok(html.includes('не автоматичні'));
 });
+test('additional public indicators API and collect integration exist',()=>{
+ const root=new URL('../',import.meta.url);
+ const fsContent=path=>fs.readFileSync(new URL(path,root),'utf8');
+ assert.ok(fsContent('netlify/functions/public-indicators.mjs').includes('public-indicators-latest'));
+ assert.ok(fsContent('netlify/functions/collect-morning.mjs').includes('collectPublicSources'));
+ assert.ok(fsContent('netlify/functions/collect-daytime.mjs').includes('collectPublicSources'));
+ assert.ok(fsContent('public/index.html').includes('market-auto-indicators'));
+ assert.ok(fsContent('netlify/functions/_public_sources.mjs').includes('requires_field_verification'));
+});
