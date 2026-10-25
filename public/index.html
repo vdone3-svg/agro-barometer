@@ -139,5 +139,20 @@ refresh();setInterval(()=>{if(!document.hidden)refresh()},300000);document.addEv
 <p style="font-size:12px;margin-bottom:0"><a href="/.netlify/functions/offer-history" target="_blank" rel="noopener noreferrer">Перевірити журнал через API</a> · Показуються лише останні 300 спостережень, повернуті API; повний журнал у сховищі обмежено 3000 записами.</p>
 </section>
 <script type="module" src="/js/offer-trends.mjs"></script>
+
+<section id="agro-logistics-v7" style="margin:16px auto;max-width:1200px;padding:18px;border:1px solid #b8cfc0;border-radius:14px;background:#fff;color:#19392c;font:14px/1.55 system-ui,sans-serif;box-sizing:border-box">
+<h3 style="font-size:19px;margin:0 0 6px">🚚 Логістика від Олександрії — Auto V7</h3>
+<p style="margin:0 0 12px">Попередній сценарний розрахунок доставки для оголошень E-ZERNO. <strong>Не комерційна рекомендація і не підтверджена чиста ціна.</strong> Відстань та тариф вводяться вручну; сайт їх не вигадує.</p>
+<div id="v7-status" role="status">Завантаження переліку пунктів…</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(195px,1fr));gap:12px;margin:14px 0">
+<label style="display:grid;gap:4px">Культура / клас<select id="v7-product" style="padding:9px;border:1px solid #b8cfc0;border-radius:8px"><option>Завантаження…</option></select></label>
+<label style="display:grid;gap:4px">Пропозиція та пункт приймання<select id="v7-offer" style="padding:9px;border:1px solid #b8cfc0;border-radius:8px"><option>Завантаження…</option></select></label>
+<label style="display:grid;gap:4px">Відстань від Олександрії, км<input id="v7-km" type="number" min="0" max="3000" step="1" placeholder="Введи перевірені км" style="padding:9px;border:1px solid #b8cfc0;border-radius:8px"></label>
+<label style="display:grid;gap:4px">Тариф, грн / т·км<input id="v7-rate" type="number" min="0" max="100" step="0.01" placeholder="Введи реальний тариф" style="padding:9px;border:1px solid #b8cfc0;border-radius:8px"></label>
+</div>
+<div id="v7-result" style="padding:13px;background:#f2f7f3;border-radius:10px" aria-live="polite">Вибери пропозицію та введи відстань і тариф.</div>
+<p style="font-size:12px;color:#78571e;margin:10px 0 0">Використовується лише арифметика: витрата на перевезення = кілометри × грн/(т·км). Умовний залишок = оголошена сума − витрата. Результат <strong>не можна</strong> вважати чистою ціною, доки не підтверджено одиницю оголошеної ціни (грн/т), базис, ПДВ, якість і фактичну вартість перевезення. Зворотний рейс та додаткові витрати мають бути включені в підтверджений тариф.</p>
+</section>
+<script type="module" src="/js/agro-logistics-v7.mjs"></script>
 </body></html>
 
