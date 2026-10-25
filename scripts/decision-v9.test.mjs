@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {destination,compareScenario,breakEvenRate} from '../public/js/agro-decision-core-v9.mjs';
+const routes=[{city:'Ізмаїл',region:'Одеська обл.',km:648,status:'planning_city_to_city'}];
+const offers=[{company:'РАМБУРС',point:'Ізмаїл',region:'Одеська обл.',price:8300},{company:'Друга компанія',point:'м. Ізмаїл',region:'Одеська обл.',price:8200},{company:'Третя компанія',point:'Рені',region:'Одеська обл.',price:9000}];
+test('known clean city',()=>assert.equal(destination(offers[0]),'Ізмаїл'));
+test('ambiguous city stays unknown',()=>assert.equal(destination({...offers[0],point:'Ізмаїл Соя 16000'}),null));
+test('ranks by conditional residual and does not hallucinate missing route',()=>{const x=compareScenario(offers,routes,3);assert.equal(x.ranked.length,2);assert.equal(x.missing.length,1);assert.equal(x.ranked[0].remainder,6356);assert.equal(x.ranked[1].remainder,6256)});
+test('no tariff no result',()=>assert.equal(compareScenario(offers,routes,null).ranked.length,0));
+test('reject zero negative and unrealistically huge tariffs',()=>{for(const t of [0,-1,101,NaN])assert.equal(compareScenario(offers,routes,t).ranked.length,0)});
+test('break even computes for unequal distances',()=>assert.equal(breakEvenRate({price:8500,km:500},{price:7800,km:100}),1.75));
+test('break even unavailable for same distance',()=>assert.equal(breakEvenRate({price:8500,km:500},{price:7800,km:500}),null));

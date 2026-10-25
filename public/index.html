@@ -155,5 +155,20 @@ refresh();setInterval(()=>{if(!document.hidden)refresh()},300000);document.addEv
 <p style="font-size:12px;color:#78571e;margin:10px 0 0">Використовується лише арифметика: витрата на перевезення = кілометри × грн/(т·км). Умовний залишок = оголошена сума − витрата. Результат <strong>не можна</strong> вважати чистою ціною, доки не підтверджено одиницю оголошеної ціни (грн/т), базис, ПДВ, якість і фактичну вартість перевезення. Зворотний рейс та додаткові витрати мають бути включені в підтверджений тариф.</p>
 </section>
 <script type="module" src="/js/agro-logistics-v7.mjs"></script>
+
+<section id="agro-decision-v9" style="margin:16px auto;max-width:1200px;padding:18px;border:1px solid #a5c6ae;border-radius:14px;background:#fff;color:#19392c;font:14px/1.55 system-ui,sans-serif;box-sizing:border-box">
+<h3 style="font-size:20px;margin:0 0 6px">📊 Кому вигідніше продати? — Auto V9</h3>
+<p>Автоматичне <strong>сценарне</strong> порівняння покупців за залишком після доставки від Олександрії. Ціни E-ZERNO не перевірено: ПДВ, базис та одиниця ціни невідомі. <strong>Не є рекомендацією укладати угоду.</strong></p>
+<div id="v9-status" role="status">Завантаження пропозицій і маршрутів…</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0">
+<label style="display:grid;gap:5px">Культура / клас<select id="v9-product" style="padding:10px;border:1px solid #b8cfc0;border-radius:8px"><option>Завантаження…</option></select></label>
+<label style="display:grid;gap:5px">Сценарний тариф, грн/(т·км)<input id="v9-rate" type="number" min="0.01" max="100" step="0.01" placeholder="Введи перевірений тариф" style="padding:10px;border:1px solid #b8cfc0;border-radius:8px"></label>
+</div>
+<div id="v9-summary" style="padding:12px;background:#f2f7f3;border-radius:10px;margin-bottom:12px" aria-live="polite">Вкажи тариф, щоб побачити сценарне порівняння.</div>
+<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:left" id="v9-table"><thead><tr><th style="padding:9px;border-bottom:1px solid #bccfc2">Покупець / місто</th><th style="padding:9px;border-bottom:1px solid #bccfc2">Оголошено*</th><th style="padding:9px;border-bottom:1px solid #bccfc2">Км</th><th style="padding:9px;border-bottom:1px solid #bccfc2">Доставка*</th><th style="padding:9px;border-bottom:1px solid #bccfc2">Залишок*</th></tr></thead><tbody id="v9-rows"><tr><td colspan="5">Завантаження…</td></tr></tbody></table></div>
+<div id="v9-missing" style="margin-top:12px;color:#79571f"></div>
+<p style="font-size:12px;color:#78571e;margin-top:12px">* Лише припущення, що всі гривневі оголошення задані за тонну, мають однаковий ПДВ і базис, а доставку оплачує продавець. Ставка тарифу не підставляється автоматично. Архівні оголошення (старші 30 днів) виключені. Немає впливу на барометри 0–100.</p>
+</section>
+<script type="module" src="/js/agro-decision-v9.mjs"></script>
 </body></html>
 
