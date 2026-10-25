@@ -19,5 +19,5 @@ test('additional public indicators API and collect integration exist',()=>{
  assert.ok(fsContent('netlify/functions/collect-morning.mjs').includes('collectPublicSources'));
  assert.ok(fsContent('netlify/functions/collect-daytime.mjs').includes('collectPublicSources'));
  assert.ok(fsContent('public/index.html').includes('market-auto-indicators'));
- assert.ok(fsContent('netlify/functions/_public_sources.mjs').includes('requires_field_verification'));
+ assert.ok(fsContent('netlify/functions/_public_sources.mjs').includes('unverified_candidates'));
 });

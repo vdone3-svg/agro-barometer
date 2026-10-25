@@ -1,3 +1,4 @@
+import { extractOfferCandidates } from './_offers.mjs';
 import { getStore } from '@netlify/blobs';
 
 export const SOURCES = Object.freeze([
@@ -40,7 +41,7 @@ export function parseDirectory(html,kind){
  if(!text.includes(expected))throw Error('Unexpected directory content');
  const dates=stamp(html);
  // Directory inventory only. No automated trade quotes until seller/grade/location/VAT parser is verified.
- return {listing_dates: [...new Set(dates)].sort().reverse().slice(0,12), dated_listing_count:dates.length, offers_status:'requires_field_verification',quote_values_published:0};
+ return {listing_dates: [...new Set(dates)].sort().reverse().slice(0,12), dated_listing_count:dates.length, offers_status:'unverified_candidates',quote_values_published:0, offers:extractOfferCandidates(html,kind,kind==='grain'?'https://e-zerno.com/trader-prices':'https://e-zerno.com/fertilizer-prices')};
 }
 async function fetchSource(source){
  const controller=new AbortController(),t=setTimeout(()=>controller.abort(),timeoutMs);
@@ -68,7 +69,7 @@ export async function collectPublicSources(label='morning'){
    results.push({...source,checked_at,last_success:old?.last_success||null,status:'error',data:old?.data||null,error:String(err?.message||err).slice(0,180)});
   }
  }
- const payload={schema_version:1,collector:'indicators_v1',run:label,last_attempt:nowIso(),sources:results,note:'E-ZERNO directories provide freshness metadata only, not validated local quotes. Enkorr figures are market references, not farm delivery offers. No direct effect on 0–100 scores.'};
+ const payload={schema_version:1,collector:'indicators_v2',run:label,last_attempt:nowIso(),sources:results,note:'E-ZERNO candidate quotes are UNVERIFIED. Relative dates skipped; VAT and basis unknown. Fuel is national wholesale reference. No effect on 0–100 scores.'};
  await store.setJSON('public-indicators-latest',payload);
  return payload;
 }

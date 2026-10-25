@@ -103,5 +103,22 @@ refresh();loadPublishedData();setInterval(()=>{if(!document.hidden)loadPublished
  update();setInterval(()=>{if(!document.hidden)update()},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)update()});
 })();
 </script>
+
+<section id="offers-candidates" style="margin:16px auto;max-width:1200px;padding:16px;border:1px solid #cbd8ce;border-radius:14px;background:#fff;color:#1b3027;font:14px/1.5 system-ui,sans-serif;box-sizing:border-box">
+<h3 style="margin:0 0 6px;font-size:18px">Пропозиції E-ZERNO — не підтверджено</h3>
+<p style="margin:0 0 10px;color:#54665d;font-size:12px">Автоматично розпізнані оголошення з абсолютною датою. ПДВ, базис і доступність не перевірені. Не впливають на барометри 0–100; перед комерційним рішенням перевірити напряму.</p>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px"><label>Категорія <select id="offer-type" style="padding:7px"><option value="all">Усі</option><option value="grain">Культури</option><option value="fertilizer">Добрива</option></select></label><label><input id="offer-region" type="checkbox"> Лише Кіровоградська обл.</label><span id="offer-count" style="font-size:12px;color:#54665d"></span></div>
+<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:700px;font-size:13px"><thead><tr style="text-align:left;background:#f0f5f1"><th style="padding:8px">Дата ставки</th><th>Компанія</th><th>Товар</th><th>Ціна</th><th>Регіон / пункт</th><th>Джерело</th></tr></thead><tbody id="offers-candidates-rows"><tr><td colspan="6" style="padding:10px">Очікуємо дані з першого збору Auto V3…</td></tr></tbody></table></div>
+</section>
+<script>
+(()=>{
+const t=document.getElementById('offer-type'),reg=document.getElementById('offer-region'),tb=document.getElementById('offers-candidates-rows'),counter=document.getElementById('offer-count');let rows=[];
+const clean=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function render(){const subset=rows.filter(x=>(t.value==='all'||x.kind===t.value)&&(!reg.checked||x.region==='Кіровоградська обл.')).sort((a,b)=>b.quote_date.localeCompare(a.quote_date)).slice(0,100);counter.textContent='Знайдено: '+subset.length+' (макс. 100)';tb.innerHTML=subset.length?subset.map(x=>`<tr style="border-bottom:1px solid #e3ebe5"><td style="padding:8px">${clean(x.quote_date)}</td><td>${clean(x.company)}</td><td>${clean(x.product)} ${x.formula?'('+clean(x.formula)+')':''}<div style="color:#99621d;font-size:11px">Не підтверджено</div></td><td>${clean(x.price)} ${clean(x.currency)}/т</td><td>${clean(x.region)} · ${clean(x.point||'—')}</td><td><a href="${x.kind==='grain'?'https://e-zerno.com/trader-prices':'https://e-zerno.com/fertilizer-prices'}" target="_blank" rel="noopener noreferrer">E-ZERNO</a></td></tr>`).join(''):'<tr><td colspan="6" style="padding:10px">Поки немає пропозицій із достатньо однозначними датами, товарами та цінами. Архівні дані не видаються за поточні.</td></tr>'}
+t.onchange=reg.onchange=render;
+async function refresh(){try{const r=await fetch('/.netlify/functions/public-indicators?offers='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error();const obj=await r.json();rows=(obj.sources||[]).filter(s=>['grain','fertilizer'].includes(s.id)).flatMap(s=>(s.data?.offers||[]).map(o=>({...o,kind:s.id}))).filter(o=>o.verification==='unverified'&&typeof o.price==='number'&&o.quote_date);render()}catch(e){counter.textContent='Зараз сервер недоступний';}}
+refresh();setInterval(()=>{if(!document.hidden)refresh()},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+})();
+</script>
 </body></html>
 
