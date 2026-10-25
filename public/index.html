@@ -121,28 +121,21 @@ refresh();setInterval(()=>{if(!document.hidden)refresh()},300000);document.addEv
 })();
 </script>
 
-<section id="offers-history" style="margin:16px auto;max-width:1200px;padding:16px;border:1px solid #cbd8ce;border-radius:14px;background:#fff;color:#1b3027;font:14px/1.5 system-ui,sans-serif;box-sizing:border-box">
-<h3 style="margin:0 0 6px;font-size:18px">Історія непідтверджених пропозицій — Auto V4</h3>
-<p style="margin:0 0 8px;font-size:12px;color:#54665d">Зберігаємо датовані спостереження. Повторний збір тієї самої ставки не створює нового запису. Зміна ціни в оголошенні ще не означає підтверджену ринкову зміну. Бали 0–100 не змінюються.</p>
-<div id="offer-history-summary" style="margin-bottom:8px;font-weight:600">Очікуємо перший збір V4…</div>
-<div style="overflow-x:auto"><table style="width:100%;min-width:630px;border-collapse:collapse;font-size:13px"><thead><tr style="text-align:left;background:#f0f5f1"><th style="padding:8px">Виявлено</th><th>Компанія / товар</th><th>Попередня → нова</th><th>Дата ставки</th></tr></thead><tbody id="offer-history-rows"><tr><td colspan="4" style="padding:8px">Історія поки порожня</td></tr></tbody></table></div>
-<p style="font-size:12px"><a href="/.netlify/functions/offer-history" target="_blank" rel="noopener noreferrer">Перевірити історію через API</a></p>
+<section id="offers-history" style="margin:16px auto;max-width:1200px;padding:18px;border:1px solid #cbd8ce;border-radius:14px;background:#fff;color:#1b3027;font:14px/1.5 system-ui,sans-serif;box-sizing:border-box">
+<h3 style="margin:0 0 6px;font-size:18px">Динаміка пропозицій — Auto V5</h3>
+<p style="margin:0 0 12px;font-size:12px;color:#54665d">Архів оголошень E-ZERNO, не підтверджені угоди. Дати на графіку — дати оголошень, а «вперше побачено» — час збору. ПДВ, базис та одиниця ціни не перевірені. Зміни можуть відображати зміну умов, а не ринку. Жодного впливу на 11 барометрів.</p>
+<div id="offer-history-summary" role="status" style="margin-bottom:12px;font-weight:600">Завантажуємо історію…</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px">
+<label style="display:grid;gap:4px;flex:1;min-width:160px">Категорія<select id="v5-kind" style="padding:9px;border:1px solid #b7c9bc;border-radius:8px"><option value="all">Усі</option><option value="grain">Зернові</option><option value="fertilizer">Добрива</option></select></label>
+<label style="display:grid;gap:4px;flex:2;min-width:190px">Компанія та товар<select id="v5-offer" style="padding:9px;border:1px solid #b7c9bc;border-radius:8px"><option value="">Завантаження…</option></select></label>
+</div>
+<div id="v5-selected" style="margin:0 0 8px;font-weight:650"></div>
+<div id="v5-chart" style="min-height:165px;background:#f7faf7;border:1px solid #e2eae3;border-radius:10px;padding:12px" aria-live="polite">Поки немає даних для графіка</div>
+<p id="v5-caveat" style="font-size:12px;color:#805c23;margin:8px 0 14px"></p>
+<h4 style="font-size:14px;margin:12px 0 6px">Збережені спостереження вибраної пропозиції</h4>
+<div style="overflow-x:auto"><table style="width:100%;min-width:580px;border-collapse:collapse;font-size:13px"><thead><tr style="text-align:left;background:#f0f5f1"><th style="padding:8px">Дата оголошення</th><th>Вперше побачено (Київ)</th><th>Ціна</th><th>Статус</th><th>Джерело</th></tr></thead><tbody id="v5-observations"><tr><td colspan="5" style="padding:8px">Завантаження…</td></tr></tbody></table></div>
+<p style="font-size:12px;margin-bottom:0"><a href="/.netlify/functions/offer-history" target="_blank" rel="noopener noreferrer">Перевірити журнал через API</a> · Показуються лише останні 300 спостережень, повернуті API; повний журнал у сховищі обмежено 3000 записами.</p>
 </section>
-<script>
-(()=>{
- const summary=document.getElementById('offer-history-summary'),body=document.getElementById('offer-history-rows');
- const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- async function update(){try{
-  const r=await fetch('/.netlify/functions/offer-history?v='+Date.now(),{cache:'no-store'});
-  if(!r.ok)throw Error('HTTP '+r.status);
-  const x=await r.json();
-  if(x.status==='not_started'){summary.textContent='Історія ще не започаткована. Запусти collect-morning після публікації V4.';return;}
-  const n=Number(x.total_observations||0),c=Array.isArray(x.changes)?x.changes:[];
-  summary.textContent='Накопичено спостережень: '+n+' · різних пропозицій: '+(x.total_distinct_offers||0)+' · за останній збір нових: '+(x.added_this_run||0)+' · зафіксованих змін у журналі: '+c.length;
-  body.innerHTML=c.length?c.slice(0,20).map(a=>`<tr style="border-bottom:1px solid #e3ebe5"><td style="padding:8px">${esc(a.observed_at?.slice(0,16)?.replace('T',' '))} UTC</td><td>${esc(a.company)} — ${esc(a.product)}<div style="font-size:11px;color:#99621d">Не підтверджено</div></td><td>${esc(a.previous_price)} → ${esc(a.new_price)} ${esc(a.currency)} (од. не перевірена)</td><td>${esc(a.quote_date)}</td></tr>`).join(''):'<tr><td colspan="4" style="padding:8px">Змін ціни ще немає — це нормально після першого збору.</td></tr>';
- }catch(e){summary.textContent='Не вдалося отримати історію ('+e.message+').';}}
- update();setInterval(()=>{if(!document.hidden)update()},300000);
-})();
-</script>
+<script type="module" src="/js/offer-trends.mjs"></script>
 </body></html>
 
