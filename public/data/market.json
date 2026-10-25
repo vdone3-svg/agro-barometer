@@ -1,0 +1,836 @@
+{
+  "quotes": [
+    {
+      "id": "q1",
+      "item": "sunflower",
+      "buyer": "Kernel",
+      "place": "Придніпровський ОЕЗ",
+      "region": "Кіровоградська",
+      "price": 15000,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "EXW",
+      "vat": "з ПДВ",
+      "date": "2026-10-22",
+      "status": "CONFLICTED",
+      "source": "https://trade.kernel.ua/",
+      "sourceType": "primary",
+      "note": "У джерелах фігурує також 15 500 грн/т; історія змін суперечлива."
+    },
+    {
+      "id": "q2",
+      "item": "sunflower",
+      "buyer": "Kernel / E-ZERNO",
+      "place": "Придніпровський ОЕЗ",
+      "region": "Кіровоградська",
+      "price": 15500,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "UNKNOWN",
+      "vat": "UNKNOWN",
+      "date": "2026-10-22",
+      "status": "CONFLICTED",
+      "source": "https://e-zerno.com/trader-prices",
+      "sourceType": "aggregator",
+      "note": "Розходження з прямим прайсом; не незалежний покупець."
+    },
+    {
+      "id": "q3",
+      "item": "sunflower",
+      "buyer": "AGRO HUB MARKET",
+      "place": "Голованівськ",
+      "region": "Кіровоградська",
+      "price": 12600,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "UNKNOWN",
+      "vat": "Ф-2, незʼясовано",
+      "date": "",
+      "status": "PARTIAL",
+      "source": "https://t.me/AGRO_H_U_B",
+      "sourceType": "telegram",
+      "note": "Telegram-скриншот без достатньо точної дати/умов."
+    },
+    {
+      "id": "q4",
+      "item": "sunflower",
+      "buyer": "Королівський смак",
+      "place": "Власівка",
+      "region": "Кіровоградська",
+      "price": 14000,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "CPT",
+      "vat": "UNKNOWN",
+      "date": "",
+      "status": "PARTIAL",
+      "source": "https://e-zerno.com/profile/279",
+      "sourceType": "aggregator",
+      "note": "У картці також 12 200 грн/т для іншої форми розрахунку."
+    },
+    {
+      "id": "q5",
+      "item": "sunflower",
+      "buyer": "RAW AGRO",
+      "place": "Львів",
+      "region": "Львівська",
+      "price": 17000,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "UNKNOWN",
+      "vat": "UNKNOWN",
+      "date": "2026-10-19",
+      "status": "PARTIAL",
+      "source": "https://t.me/rawagro",
+      "sourceType": "telegram",
+      "note": "Не плутати зі ставкою високоолеїнового соняшнику 18 500 грн/т."
+    },
+    {
+      "id": "q6",
+      "item": "corn",
+      "buyer": "GrainTrade",
+      "place": "Україна, індикатив EXW",
+      "region": "Україна",
+      "price": 6000,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "EXW",
+      "vat": "UNKNOWN",
+      "date": "2026-10-23",
+      "status": "INDICATIVE",
+      "source": "https://graintrade.com.ua/",
+      "sourceType": "aggregator",
+      "note": "Не локальна пропозиція конкретного покупця."
+    },
+    {
+      "id": "q7",
+      "item": "corn",
+      "buyer": "Zernotorg",
+      "place": "Порт",
+      "region": "Одеська",
+      "price": 7100,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "CPT",
+      "vat": "UNKNOWN",
+      "date": "2026-10-18",
+      "status": "INDICATIVE",
+      "source": "https://zernotorg.ua/",
+      "sourceType": "aggregator",
+      "note": "Датований портовий індикатив."
+    },
+    {
+      "id": "q8",
+      "item": "corn",
+      "buyer": "RAW AGRO",
+      "place": "Орлівка",
+      "region": "Одеська",
+      "price": 7500,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "UNKNOWN",
+      "vat": "UNKNOWN",
+      "date": "2026-10-19",
+      "status": "PARTIAL",
+      "source": "https://t.me/rawagro",
+      "sourceType": "telegram",
+      "note": "Зі скриншота, уточнити базис та форму оплати."
+    },
+    {
+      "id": "q9",
+      "item": "wheat",
+      "buyer": "Kernel",
+      "place": "Дунайсудноремонт, Ізмаїл",
+      "region": "Одеська",
+      "price": 7800,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "EXW",
+      "vat": "з ПДВ",
+      "date": "2026-10-22",
+      "status": "HISTORICAL",
+      "source": "https://trade.kernel.ua/",
+      "sourceType": "primary",
+      "note": "Клас 2/3, не порівнювати з 4 класом."
+    },
+    {
+      "id": "q10",
+      "item": "wheat",
+      "buyer": "RAW AGRO",
+      "place": "Рені",
+      "region": "Одеська",
+      "price": 8650,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "UNKNOWN",
+      "vat": "UNKNOWN",
+      "date": "2026-10-19",
+      "status": "PARTIAL",
+      "source": "https://t.me/rawagro",
+      "sourceType": "telegram",
+      "note": "Клас 3; дата зі скриншота."
+    },
+    {
+      "id": "q11",
+      "item": "wheat",
+      "buyer": "Ramburs",
+      "place": "Ізмаїл",
+      "region": "Одеська",
+      "price": 8200,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "UNKNOWN",
+      "vat": "UNKNOWN",
+      "date": "",
+      "status": "PARTIAL",
+      "source": "https://www.ramburs.com/ua/price/",
+      "sourceType": "primary",
+      "note": "Клас 3; дата первинного котирування не підтверджена."
+    },
+    {
+      "id": "q12",
+      "item": "rapeseed",
+      "buyer": "GrainTrade",
+      "place": "Україна, індикатив EXW",
+      "region": "Україна",
+      "price": 20400,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "EXW",
+      "vat": "UNKNOWN",
+      "date": "2026-10-23",
+      "status": "INDICATIVE",
+      "source": "https://graintrade.com.ua/",
+      "sourceType": "aggregator",
+      "note": "Ріпак 1 класу без ГМО."
+    },
+    {
+      "id": "q13",
+      "item": "rapeseed",
+      "buyer": "В АГРО",
+      "place": "Одеса",
+      "region": "Одеська",
+      "price": 21000,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "UNKNOWN",
+      "vat": "UNKNOWN",
+      "date": "",
+      "status": "PARTIAL",
+      "source": "https://e-zerno.com/trader-prices",
+      "sourceType": "aggregator",
+      "note": "Ріпак без ГМО, дата/умови потребують підтвердження."
+    },
+    {
+      "id": "q14",
+      "item": "barley",
+      "buyer": "GrainTrade",
+      "place": "Україна, індикатив FCA",
+      "region": "Україна",
+      "price": 5500,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "FCA",
+      "vat": "UNKNOWN",
+      "date": "2026-10-23",
+      "status": "INDICATIVE",
+      "source": "https://graintrade.com.ua/",
+      "sourceType": "aggregator",
+      "note": "Національний індикатив."
+    },
+    {
+      "id": "q15",
+      "item": "barley",
+      "buyer": "RAW AGRO",
+      "place": "Ізмаїл",
+      "region": "Одеська",
+      "price": 7000,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "UNKNOWN",
+      "vat": "UNKNOWN",
+      "date": "2026-10-19",
+      "status": "PARTIAL",
+      "source": "https://t.me/rawagro",
+      "sourceType": "telegram",
+      "note": "Потрібно підтвердити логістику й оплату."
+    },
+    {
+      "id": "q16",
+      "item": "diesel",
+      "buyer": "Enkorr / А-95",
+      "place": "Україна, гурт F2",
+      "region": "Україна",
+      "price": 104.86,
+      "currency": "UAH",
+      "unit": "л",
+      "basis": "F2",
+      "vat": "UNKNOWN",
+      "date": "2026-10-23",
+      "status": "INDICATIVE",
+      "source": "https://enkorr.ua/",
+      "sourceType": "market",
+      "note": "Середня гуртова ціна, НЕ ціна доставки в Олександрію."
+    },
+    {
+      "id": "q17",
+      "item": "gasoline",
+      "buyer": "Enkorr",
+      "place": "Україна, гурт А-95",
+      "region": "Україна",
+      "price": 83.61,
+      "currency": "UAH",
+      "unit": "л",
+      "basis": "F2",
+      "vat": "UNKNOWN",
+      "date": "2026-10-23",
+      "status": "INDICATIVE",
+      "source": "https://enkorr.ua/",
+      "sourceType": "market",
+      "note": "Гуртовий ринковий індикатив."
+    },
+    {
+      "id": "q18",
+      "item": "nitrate",
+      "buyer": "E-ZERNO / дистрибʼютори",
+      "place": "Україна",
+      "region": "Україна",
+      "price": 27600,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "UNKNOWN",
+      "vat": "UNKNOWN",
+      "date": "2026-10-22",
+      "status": "PARTIAL",
+      "source": "https://e-zerno.com/fertilizer-prices",
+      "sourceType": "aggregator",
+      "note": "Публічна позиція, доставку й ПДВ уточнити."
+    },
+    {
+      "id": "q19",
+      "item": "urea",
+      "buyer": "E-ZERNO / дистрибʼютори",
+      "place": "Україна",
+      "region": "Україна",
+      "price": 31700,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "UNKNOWN",
+      "vat": "UNKNOWN",
+      "date": "2026-10-22",
+      "status": "PARTIAL",
+      "source": "https://e-zerno.com/fertilizer-prices",
+      "sourceType": "aggregator",
+      "note": "Публічна позиція, доставку й ПДВ уточнити."
+    },
+    {
+      "id": "q20",
+      "item": "uan",
+      "buyer": "E-ZERNO / дистрибʼютори",
+      "place": "Україна",
+      "region": "Україна",
+      "price": 26900,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "UNKNOWN",
+      "vat": "UNKNOWN",
+      "date": "2026-10-22",
+      "status": "PARTIAL",
+      "source": "https://e-zerno.com/fertilizer-prices",
+      "sourceType": "aggregator",
+      "note": "КАС-32, не плутати з КАС 26+4S."
+    },
+    {
+      "id": "q21",
+      "item": "npk",
+      "buyer": "Grossdorf / Telegram",
+      "place": "Вознесенськ",
+      "region": "Миколаївська",
+      "price": 37500,
+      "currency": "UAH",
+      "unit": "т",
+      "basis": "UNKNOWN",
+      "vat": "UNKNOWN",
+      "date": "2026-10-16",
+      "status": "NON_COMPARABLE",
+      "source": "https://grossdorf.com/",
+      "sourceType": "telegram",
+      "note": "Це NPK 15:15:15+11S, НЕ 16:16:16; виключено з барометра NPK16."
+    }
+  ],
+  "news": [
+    {
+      "id": "n1",
+      "date": "2026-10-23",
+      "source": "Enkorr",
+      "category": "Паливо",
+      "title": "Гуртовий дизель: інформер показує 104,86 грн/л",
+      "summary": "Середній гуртовий орієнтир F2; не є ціною доставки до Олександрії. Відстежувати динаміку разом з ICE Gasoil і курсом.",
+      "items": [
+        "diesel"
+      ],
+      "impact": "ризик дорожчання закупівлі",
+      "strength": "high",
+      "url": "https://enkorr.ua/",
+      "fresh": "Датоване джерело"
+    },
+    {
+      "id": "n2",
+      "date": "2026-10-23",
+      "source": "Latifundist",
+      "category": "Логістика",
+      "title": "Зернові автоперевезення: повідомляють про подорожчання",
+      "summary": "Дорожче пальне та дефіцит перевізників можуть зменшувати чисту ціну далеких покупців. Це не тариф для конкретного маршруту.",
+      "items": [
+        "wheat",
+        "corn",
+        "sunflower",
+        "rapeseed",
+        "barley"
+      ],
+      "impact": "тиск на чисту ціну",
+      "strength": "high",
+      "url": "https://latifundist.com/",
+      "fresh": "Потрібно звірити точну публікацію"
+    },
+    {
+      "id": "n3",
+      "date": "2026-10-20",
+      "source": "Мінекономіки / галузеві передруки",
+      "category": "Врожай",
+      "title": "Збирання соняшнику: 79% площ; кукурудзи: 20%",
+      "summary": "Останній прийнятий зріз із попереднього дослідження, не автоматично новий звіт на 24 жовтня. Може пояснювати сезонну пропозицію.",
+      "items": [
+        "sunflower",
+        "corn"
+      ],
+      "impact": "контекст пропозиції",
+      "strength": "medium",
+      "url": "https://me.gov.ua/",
+      "fresh": "Історичний контекст"
+    },
+    {
+      "id": "n4",
+      "date": "2026-10-20",
+      "source": "UkrAgroConsult",
+      "category": "Логістика",
+      "title": "Дунай, Sulina та альтернативні румунські порти",
+      "summary": "Заголовки про ризики і маршрути через Галац/Бреїлу; точний поточний статус навігації треба підтверджувати.",
+      "items": [
+        "wheat",
+        "corn",
+        "barley"
+      ],
+      "impact": "логістична невизначеність",
+      "strength": "medium",
+      "url": "https://ukragroconsult.com/",
+      "fresh": "Подія не перевірена як нова"
+    },
+    {
+      "id": "n5",
+      "date": "2026-10-23",
+      "source": "Elevatorist",
+      "category": "Врожай",
+      "title": "Обговорюється можливе зниження прогнозу кукурудзи",
+      "summary": "Галузева оцінка; величину та офіційність перегляду ще потрібно перевірити. Не є зміною місцевої ціни.",
+      "items": [
+        "corn"
+      ],
+      "impact": "можлива підтримка ціни",
+      "strength": "medium",
+      "url": "https://elevatorist.com/",
+      "fresh": "Вторинне повідомлення"
+    },
+    {
+      "id": "n6",
+      "date": "2026-10-20",
+      "source": "UkrAgroConsult",
+      "category": "Попит",
+      "title": "Йорданія не закупила пшеницю на тендері 120 тис. т",
+      "summary": "Окремий тендер не визначає українську внутрішню ціну; умови закупівлі й повторний тендер потребують звірки.",
+      "items": [
+        "wheat"
+      ],
+      "impact": "слабкий зовнішній попит",
+      "strength": "low",
+      "url": "https://ukragroconsult.com/",
+      "fresh": "Історична подія"
+    },
+    {
+      "id": "n7",
+      "date": "2026-10-21",
+      "source": "UkrAgroConsult",
+      "category": "Добрива",
+      "title": "Підвищення цін OSTCHEM на аміачну селітру",
+      "summary": "Жовтневе підвищення приблизно на 900 грн/т за галузевими повідомленнями. Не дорівнює новій оферті конкретного постачальника.",
+      "items": [
+        "nitrate"
+      ],
+      "impact": "ризик росту закупівельної ціни",
+      "strength": "medium",
+      "url": "https://ukragroconsult.com/",
+      "fresh": "Контекст"
+    },
+    {
+      "id": "n8",
+      "date": "2026-10-23",
+      "source": "Укргідрометцентр",
+      "category": "Погода",
+      "title": "Оперативна агрометеорологічна інформація",
+      "summary": "Опади й температура важливі для збирання кукурудзи, сівби озимих та вологості зерна. Локальний ефект потребує погодного зрізу.",
+      "items": [
+        "corn",
+        "wheat"
+      ],
+      "impact": "операційний ризик",
+      "strength": "medium",
+      "url": "https://www.meteo.gov.ua/",
+      "fresh": "Офіційний канал"
+    },
+    {
+      "id": "n9",
+      "date": "2026-10-19",
+      "source": "RAW AGRO / Telegram",
+      "category": "Ціни покупців",
+      "title": "Прайс RAW AGRO: портові ставки й соняшник",
+      "summary": "Перелік цін зі скриншота користувача. Умови ПДВ, оплати та базиси різняться; публікацію не прирівнювати до чинної оферти.",
+      "items": [
+        "sunflower",
+        "corn",
+        "wheat",
+        "barley"
+      ],
+      "impact": "цінове порівняння",
+      "strength": "medium",
+      "url": "https://t.me/rawagro",
+      "fresh": "Скріншот"
+    },
+    {
+      "id": "n10",
+      "date": "2026-10-22",
+      "source": "Kernel",
+      "category": "Ціни покупців",
+      "title": "Розбіжність у котируваннях соняшнику Kernel",
+      "summary": "У різних зрізах і агрегаторі зустрічаються 15 000 і 15 500 грн/т. Історичний рух не підтверджений; не враховувати як тренд.",
+      "items": [
+        "sunflower"
+      ],
+      "impact": "конфлікт джерел",
+      "strength": "high",
+      "url": "https://trade.kernel.ua/",
+      "fresh": "Невирішений конфлікт"
+    }
+  ],
+  "sources": [
+    {
+      "group": "Прямі покупці",
+      "name": "Kernel",
+      "url": "https://trade.kernel.ua/",
+      "purpose": "Офіційні ціни заводів, ПДВ і якість"
+    },
+    {
+      "group": "Прямі покупці",
+      "name": "NIBULON",
+      "url": "https://www.nibulon.com/zakupivelni-tsiny-na-zernovi-kultury/",
+      "purpose": "Таблиця ставок пунктів приймання"
+    },
+    {
+      "group": "Прямі покупці",
+      "name": "OKKO",
+      "url": "https://www.okko.ua/spot-hryvnia",
+      "purpose": "Зернові закупівельні ставки"
+    },
+    {
+      "group": "Прямі покупці",
+      "name": "Ramburs",
+      "url": "https://www.ramburs.com/ua/price/",
+      "purpose": "Прямі ставки трейдера"
+    },
+    {
+      "group": "Ваші трейдери",
+      "name": "RAW AGRO Telegram",
+      "url": "https://t.me/rawagro",
+      "purpose": "Датовані пости, умови розрахунків"
+    },
+    {
+      "group": "Ваші трейдери",
+      "name": "Агро Фонд Telegram",
+      "url": "https://t.me/agrofondprice",
+      "purpose": "Оголошення цін і їх змін"
+    },
+    {
+      "group": "Ваші трейдери",
+      "name": "AGRO HUB MARKET",
+      "url": "https://t.me/AGRO_H_U_B",
+      "purpose": "Локальні пропозиції Голованівська"
+    },
+    {
+      "group": "Ваші трейдери",
+      "name": "Агропресперіс",
+      "url": "https://t.me/Agroprosperis_price",
+      "purpose": "Елеваторні котирування"
+    },
+    {
+      "group": "Ваші трейдери",
+      "name": "Алмейда",
+      "url": "https://t.me/almeidagroup",
+      "purpose": "Прайси торговця"
+    },
+    {
+      "group": "Агрегатори",
+      "name": "E-ZERNO трейдери",
+      "url": "https://e-zerno.com/trader-prices",
+      "purpose": "Пошук покупців та дат"
+    },
+    {
+      "group": "Агрегатори",
+      "name": "GrainTrade",
+      "url": "https://graintrade.com.ua/",
+      "purpose": "Індикативи та огляди"
+    },
+    {
+      "group": "Агрегатори",
+      "name": "AgroTender",
+      "url": "https://agrotender.com.ua/",
+      "purpose": "Оголошення, перевірка дат і умов"
+    },
+    {
+      "group": "Логістика",
+      "name": "Укрвантаж АГРО",
+      "url": "https://agro.ukrvantage.com/platform/automotive",
+      "purpose": "Огляди зерновозів"
+    },
+    {
+      "group": "Логістика",
+      "name": "DELLA",
+      "url": "https://della.ua/",
+      "purpose": "Публічні заявки перевезень"
+    },
+    {
+      "group": "Паливо",
+      "name": "Enkorr",
+      "url": "https://enkorr.ua/",
+      "purpose": "Гурт, ICE Gasoil, імпорт"
+    },
+    {
+      "group": "Паливо",
+      "name": "Мінфін пальне",
+      "url": "https://index.minfin.com.ua/ua/markets/fuel/dt/",
+      "purpose": "Роздрібні щоденні ряди"
+    },
+    {
+      "group": "Добрива",
+      "name": "E-ZERNO добрива",
+      "url": "https://e-zerno.com/fertilizer-prices",
+      "purpose": "Прайси виробників і дистрибʼюторів"
+    },
+    {
+      "group": "Добрива",
+      "name": "Grossdorf",
+      "url": "https://grossdorf.com/",
+      "purpose": "Продукти КАС/NPK, джерело пропозицій"
+    },
+    {
+      "group": "Ринок",
+      "name": "UkrAgroConsult",
+      "url": "https://ukragroconsult.com/",
+      "purpose": "Ціни, логістика, добрива"
+    },
+    {
+      "group": "Ринок",
+      "name": "Elevatorist",
+      "url": "https://elevatorist.com/",
+      "purpose": "Елеватори й експорт"
+    },
+    {
+      "group": "Ринок",
+      "name": "Latifundist",
+      "url": "https://latifundist.com/",
+      "purpose": "Новини ринку"
+    },
+    {
+      "group": "Ринок",
+      "name": "CME Group",
+      "url": "https://www.cmegroup.com/",
+      "purpose": "CBOT"
+    },
+    {
+      "group": "Ринок",
+      "name": "Euronext",
+      "url": "https://www.euronext.com/",
+      "purpose": "MATIF"
+    },
+    {
+      "group": "Офіційні",
+      "name": "Укргідрометцентр",
+      "url": "https://www.meteo.gov.ua/",
+      "purpose": "Погода"
+    },
+    {
+      "group": "Офіційні",
+      "name": "НБУ",
+      "url": "https://bank.gov.ua/",
+      "purpose": "Валюта"
+    },
+    {
+      "group": "Офіційні",
+      "name": "Мінекономіки",
+      "url": "https://me.gov.ua/",
+      "purpose": "Збирання і регуляторика"
+    },
+    {
+      "name": "FAOSTAT",
+      "url": "https://www.fao.org/faostat/en/",
+      "group": "Міжнародна статистика",
+      "purpose": "Збирання, площі, урожайність, ціни виробника, обіг добрив · Зареєстровано джерело; числові ряди ще не імпортовано"
+    },
+    {
+      "name": "USDA PSD Online",
+      "url": "https://apps.fas.usda.gov/psdonline/",
+      "group": "Міжнародна статистика",
+      "purpose": "Виробництво, внутрішнє використання, експорт, кінцеві запаси, stocks/use · API та файли підтверджені; баланс ще не завантажено"
+    },
+    {
+      "name": "USDA WASDE",
+      "url": "https://www.usda.gov/about-usda/general-information/staff-offices/office-chief-economist/commodity-markets/wasde-report",
+      "group": "Міжнародна статистика",
+      "purpose": "Перегляд прогнозів попиту і пропозиції; дати публікацій · Доступні Excel/XML/CSV; конкретні значення не імпортовано"
+    },
+    {
+      "name": "Єврокомісія · Cereals",
+      "url": "https://agridata.ec.europa.eu/extensions/DataPortal/cereals.html",
+      "group": "Міжнародна статистика",
+      "purpose": "Тижневі ціни ЄС; експорт/імпорт; виробництво · Таблиці підтверджені; числові ряди ще не імпортовано"
+    },
+    {
+      "name": "Єврокомісія · Oilseeds",
+      "url": "https://agridata.ec.europa.eu/extensions/DataPortal/oilseeds-protein-crops.html",
+      "group": "Міжнародна статистика",
+      "purpose": "Ріпак та соняшник: ціни й торгівля ЄС · Excel-експорт заявлено; числові ряди ще не імпортовано"
+    },
+    {
+      "name": "AHDB · Cereals & oilseeds",
+      "url": "https://ahdb.org.uk/cereals-oilseeds/market-data",
+      "group": "Міжнародні довідкові",
+      "purpose": "Експортні/фермерські ціни Великої Британії · Виявлено щотижневий формат; ліцензійні умови перевіряти"
+    },
+    {
+      "name": "AHDB · Futures",
+      "url": "https://ahdb.org.uk/cereals-oilseeds/futures-prices",
+      "group": "Міжнародні довідкові",
+      "purpose": "Ф’ючерси CME/ICE; ціна закриття · Явні обмеження повторного поширення та похідних даних"
+    },
+    {
+      "name": "AgWeb",
+      "url": "https://www.agweb.com/",
+      "group": "Міжнародна аналітика",
+      "purpose": "Американські ринкові новини; попит, погода, індикативи · Джерело-видання, не статистична база"
+    },
+    {
+      "name": "Successful Farming",
+      "url": "https://www.agriculture.com/",
+      "group": "Міжнародна аналітика",
+      "purpose": "Американські новини і фермерська економіка · Джерело-видання, не статистична база"
+    },
+    {
+      "name": "Farmers Weekly",
+      "url": "https://www.fwi.co.uk/prices-trends",
+      "group": "Міжнародна аналітика",
+      "purpose": "Європейські фермерські новини · Для структурованих цін перевага AHDB"
+    },
+    {
+      "name": "Agriwatch",
+      "url": "https://www.agriwatch.com/",
+      "group": "Міжнародна аналітика",
+      "purpose": "Індійські товарні ринки · Українську ціну не відновлює"
+    },
+    {
+      "name": "AgriBusiness Global",
+      "url": "https://www.agribusinessglobal.com/",
+      "group": "Міжнародна аналітика",
+      "purpose": "Постачання добрив і ЗЗР, законодавство · Секторне медіа"
+    },
+    {
+      "name": "Farms.com",
+      "url": "https://www.farms.com/",
+      "group": "Міжнародна аналітика",
+      "purpose": "AgTech та огляди агроринку Північної Америки · Низька прямота сигналів для України"
+    },
+    {
+      "name": "Access Agriculture",
+      "url": "https://www.accessagriculture.org/",
+      "group": "Міжнародні довідкові",
+      "purpose": "Освітні матеріали з агротехнологій · Довідковий матеріал, не торгові котирування"
+    }
+  ],
+  "items": [
+    {
+      "id": "wheat",
+      "name": "Пшениця",
+      "icon": "🌾",
+      "kind": "crop"
+    },
+    {
+      "id": "corn",
+      "name": "Кукурудза",
+      "icon": "🌽",
+      "kind": "crop"
+    },
+    {
+      "id": "sunflower",
+      "name": "Соняшник",
+      "icon": "🌻",
+      "kind": "crop"
+    },
+    {
+      "id": "rapeseed",
+      "name": "Ріпак",
+      "icon": "🌱",
+      "kind": "crop"
+    },
+    {
+      "id": "barley",
+      "name": "Ячмінь",
+      "icon": "🌾",
+      "kind": "crop"
+    },
+    {
+      "id": "diesel",
+      "name": "Дизель",
+      "icon": "⛽",
+      "kind": "fuel"
+    },
+    {
+      "id": "gasoline",
+      "name": "Бензин А-95",
+      "icon": "⛽",
+      "kind": "fuel"
+    },
+    {
+      "id": "nitrate",
+      "name": "Аміачна селітра",
+      "icon": "🧪",
+      "kind": "fert"
+    },
+    {
+      "id": "urea",
+      "name": "Карбамід",
+      "icon": "🧪",
+      "kind": "fert"
+    },
+    {
+      "id": "uan",
+      "name": "КАС-32",
+      "icon": "🧪",
+      "kind": "fert"
+    },
+    {
+      "id": "npk",
+      "name": "NPK 16:16:16",
+      "icon": "🧪",
+      "kind": "fert"
+    }
+  ],
+  "published_at": "2026-10-25",
+  "publication_note": "Архівні дані з попереднього дослідження. Автоматичний збір поки не підключено."
+}

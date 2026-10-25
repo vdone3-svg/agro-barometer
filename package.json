@@ -1,0 +1,12 @@
+{
+  "name": "agro-barometer-netlify-auto",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "^11.1.6"
+  },
+  "scripts": {
+    "test": "node --test scripts/*.test.mjs"
+  }
+}
