@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": "city_v8",
+  "version": "city_v10",
   "origin": "Олександрія, Кіровоградська область",
   "routes": [
     {
@@ -14,8 +14,50 @@
         633
       ],
       "note": "Відстань між містами; не до термінала і не тариф."
+    },
+    {
+      "city": "Черкаси",
+      "region": "Черкаська обл.",
+      "km": 144,
+      "status": "planning_city_to_city",
+      "source": "https://flagma.ua/uk/vidstan-aleksandriyaukr-cherkassy/",
+      "alternatives_km": [],
+      "note": "Міський маршрут Flagma; не адреса складу і не ціна перевезення."
+    },
+    {
+      "city": "Київ",
+      "region": "Київська обл.",
+      "km": 324,
+      "status": "planning_city_to_city",
+      "source": "https://flagma.ua/uk/vidstan-aleksandriyaukr-kiev/",
+      "alternatives_km": [],
+      "note": "Міський маршрут Flagma; дорожні обмеження для вантажівки потребують перевірки."
+    },
+    {
+      "city": "Одеса",
+      "region": "Одеська обл.",
+      "km": 410,
+      "status": "planning_city_to_city",
+      "source": "https://flagma.ua/uk/vidstan-aleksandriyaukr-odessa/",
+      "alternatives_km": [
+        376,
+        380
+      ],
+      "note": "Швидкий маршрут Flagma; короткий маршрут 376 км, економ 380 км."
+    },
+    {
+      "city": "Рівне",
+      "region": "Рівненська обл.",
+      "km": 645,
+      "status": "planning_city_to_city",
+      "source": "https://flagma.ua/uk/vidstan-aleksandriyaukr-rovno/",
+      "alternatives_km": [
+        616,
+        617
+      ],
+      "note": "Швидкий маршрут Flagma; це не адреса бази постачальника."
     }
   ],
   "default_freight_rate": null,
-  "note": "Невідомі маршрути не заповнюються приблизними відстанями. Ставки перевезень задаються вручну."
+  "note": "V10: відстані Олександрія → міста для орієнтовної логістики. Це не гарантія вантажного маршруту, підʼїзду до приймання чи тарифу. Реальний тариф вводиться вручну."
 }
