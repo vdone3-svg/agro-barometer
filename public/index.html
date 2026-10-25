@@ -114,10 +114,34 @@ refresh();loadPublishedData();setInterval(()=>{if(!document.hidden)loadPublished
 (()=>{
 const t=document.getElementById('offer-type'),reg=document.getElementById('offer-region'),tb=document.getElementById('offers-candidates-rows'),counter=document.getElementById('offer-count');let rows=[];
 const clean=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function render(){const subset=rows.filter(x=>(t.value==='all'||x.kind===t.value)&&(!reg.checked||x.region==='Кіровоградська обл.')).sort((a,b)=>b.quote_date.localeCompare(a.quote_date)).slice(0,100);counter.textContent='Знайдено: '+subset.length+' (макс. 100)';tb.innerHTML=subset.length?subset.map(x=>`<tr style="border-bottom:1px solid #e3ebe5"><td style="padding:8px">${clean(x.quote_date)}</td><td>${clean(x.company)}</td><td>${clean(x.product)} ${x.formula?'('+clean(x.formula)+')':''}<div style="color:#99621d;font-size:11px">Не підтверджено</div></td><td>${clean(x.price)} ${clean(x.currency)}/т</td><td>${clean(x.region)} · ${clean(x.point||'—')}</td><td><a href="${x.kind==='grain'?'https://e-zerno.com/trader-prices':'https://e-zerno.com/fertilizer-prices'}" target="_blank" rel="noopener noreferrer">E-ZERNO</a></td></tr>`).join(''):'<tr><td colspan="6" style="padding:10px">Поки немає пропозицій із достатньо однозначними датами, товарами та цінами. Архівні дані не видаються за поточні.</td></tr>'}
+function render(){const subset=rows.filter(x=>(t.value==='all'||x.kind===t.value)&&(!reg.checked||x.region==='Кіровоградська обл.')).sort((a,b)=>b.quote_date.localeCompare(a.quote_date)).slice(0,100);counter.textContent='Знайдено: '+subset.length+' (макс. 100)';tb.innerHTML=subset.length?subset.map(x=>`<tr style="border-bottom:1px solid #e3ebe5"><td style="padding:8px">${clean(x.quote_date)}</td><td>${clean(x.company)}</td><td>${clean(x.product)} ${x.formula?'('+clean(x.formula)+')':''}<div style="color:#99621d;font-size:11px">Не підтверджено</div></td><td>${clean(x.price)} ${clean(x.currency)} <small>(од. не перевірена)</small></td><td>${clean(x.region)} · ${clean(x.point||'—')}</td><td><a href="${x.kind==='grain'?'https://e-zerno.com/trader-prices':'https://e-zerno.com/fertilizer-prices'}" target="_blank" rel="noopener noreferrer">E-ZERNO</a></td></tr>`).join(''):'<tr><td colspan="6" style="padding:10px">Поки немає пропозицій із достатньо однозначними датами, товарами та цінами. Архівні дані не видаються за поточні.</td></tr>'}
 t.onchange=reg.onchange=render;
 async function refresh(){try{const r=await fetch('/.netlify/functions/public-indicators?offers='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error();const obj=await r.json();rows=(obj.sources||[]).filter(s=>['grain','fertilizer'].includes(s.id)).flatMap(s=>(s.data?.offers||[]).map(o=>({...o,kind:s.id}))).filter(o=>o.verification==='unverified'&&typeof o.price==='number'&&o.quote_date);render()}catch(e){counter.textContent='Зараз сервер недоступний';}}
 refresh();setInterval(()=>{if(!document.hidden)refresh()},300000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+})();
+</script>
+
+<section id="offers-history" style="margin:16px auto;max-width:1200px;padding:16px;border:1px solid #cbd8ce;border-radius:14px;background:#fff;color:#1b3027;font:14px/1.5 system-ui,sans-serif;box-sizing:border-box">
+<h3 style="margin:0 0 6px;font-size:18px">Історія непідтверджених пропозицій — Auto V4</h3>
+<p style="margin:0 0 8px;font-size:12px;color:#54665d">Зберігаємо датовані спостереження. Повторний збір тієї самої ставки не створює нового запису. Зміна ціни в оголошенні ще не означає підтверджену ринкову зміну. Бали 0–100 не змінюються.</p>
+<div id="offer-history-summary" style="margin-bottom:8px;font-weight:600">Очікуємо перший збір V4…</div>
+<div style="overflow-x:auto"><table style="width:100%;min-width:630px;border-collapse:collapse;font-size:13px"><thead><tr style="text-align:left;background:#f0f5f1"><th style="padding:8px">Виявлено</th><th>Компанія / товар</th><th>Попередня → нова</th><th>Дата ставки</th></tr></thead><tbody id="offer-history-rows"><tr><td colspan="4" style="padding:8px">Історія поки порожня</td></tr></tbody></table></div>
+<p style="font-size:12px"><a href="/.netlify/functions/offer-history" target="_blank" rel="noopener noreferrer">Перевірити історію через API</a></p>
+</section>
+<script>
+(()=>{
+ const summary=document.getElementById('offer-history-summary'),body=document.getElementById('offer-history-rows');
+ const esc=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ async function update(){try{
+  const r=await fetch('/.netlify/functions/offer-history?v='+Date.now(),{cache:'no-store'});
+  if(!r.ok)throw Error('HTTP '+r.status);
+  const x=await r.json();
+  if(x.status==='not_started'){summary.textContent='Історія ще не започаткована. Запусти collect-morning після публікації V4.';return;}
+  const n=Number(x.total_observations||0),c=Array.isArray(x.changes)?x.changes:[];
+  summary.textContent='Накопичено спостережень: '+n+' · різних пропозицій: '+(x.total_distinct_offers||0)+' · за останній збір нових: '+(x.added_this_run||0)+' · зафіксованих змін у журналі: '+c.length;
+  body.innerHTML=c.length?c.slice(0,20).map(a=>`<tr style="border-bottom:1px solid #e3ebe5"><td style="padding:8px">${esc(a.observed_at?.slice(0,16)?.replace('T',' '))} UTC</td><td>${esc(a.company)} — ${esc(a.product)}<div style="font-size:11px;color:#99621d">Не підтверджено</div></td><td>${esc(a.previous_price)} → ${esc(a.new_price)} ${esc(a.currency)} (од. не перевірена)</td><td>${esc(a.quote_date)}</td></tr>`).join(''):'<tr><td colspan="4" style="padding:8px">Змін ціни ще немає — це нормально після першого збору.</td></tr>';
+ }catch(e){summary.textContent='Не вдалося отримати історію ('+e.message+').';}}
+ update();setInterval(()=>{if(!document.hidden)update()},300000);
 })();
 </script>
 </body></html>

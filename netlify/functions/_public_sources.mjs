@@ -1,3 +1,4 @@
+import { saveOfferHistory } from './_offer_history.mjs';
 import { extractOfferCandidates } from './_offers.mjs';
 import { getStore } from '@netlify/blobs';
 
@@ -71,5 +72,7 @@ export async function collectPublicSources(label='morning'){
  }
  const payload={schema_version:1,collector:'indicators_v2',run:label,last_attempt:nowIso(),sources:results,note:'E-ZERNO candidate quotes are UNVERIFIED. Relative dates skipped; VAT and basis unknown. Fuel is national wholesale reference. No effect on 0–100 scores.'};
  await store.setJSON('public-indicators-latest',payload);
+ try { payload.history_write=await saveOfferHistory(results,payload.last_attempt); }
+ catch(err) { payload.history_write={status:'error',message:String(err?.message||err).slice(0,180)}; console.error('offer history persist failed',err); }
  return payload;
 }
