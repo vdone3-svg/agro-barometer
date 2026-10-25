@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {euroPrice,isoFromEuDate,normalizeEuPrices,euEndpoint,fetchEuCereals} from '../netlify/functions/_eu_cereal_prices_v13.mjs';
+const row=(overrides={})=>({memberStateCode:'PL',beginDate:'05/10/2026',endDate:'11/10/2026',price:'€217,50',unit:'TONNES',productName:'Feed wheat',marketName:'Warsaw',stageName:'Departure from silo',...overrides});
+test('EU date validation correct incl impossible dates',()=>{assert.equal(isoFromEuDate('29/02/2024'),'2024-02-29');assert.equal(isoFromEuDate('29/02/2025'),null);assert.equal(isoFromEuDate('31/11/2026'),null);});
+test('EU euro price parses decimal conventions',()=>{assert.equal(euroPrice('€217,50'),217.5);assert.equal(euroPrice('1.234,50'),1234.5);assert.equal(euroPrice('1,234.50'),1234.5);assert.equal(euroPrice('n/a'),null);});
+test('EU prices properly record basis and never buyer grade',()=>{const x=normalizeEuPrices([row()]);assert.equal(x.records_total,1);assert.equal(x.rows[0].price_eur_per_tonne,217.5);assert.equal(x.rows[0].comparison_with_ukraine_buyers,'not_comparable');assert.equal(x.decision_grade,false);});
+test('reject 100kg to prevent 10x unit error',()=>{const x=normalizeEuPrices([row({unit:'100 KG'})]);assert.equal(x.records_total,0);assert.equal(x.invalid.unit,1);});
+test('reject oil byproducts and unrecognized products',()=>{const x=normalizeEuPrices([row({productName:'Sunflower oil'})]);assert.equal(x.records_total,0);});
+test('reject invalid dates, prices and missing market',()=>{const x=normalizeEuPrices([row({beginDate:'30/02/2026'}),row({price:'€abc'}),row({marketName:''})]);assert.equal(x.records_total,0);});
+test('deduplicate identical rows',()=>{assert.equal(normalizeEuPrices([row(),row()]).records_total,1);});
+test('validate date parameters and encode URL',()=>{assert.match(euEndpoint('01/09/2026','30/09/2026'),/beginDate=01%2F09%2F2026/);assert.throws(()=>euEndpoint('31/02/2026','30/09/2026'));});
+test('mock fetch uses approved EU endpoint and processes response',async()=>{let got='';const result=await fetchEuCereals({now:new Date('2026-10-25T00:00:00Z'),fetchImpl:async url=>{got=url;return {ok:true,headers:{get:()=>null},json:async()=>[row()]};}});assert.match(got,/api\/cereal\/prices/);assert.equal(result.records_total,1);});
+test('failed fetch does not invent rows',async()=>{await assert.rejects(()=>fetchEuCereals({fetchImpl:async()=>({ok:false,status:429})}),/EU_HTTP_429/);});
+test('reject response not array',()=>{assert.throws(()=>normalizeEuPrices({rows:[row()]}),/not_array/);});

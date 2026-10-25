@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {FACTS,validateFacts,queryFacts} from '../netlify/functions/_verified_facts_v13.mjs';
+test('all supplied reference facts pass schema audit',()=>assert.equal(validateFacts(),true));
+test('all numbers retain a source URL',()=>assert.ok(FACTS.every(f=>f.source_url.startsWith('https://'))));
+test('none can enter auto-pricing',()=>assert.ok(FACTS.every(f=>f.usable_for_price_ranking===false)));
+test('official and secondary remain distinguishable',()=>{assert.equal(queryFacts({sourceKind:'official_primary'}).length,4);assert.equal(queryFacts({sourceKind:'secondary_report'}).length,3)});
+test('crop filtering does not confuse wheat and corn',()=>assert.ok(queryFacts({commodity:'corn'}).every(f=>f.commodity==='corn')));
+test('duplicate keys rejected',()=>assert.throws(()=>validateFacts([FACTS[0],FACTS[0]])));
+test('invalid calendar date rejected',()=>assert.throws(()=>validateFacts([{...FACTS[0],publication_date:'2026-02-30'}])));
+test('cannot elevate reference fact into a trading quote',()=>assert.throws(()=>validateFacts([{...FACTS[0],usable_for_price_ranking:true}])));

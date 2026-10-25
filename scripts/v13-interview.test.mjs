@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {INTERVIEW_POLICY_V13,publicOpportunity,interviewOverview} from '../public/js/agro-v13-policy.mjs';
+import {evaluateV13} from '../public/js/agro-economics-core-v13.mjs';
+const sample={kind:'grain',crop:'кукурудза',company:'Тест',destination_city:'Одеса',observed_quote_value:10000,price_uah_per_tonne:null,vat_status:'unknown',delivery_mode:'unknown',quality_conditions_verified:false,freshness:'unverified'};
+test('interview rules are explicit and stable',()=>{assert.equal(INTERVIEW_POLICY_V13.unknown_freight,'separate_promising_unconfirmed');assert.equal(INTERVIEW_POLICY_V13.mixed_delivery,'single_verified_economic_comparison');});
+test('unconfirmed market listing retained separately without inventing price unit',()=>{const item=publicOpportunity(sample);assert.equal(item.category,'promising_unconfirmed');assert.ok(item.reasons.includes('Ціна у грн/т не підтверджена'));});
+test('headline quote alone cannot trigger a false unusually-high-price alarm',()=>{assert.equal(publicOpportunity(sample,{confirmedReference:{documented:true,price_uah_per_tonne:5000,same_crop_and_grade:true,same_vat_basis:true,same_delivery_basis:true}}).category,'promising_unconfirmed');});
+test('outlier only with documented comparable reference and verified quoted unit',()=>{const offer={...sample,price_uah_per_tonne:14000,vat_status:'included',delivery_mode:'pickup',quality_conditions_verified:true};const ref={documented:true,same_crop_and_grade:true,same_vat_basis:true,same_delivery_basis:true,price_uah_per_tonne:10000};assert.equal(publicOpportunity(offer,{confirmedReference:ref}).category,'review_priority');assert.notEqual(publicOpportunity(offer,{confirmedReference:{...ref,same_delivery_basis:false}}).category,'review_priority');});
+test('market candidates never become verified solely from an overview',()=>{const result=evaluateV13([sample],[],{today:'2026-10-25'});const overview=interviewOverview([sample],result);assert.equal(overview.counts.verified,0);assert.equal(overview.counts.promising,1);});
+test('archival market listing not promoted to promising',()=>{assert.equal(publicOpportunity({...sample,freshness:'archival_unverified'}).category,'archive');});
+test('single dashboard shows separate candidate and reviewed lists',()=>{const html=readFileSync(new URL('../public/index.html',import.meta.url),'utf8');for(const id of ['v13-overview','v13-promising','v13-priority-review','v13-ranked'])assert.ok(html.includes('id="'+id+'"'));});

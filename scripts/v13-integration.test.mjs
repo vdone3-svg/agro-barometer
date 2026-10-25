@@ -1,0 +1,15 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';
+import {adaptPublicOffer,identifyCrop,aggregateReasons,freightQualityReport} from '../public/js/agro-v13-adapter.mjs';
+import {evaluateV13} from '../public/js/agro-economics-core-v13.mjs';
+import {chooseExactPlace,validAddressPart} from '../netlify/functions/_route_place_v13.mjs';
+const sample={kind:'grain',product:'Кукурудза',point:'Одеса',region:'Одеська обл.',price:10400,currency:'UAH',vat:'unknown',verification:'unverified',company:'Демо постачальник'};
+test('all six priority crops have deterministic mapping',()=>{for(const c of ['Пшениця 3 клас','Кукурудза','Соняшник','Ячмінь','Соя','Ріпак'])assert.ok(identifyCrop(c));});
+test('raw source price NEVER becomes a certified price per tonne',()=>{const o=adaptPublicOffer(sample);assert.equal(o.price_uah_per_tonne,null);assert.equal(o.observed_quote_value,10400);assert.equal(o.vat_status,'unknown');assert.equal(o.delivery_mode,'unknown');});
+test('unverified public offer cannot enter ranked results with empty transport base',()=>{const x=evaluateV13([adaptPublicOffer(sample)],[],{vat_rate:0.2,today:'2026-10-25'});assert.equal(x.ranked.length,0);assert.equal(x.review.length,1);assert.ok(x.review[0].reasons.length>=5);});
+test('unverified offer stays unverified even when freight rate object is approved',()=>{const f={validated_for_market_model:true,evidence_status:'verified_document'};assert.equal(evaluateV13([adaptPublicOffer(sample)],[f],{vat_rate:0.2}).ranked.length,0)});
+test('freight audit does not promote observations',()=>{assert.deepEqual(freightQualityReport([{source_url:'https://example.org',observed_date:'2026-10-25',vat_status:'included'}]),{total:1,approved:0,with_date:1,with_vat:1,with_source:1,exact_destination:0})});
+test('explanation reasons are correctly grouped',()=>{assert.deepEqual(aggregateReasons([{reasons:['X','X','Y']},{reasons:['Y']}]),[['Y',2],['X',1]])});
+test('same-name ambiguous geocoding cannot be chosen',()=>{const hit={name:'Термінал',city:'Одеса',state:'Одеська область',countrycode:'UA',street:'Портова',housenumber:'10',point:{lat:46.5,lng:30.7}};assert.equal(chooseExactPlace([hit,hit],{city:'Одеса',region:'Одеська область',address:'Портова 10'}),null)});
+test('wrong address cannot resolve to nearby unrelated destination',()=>{const hit={city:'Одеса',state:'Одеська область',countrycode:'UA',street:'Портова',housenumber:'10',point:{lat:46.5,lng:30.7}};assert.equal(chooseExactPlace([hit],{city:'Одеса',region:'Одеська область',address:'Зернова 15'}),null);assert.ok(chooseExactPlace([hit],{city:'Одеса',region:'Одеська область',address:'Портова 10'}));});
+test('invalid address payload rejected',()=>{assert.equal(validAddressPart('<script>'),false);assert.equal(validAddressPart('Портова 10'),true)});
+test('new UI wired and old barometer code intact',()=>{const html=readFileSync(new URL('../public/index.html',import.meta.url),'utf8');assert.match(html,/agro-v13-dashboard\.mjs/);assert.match(html,/id="v13-place-status"/);assert.match(html,/id="v12-status"/)});

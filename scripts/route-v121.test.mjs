@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {validCity,chooseHit,distanceKm} from '../netlify/functions/_route_v121.mjs';
+test('validates destination city',()=>{assert.equal(validCity('Ізмаїл'),true);assert.equal(validCity(''),false);assert.equal(validCity('Ізмаїл Соя 16000'),false);assert.equal(validCity('Одеса<script>'),false)});
+test('rejects unconfirmed city or oblast and ambiguous geocode',()=>{const hits=[{name:'Одеса',countrycode:'ua',state:'Одеська область',point:{lat:46.4,lng:30.7}}];assert.equal(chooseHit(hits,{city:'Одеса',region:'Одеська'}),hits[0]);assert.equal(chooseHit(hits,{city:'Одеса',region:'Полтавська'}),null);assert.equal(chooseHit([...hits,...hits],{city:'Одеса',region:'Одеська'}),null);});
+test('distance only comes from provider metres',()=>{assert.equal(distanceKm({paths:[{distance:410123}]}),410.1);assert.equal(distanceKm({paths:[{distance:0}]}),null);assert.equal(distanceKm({paths:[]}),null)});

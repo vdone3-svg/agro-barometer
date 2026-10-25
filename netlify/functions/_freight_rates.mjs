@@ -1,5 +1,10 @@
 // Freight observations are NOT confirmed bookings or grain purchase prices.
 const dateRE=/^20\d{2}-\d{2}-\d{2}$/;
+const isCalendarDate=(value)=>{
+ if(!dateRE.test(value))return false;
+ const date=new Date(value+'T00:00:00.000Z');
+ return Number.isFinite(date.getTime()) && date.toISOString().slice(0,10)===value;
+};
 const text=(v,n=160)=>typeof v==='string'&&v.trim()&&v.trim().length<=n;
 const clean=(v)=>typeof v==='string'?v.trim():'';
 const choices=(v,allowed)=>allowed.includes(v);
@@ -10,7 +15,7 @@ export function normalizeFreightRate(input, today=new Date().toISOString().slice
  let u;
  try{u=new URL(input.source_url);}catch{throw Error('invalid source_url')}
  if(u.protocol!=='https:'&&u.protocol!=='http:')throw Error('invalid URL protocol');
- if(!dateRE.test(input.observed_date)||input.observed_date>today||Number.isNaN(Date.parse(input.observed_date)))throw Error('invalid observed_date');
+ if(!isCalendarDate(input.observed_date)||input.observed_date>today)throw Error('invalid observed_date');
  const vType=['grain_truck','other'];if(!choices(input.vehicle_type,vType))throw Error('invalid vehicle_type');
  if(!choices(input.evidence_status,['unverified_listing','carrier_quote','verified_document']))throw Error('invalid evidence_status');
  if(!choices(input.vat_status,['included','excluded','unknown']))throw Error('invalid vat_status');

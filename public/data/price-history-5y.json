@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-10-25",
+  "currency": "USD",
+  "unit": "metric_tonne",
+  "observations": [],
+  "note": "Verified source observations only. No invented values. Never substitute world benchmark for Ukraine farmgate."
+}

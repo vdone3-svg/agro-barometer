@@ -1,0 +1,12 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {parseRss,summarizeNews} from '../netlify/functions/_news_digest_v13.mjs';
+const now=Date.parse('2026-10-25T12:00:00Z');
+const xml=(date,link='https://latifundist.com/novosti/111')=>`<rss><channel><item><title><![CDATA[Кукурудза: темпи збирання нового врожаю]]></title><link>${link}</link><pubDate>${date}</pubDate><description><![CDATA[Кукурудзу збирають]]></description></item></channel></rss>`;
+test('RSS parses dated article from allowed source',()=>{const x=parseRss(xml('Sat, 24 Oct 2026 12:00:00 GMT'),'Latifundist','latifundist.com',now);assert.equal(x.length,1);assert.match(x[0].title,/Кукурудза/)});
+test('stale news excluded',()=>assert.equal(parseRss(xml('Sat, 10 Oct 2026 12:00:00 GMT'),'L','latifundist.com',now).length,0));
+test('future news excluded',()=>assert.equal(parseRss(xml('Sat, 27 Oct 2026 12:00:00 GMT'),'L','latifundist.com',now).length,0));
+test('alien link blocked',()=>assert.equal(parseRss(xml('Sat, 24 Oct 2026 12:00:00 GMT','https://phishing.example/novosti/111'),'L','latifundist.com',now).length,0));
+test('javascript link blocked',()=>assert.equal(parseRss(xml('Sat, 24 Oct 2026 12:00:00 GMT','javascript:alert(1)'),'L','latifundist.com',now).length,0));
+test('crop-specific summary with references, not price prediction',()=>{const rows=parseRss(xml('Sat, 24 Oct 2026 12:00:00 GMT'),'L','latifundist.com',now);const d=summarizeNews(rows,{now});assert.equal(d.crops['кукурудза'].count,1);assert.equal(d.crops['соя'].count,0);assert.match(d.crops['кукурудза'].summary,/самі новини не доводять/)});
+test('duplicate article url counted once',()=>{const rows=parseRss(xml('Sat, 24 Oct 2026 12:00:00 GMT'),'L','latifundist.com',now);assert.equal(summarizeNews([...rows,...rows],{now}).articles_total,1)});
+test('invalid publication date excluded',()=>assert.equal(parseRss(xml('invalid'),'L','latifundist.com',now).length,0));

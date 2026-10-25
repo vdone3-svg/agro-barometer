@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {HORIZONS,assessThreeHorizons,assessHorizon,validateHorizonObservation} from '../public/js/agro-horizons-v13.mjs';
+const now=Date.parse('2026-10-25T12:00:00Z');
+const obs=(horizon,factor,publisher,impact='up',over={})=>({horizon,factor,publisher,impact,crop:'corn',metric:'Перевірений фактор попиту',event_date:'2026-10-24',evidence_type:'official_data',url:'https://example.org/report',description:'Вимірюваний поточний фактор аграрного ринку.',confirmed:true,direction_basis:'measured',...over});
+test('three exact horizon windows and no numeric scores',()=>{const r=assessThreeHorizons('corn',[],{now});assert.deepEqual(r.horizons.map(x=>x.id),['7-14d','30d','90d']);assert.ok(r.horizons.every(x=>x.score===null&&!x.can_publish_buy_sell));assert.equal(r.historical_charts_are_decision_inputs,false)});
+test('horizon leakage is prevented',()=>{const data=[obs('7-14d','local_price','a')];assert.equal(assessHorizon('corn','30d',data,{now}).eligible_evidence,0)});
+test('unknown horizon and missing metric rejected',()=>{assert.equal(validateHorizonObservation(obs('365d','local_price','a'),{crop:'corn',now}).valid,false);assert.equal(validateHorizonObservation(obs('30d','local_price','a','up',{metric:''}),{crop:'corn',now}).valid,false)});
+test('unconfirmed and old observations rejected',()=>{assert.equal(assessHorizon('corn','7-14d',[obs('7-14d','local_price','a','up',{confirmed:false})],{now}).eligible_evidence,0);assert.equal(assessHorizon('corn','7-14d',[obs('7-14d','local_price','a','up',{event_date:'2026-01-01'})],{now}).eligible_evidence,0)});
+test('multiple syndicated articles count as single underlying source',()=>{const data=[obs('30d','local_price','A','up',{original_source:'X'}),obs('30d','local_price','B','up',{original_source:'X'})];assert.equal(assessHorizon('corn','30d',data,{now}).corroborated_factors.length,0)});
+test('contradictions explicitly flagged',()=>{const data=[obs('30d','local_price','a'),obs('30d','local_price','b','down')];assert.deepEqual(assessHorizon('corn','30d',data,{now}).conflicts,['local_price'])});
+test('coverage is not a trading recommendation',()=>{const data=['local_price','logistics','world_balance'].flatMap(f=>[obs('90d',f,'A'),obs('90d',f,'B')]);const r=assessHorizon('corn','90d',data,{now});assert.equal(r.status,'Ринкова оцінка потребує інтерпретації');assert.equal(r.can_publish_buy_sell,false);assert.equal(r.score,null)});
+test('missing local price blocks coverage',()=>{const data=['ukraine_crop','logistics','world_balance'].flatMap(f=>[obs('30d',f,'A'),obs('30d',f,'B')]);assert.equal(assessHorizon('corn','30d',data,{now}).status,'Недостатньо даних')});
+test('historical seasonality rejected as non-current factor',()=>{assert.equal(validateHorizonObservation(obs('90d','historical_seasonality','a'),{crop:'corn',now}).valid,false)});
+test('cannot fabricate future dates',()=>{assert.equal(validateHorizonObservation(obs('30d','local_price','a','up',{event_date:'2026-12-01'}),{crop:'corn',now}).valid,false)});
+test('six crops each report all horizons',()=>{for(const crop of ['wheat','corn','sunflower','barley','soy','rapeseed'])assert.equal(assessThreeHorizons(crop,[],{now}).horizons.length,3)});
+test('invalid horizon throws',()=>assert.throws(()=>assessHorizon('corn','infinite',[],{now}),RangeError));

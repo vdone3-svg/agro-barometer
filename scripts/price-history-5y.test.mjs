@@ -1,0 +1,15 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {validObservation,selectSeries,splitByYear,coverage,rejectMixedSeries,parseMonthlyCsv,YEARS,CROPS} from '../public/js/price-history-5y-core.mjs';
+const r=(override={})=>({month:'2025-02',crop:'wheat',market:'world_benchmark',series_id:'wheat-us-hrw',basis:'US HRW export',usd_per_tonne:242,currency:'USD',unit:'metric_tonne',source_name:'World Bank',source_url:'https://www.worldbank.org/',...override});
+test('six crops and five years',()=>{assert.equal(Object.keys(CROPS).length,6);assert.deepEqual(YEARS,[2022,2023,2024,2025,2026])});
+test('valid verified monthly record',()=>assert.equal(validObservation(r()),true));
+test('missing provenance invalid',()=>assert.equal(validObservation(r({source_url:''})),false));
+test('no fake zero price',()=>assert.equal(validObservation(r({usd_per_tonne:0})),false));
+test('reject invalid dates',()=>{assert.equal(validObservation(r({month:'2025-13'})),false);assert.equal(validObservation(r({month:'2026-11'})),false)});
+test('reject mixed units and currency',()=>{assert.equal(validObservation(r({unit:'bushel'})),false);assert.equal(validObservation(r({currency:'UAH'})),false)});
+test('market separation',()=>assert.deepEqual(selectSeries([r(),r({market:'ukraine_local'})],'wheat','world_benchmark','wheat-us-hrw',[2025]).length,1));
+test('series separation',()=>assert.equal(selectSeries([r(),r({series_id:'another'})],'wheat','world_benchmark','wheat-us-hrw',[2025]).length,1));
+test('coverage counts missing months',()=>assert.equal(coverage([r(),r({month:'2025-03'})],2025),2));
+test('no mixed bases',()=>assert.equal(rejectMixedSeries([r(),r({basis:'different'})]),false));
+test('valid CSV imported',()=>{const keys='month,crop,market,series_id,basis,usd_per_tonne,currency,unit,source_name,source_url';assert.equal(parseMonthlyCsv(keys+'\n2025-02,wheat,world_benchmark,wheat-us-hrw,US HRW export,242,USD,metric_tonne,World Bank,https://www.worldbank.org/').length,1)});
+test('reject duplicate observation',()=>{const keys='month,crop,market,series_id,basis,usd_per_tonne,currency,unit,source_name,source_url';const line='2025-02,wheat,world_benchmark,wheat-us-hrw,US HRW export,242,USD,metric_tonne,World Bank,https://www.worldbank.org/';assert.throws(()=>parseMonthlyCsv(keys+'\n'+line+'\n'+line))});
+test('year grouping',()=>assert.equal(splitByYear([r()])[2025].length,1));

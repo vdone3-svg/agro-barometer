@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mergeArchive,coverageReport,itemKey} from '../netlify/functions/_market_archive_v13.mjs';
+const now='2026-10-25T12:00:00.000Z';
+const item={title:'Огляд ринку кукурудзи',url:'https://latifundist.com/news/123',date:'2026-10-24T12:00:00.000Z'};
+const feed={id:'lat-grain',publisher:'Latifundist',url:'https://latifundist.com/rss/novosti/zerno',ok:true,items:[item]};
+test('new article ingested with publisher and provenance',()=>{const a=mergeArchive(null,[feed],now);assert.equal(a.articles_total,1);assert.equal(a.added_this_run,1);assert.equal(a.articles[0].source,'Latifundist');});
+test('duplicate observation does not inflate totals',()=>{const a=mergeArchive(null,[feed],now);const b=mergeArchive(a,[feed],now);assert.equal(b.added_this_run,0);assert.equal(b.articles_total,1)});
+test('failed feed cannot erase records',()=>{const a=mergeArchive(null,[feed],now);const b=mergeArchive(a,[{...feed,ok:false,items:[],error:'timeout'}],now);assert.equal(b.articles_total,1);assert.equal(coverageReport(b,now).feeds_ok_last_run,0)});
+test('future articles excluded',()=>{const a=mergeArchive(null,[{...feed,items:[{...item,date:'2026-10-28T12:00:00Z'}]}],now);assert.equal(a.articles_total,0)});
+test('publisher diversity counts publishers not feed count',()=>{const a=mergeArchive(null,[feed,{...feed,id:'lat-process',items:[{...item,url:'https://latifundist.com/news/124'}]}],now);assert.equal(a.publishers_in_archive,1)});
+test('stable fingerprint',()=>assert.equal(itemKey(item),itemKey({...item,title:'Changed title'})));

@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {FOCUS_CROPS,interpretPriceBarometer,interpretWithNews} from '../public/js/agro-market-decision-v13.mjs';
+test('supports the six requested cultures',()=>assert.equal(FOCUS_CROPS.length,6));
+test('no price signal from zero evidence',()=>assert.equal(interpretPriceBarometer({}).score,null));
+test('less than eight months refuses a number',()=>assert.equal(interpretPriceBarometer({score:99,months:7}).score,null));
+test('invalid and fractional scores are rejected',()=>{for(const n of [-1,101,32.5,NaN])assert.equal(interpretPriceBarometer({score:n,months:12}).score,null)});
+test('high historical crop price means consider sale, not guaranteed sale',()=>assert.equal(interpretPriceBarometer({score:80,months:8,kind:'crop'}).signal,'Розглянути продаж'));
+test('low historical crop price does not imply buy a crop',()=>assert.equal(interpretPriceBarometer({score:20,months:8,kind:'crop'}).signal,'Не поспішати з продажем'));
+test('fuel purchase logic reverses decision direction',()=>assert.equal(interpretPriceBarometer({score:80,months:10,kind:'fuel'}).signal,'Розглянути закупівлю'));
+test('news without price evidence cannot generate a number',()=>assert.equal(interpretWithNews(interpretPriceBarometer({}),{articles:[{url:'https://example.org/a'}],independent_publishers:1}).score,null));
+test('invalid news URLs not shown',()=>assert.deepEqual(interpretWithNews(interpretPriceBarometer({}),{articles:[{url:'javascript:alert(1)'}]}).newsUrls,[]));
+test('historical source score preserved exactly',()=>assert.equal(interpretPriceBarometer({score:67,months:11,kind:'crop'}).score,67));

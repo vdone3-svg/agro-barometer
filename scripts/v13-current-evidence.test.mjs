@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {assessCurrentMarket,classifyObservation} from '../public/js/agro-current-evidence-v13.mjs';
+const NOW=Date.parse('2026-10-25T12:00:00Z');
+const make=(factor,publisher,impact='up',more={})=>({factor,publisher,impact,crop:'corn',evidence_type:'official_data',event_date:'2026-10-24',url:'https://example.org/report',description:'Перевірена зміна конкретного показника ринку.',confirmed:true,...more});
+test('no evidence means no buy sell signal and no invented score',()=>{const r=assessCurrentMarket('corn',[],{now:NOW});assert.equal(r.can_publish_direction,false);assert.equal(r.score,null)});
+test('historical observations cannot be an eligible factor',()=>assert.equal(classifyObservation(make('historical_seasonality','one'),{crop:'corn',now:NOW}).valid,false));
+test('rejects invalid calendar dates',()=>assert.equal(classifyObservation(make('local_price','one','up',{event_date:'2026-02-30'}),{crop:'corn',now:NOW}).valid,false));
+test('rejects stale local prices',()=>assert.equal(classifyObservation(make('local_price','one','up',{event_date:'2026-10-01'}),{crop:'corn',now:NOW}).valid,false));
+test('rejects different crops and unconfirmed articles',()=>assert.equal(assessCurrentMarket('wheat',[make('local_price','one')],{now:NOW}).evidence_count,0));
+test('one publisher repeated does not independently corroborate',()=>{const r=assessCurrentMarket('corn',[make('local_price','one'),make('local_price','one')],{now:NOW});assert.equal(r.corroborated_factors.length,0)});
+test('multiple reports without local prices cannot publish a directional call',()=>{const items=['world_balance','export_demand','logistics'].flatMap(f=>[make(f,'pub1'),make(f,'pub2')]);assert.equal(assessCurrentMarket('corn',items,{now:NOW}).can_publish_direction,false)});
+test('conflicting sources block directional publishing',()=>{const items=['local_price','logistics','world_balance'].flatMap(f=>[make(f,'pub1','up'),make(f,'pub2',f==='world_balance'?'down':'up')]);const r=assessCurrentMarket('corn',items,{now:NOW});assert.equal(r.can_publish_direction,false);assert.deepEqual(r.conflicting_factors,['world_balance'])});
+test('corroborated current evidence can establish carefully worded rationale without a numeric score',()=>{const items=['local_price','logistics','world_balance'].flatMap(f=>[make(f,'pub1'),make(f,'pub2')]);const r=assessCurrentMarket('corn',items,{now:NOW});assert.equal(r.can_publish_direction,true);assert.equal(r.signal,'Є підстави розглянути продаж');assert.equal(r.score,null)});
+test('cannot use unsafe url',()=>assert.equal(classifyObservation(make('local_price','pub1','up',{url:'javascript:alert(1)'}),{crop:'corn',now:NOW}).valid,false));
