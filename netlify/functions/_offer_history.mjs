@@ -1,3 +1,4 @@
+import { offerProblem, quoteFreshness } from './_offer_quality.mjs';
 import { createHash } from 'node:crypto';
 
 // The quote's commercial identity deliberately excludes its price and observation time.
@@ -22,7 +23,7 @@ export function updateHistory(previous, sources, observedAt) {
   if(src.status!=='ok'||!['grain','fertilizer'].includes(src.id))continue;
   for(const raw of src.data?.offers||[]){
    const o={...raw,kind:src.id};
-   if(!validOffer(o))continue;
+   if(!validOffer(o) || offerProblem(o))continue;
    const identity=offerIdentity(o);
    // Repeated daily snapshots of the same dated offer are not a new market price.
    const fingerprint=createHash('sha256').update(JSON.stringify([identity,o.quote_date,o.price])).digest('hex').slice(0,32);
@@ -30,7 +31,7 @@ export function updateHistory(previous, sources, observedAt) {
    observations.push({fingerprint,identity,first_seen_at:observedAt,quote_date:o.quote_date,
      kind:o.kind,company:o.company,product:o.product,formula:o.formula??null,price:o.price,
      currency:o.currency,region:o.region??null,point:o.point??null,source_url:o.source_url,
-     vat:o.vat??'unknown',basis:o.basis??'unknown',verification:'unverified',quality:o.quality});
+     vat:o.vat??'unknown',basis:o.basis??'unknown',verification:'unverified',quality:o.quality,freshness:quoteFreshness(o)});
    existing.add(fingerprint);added++;
   }
  }

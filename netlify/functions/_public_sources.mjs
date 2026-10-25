@@ -1,3 +1,4 @@
+import { quoteFreshness } from './_offer_quality.mjs';
 import { cropCoverage } from './_crop_coverage.mjs';
 import { saveOfferHistory } from './_offer_history.mjs';
 import { extractOfferCandidates } from './_offers.mjs';
@@ -43,8 +44,8 @@ export function parseDirectory(html,kind){
  if(!text.includes(expected))throw Error('Unexpected directory content');
  const dates=stamp(html);
  // Directory inventory only. No automated trade quotes until seller/grade/location/VAT parser is verified.
- const offers=extractOfferCandidates(html,kind,kind==='grain'?'https://e-zerno.com/trader-prices':'https://e-zerno.com/fertilizer-prices');
- return {listing_dates: [...new Set(dates)].sort().reverse().slice(0,12), dated_listing_count:dates.length, offers_status:'unverified_candidates',quote_values_published:0, ...(kind==='grain'?{crop_coverage:cropCoverage(offers)}:{}), offers};
+ const offers=extractOfferCandidates(html,kind,kind==='grain'?'https://e-zerno.com/trader-prices':'https://e-zerno.com/fertilizer-prices').map(o=>({...o,freshness:quoteFreshness(o)}));
+ return {listing_dates: [...new Set(dates)].sort().reverse().slice(0,12), dated_listing_count:dates.length, offers_status:'unverified_candidates',quote_values_published:0, quality_control:{published_candidates:offers.length, historical_over_30_days:offers.filter(o=>o.freshness==='archival_unverified').length, note:'Rejected malformed candidate rows are excluded; rejected-count is not currently measurable without parser instrumentation.'}, ...(kind==='grain'?{crop_coverage:cropCoverage(offers)}:{}), offers};
 }
 async function fetchSource(source){
  const controller=new AbortController(),t=setTimeout(()=>controller.abort(),timeoutMs);

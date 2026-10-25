@@ -1,3 +1,4 @@
+import { offerProblem } from './_offer_quality.mjs';
 // Conservative E-ZERNO listing parser. Extract only individually attributable, absolutely dated offers.
 // Intentionally no currency/VAT/basis inference, and no extraction from relative "сьогодні/вчора" dates.
 const escEntities = str => String(str).replace(/&nbsp;|&#160;|&#xA0;/gi,' ').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;|&#x27;|&apos;/gi,"'").replace(/&lt;/gi,'<').replace(/&gt;/gi,'>');
@@ -31,6 +32,7 @@ function findOffers(chunk,kind,company,date,sourceUrl){
   const point=(next>=0?after.slice(0,next):after).replace(/^(?:Україна\s*\/\s*[^ ]+\s*)/,'').trim().slice(0,100);
   if(invalidLocation(point))continue;
   const rec={kind,company,product,formula:m[2]?.trim()||null,price:val,currency,region:rm[1]+' обл.',point:point||null,quote_date:date,source_url:sourceUrl,vat:'unknown',basis:'unknown',verification:'unverified',quality:'partial',collected_at:null};
+  if(offerProblem(rec))continue;
   out.push(rec);
  }
  return out;
