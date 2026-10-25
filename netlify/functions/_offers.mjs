@@ -39,28 +39,35 @@ const knownCompanies=[
 'НІБУЛОН','RISOIL','ГЛЕНПОРТ ОДЕСА','OKKO','АГРОХІМТЕХНОЛОДЖІ','АСТАРТА-КИЇВ','В АГРО','РАМБУРС','КОРОЛІВСЬКИЙ СМАК','AVALON GP TRAIDING','KERNEL','AGROPROSPERIS','Контінентал Фармерз Груп','МХП','КИЇВСЬКИЙ МЛИН','БІСКВІТНИЙ КОМПЛЕКС РОШЕН','Алмейда Груп','AGROMINO','AGROVISTA','FENIX AGRO','VVT Group','YUROL TRADING','АТК','GROSSDORF Агрохімічна Компанія','ExpoGrain','МКО ТРАНС-СЕРВІС','DACSA BUNGE UKRAINE','Region Grain Company','Ділекс Трейд','ТОВ Гудгрейноіл','ОДЕСЗЕРНОТРЕЙД','РОМА','Васильківхлібпродукт','Павлоградзернопродукт','GRANOLA','ТОВ Коудайс Україна','РО АГРО ТРЕЙД','YEDNIST\' GROUP','ФАЗОР','АГРОПАРТНЕР','Українська Агропромислова Група','ХІМАГРО','ІНАГРОТЕХ','MAKOSH','САНАГРО УКРАЇНА','ПромНафтоХімКомплект','Агрономічна компанія','УКРФЕРТІНВЕСТ','МИНЕРАЛ-ТРЕЙД','ВА АГРО ЮКРЕЙН','AGROTOK','НВП Фервіта','АГРОВЕЙ ДОБРИВА','КЕАРФІЛД'];
 function knownCompany(prefix){const p=prefix.toLocaleUpperCase('uk');const found=knownCompanies.filter(n=>p.endsWith(n.toLocaleUpperCase('uk'))).sort((a,b)=>b.length-a.length);return found[0]||null;}
 export function extractOfferCandidates(html,kind,sourceUrl){
- // Cards can contain nested markup; find heading nodes enclosing a company title + date.
  const text=textify(html);
  if(!text.includes(kind==='grain'?'Ціни на зерно':'Ціни на добрива'))throw Error('Unexpected E-ZERNO page type');
- const start=text.indexOf(kind==='grain'?'Платинові партнери':'Платинові партнери');
+ const start=text.indexOf('Платинові партнери');
  const content=start>=0?text.slice(start):text;
- // Only explicit absolute dates; never substitute scrape time for a quote date.
- const re=/([^]{1,155}?)\s+Ціни на\s+(\d{2}\.\d{2}\.20\d{2})\s+/g;
- const matches=[...content.matchAll(re)].filter(m=>!!iso(m[2]));
+ // Each card is delimited by its own price-date header, including relative-date cards.
+ // Never allow the next company card to become a previous offer's location.
+ const dateHeader=/Ціни на\s+(сьогодні|вчора|\d{2}\.\d{2}\.20\d{2})/gi;
+ const matches=[...content.matchAll(dateHeader)];
  const offers=[];
  for(let i=0;i<matches.length;i++){
-  const m=matches[i];const rawCompany=m[1].replace(/(?:Платиновий партнер|Золотий партнер|Трейдери|Дистриб'ютори|Партнери)/g,' ').trim();
-  // company is the trailing recognizable text from previous card's end; use markup-aware candidates if available.
-  const company=knownCompany(rawCompany);
+  const m=matches[i];
+  const date=iso(m[1]);
+  if(!date||date>today())continue; // no inferred date for "today" or "yesterday"
+  const preceding=content.slice(Math.max(0,m.index-240),m.index).replace(/(?:Платиновий партнер|Золотий партнер|Срібний партнер|Трейдери|Дистриб'ютори|Партнери)\s*$/gi,' ').trim();
+  const company=knownCompany(preceding);
   if(!company)continue;
-  const date=iso(m[2]);if(!date||date>today())continue;
   const end=i+1<matches.length?matches[i+1].index:content.length;
-  const rawChunk=content.slice(m.index+m[0].length,end).slice(0,650);
-  const rel=rawChunk.search(/Ціни на (?:вчора|сьогодні)/i);
-  const chunk=rel>=0?rawChunk.slice(0,rel):rawChunk;
+  let chunk=content.slice(m.index+m[0].length,end).slice(0,900);
+  // Trim next card's name/partner label, before matching any candidate offer.
+  const nextCompany=knownCompanies
+    .map(name=>({name,index:chunk.toLocaleUpperCase('uk').indexOf(name.toLocaleUpperCase('uk'))}))
+    .filter(x=>x.index>=0)
+    .sort((a,b)=>a.index-b.index)[0];
+  if(nextCompany)chunk=chunk.slice(0,nextCompany.index);
+  const unknownNextCompany=chunk.search(/\bТОВ\s+[А-ЯA-ZІЇЄҐ]/);
+  if(unknownNextCompany>=0)chunk=chunk.slice(0,unknownNextCompany);
   offers.push(...findOffers(chunk,kind,company,date,sourceUrl));
  }
- // No confident match => zero rather than fabricated prices.
- const unique=new Map();for(const x of offers){const key=[x.kind,x.company,x.product,x.formula,x.price,x.currency,x.region,x.point,x.quote_date].join('|');unique.set(key,x)}
+ const unique=new Map();
+ for(const x of offers){const key=[x.kind,x.company,x.product,x.formula,x.price,x.currency,x.region,x.point,x.quote_date].join('|');unique.set(key,x);}
  return [...unique.values()].slice(0,120);
 }

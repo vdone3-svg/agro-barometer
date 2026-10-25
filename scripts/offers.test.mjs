@@ -15,3 +15,24 @@ test('decode hexadecimal apostrophe entity',()=>{
  const r=extractOfferCandidates(html,'fertilizer','https://e-zerno.com/fertilizer-prices');
  assert.equal(r[0]?.point,"м. Кам'янське");
 });
+
+test('captures all five planned crops with absolute dates',()=>{
+ const records=[
+ ['KERNEL','20.10.2026','Соняшник 15 500 Кіровоградська обл. Олександрія'],
+ ['AGROPROSPERIS','28.07.2026','Кукурудза 7 000 Хмельницька обл. Поділля елеватор'],
+ ['РАМБУРС','20.10.2026','Пшениця 3 клас 8 200 Одеська обл. Ізмаїл'],
+ ['АТК','18.07.2026','Ячмінь 8 000 Житомирська обл. Печанівка'],
+ ['ExpoGrain','20.10.2026','Ріпак не ГМО 20 200 Одеська обл. Одеса']
+ ];
+ const html='<h1>Ціни на зерно</h1><h2>Платинові партнери</h2>'+records.map(([c,d,v])=>`<div>${c} Ціни на ${d} ${v}</div>`).join('');
+ const out=extractOfferCandidates(html,'grain','https://e-zerno.com/trader-prices');
+ assert.deepEqual(new Set(out.map(x=>x.product)),new Set(['Соняшник','Кукурудза','Пшениця 3 клас','Ячмінь','Ріпак не ГМО']));
+ assert(out.every(o=>o.verification==='unverified'&&o.vat==='unknown'));
+});
+
+test('relative-date cards are not converted to dated quotes',()=>{
+ const html='<h1>Ціни на зерно</h1><h2>Платинові партнери</h2>KERNEL Ціни на сьогодні Соняшник 15 500 Кіровоградська обл. Олександрія AGROPROSPERIS Ціни на 28.07.2026 Кукурудза 7 000 Хмельницька обл. Поділля елеватор';
+ const out=extractOfferCandidates(html,'grain','x');
+ assert(out.every(o=>o.product!=='Соняшник'));
+ assert.equal(out.length,1);
+});
