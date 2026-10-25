@@ -157,7 +157,7 @@ refresh();setInterval(()=>{if(!document.hidden)refresh()},300000);document.addEv
 <script type="module" src="/js/agro-logistics-v7.mjs"></script>
 
 <section id="agro-decision-v9" style="margin:16px auto;max-width:1200px;padding:18px;border:1px solid #a5c6ae;border-radius:14px;background:#fff;color:#19392c;font:14px/1.55 system-ui,sans-serif;box-sizing:border-box">
-<h3 style="font-size:20px;margin:0 0 6px">📊 Кому вигідніше продати? — Auto V10</h3>
+<h3 style="font-size:20px;margin:0 0 6px">📊 Кому вигідніше продати? — Auto V10.1</h3>
 <p>Автоматичне <strong>сценарне</strong> порівняння покупців за залишком після доставки від Олександрії. Ціни E-ZERNO не перевірено: ПДВ, базис та одиниця ціни невідомі. <strong>Не є рекомендацією укладати угоду.</strong></p>
 <div id="v9-status" role="status">Завантаження пропозицій і маршрутів…</div>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:14px 0">
@@ -170,5 +170,13 @@ refresh();setInterval(()=>{if(!document.hidden)refresh()},300000);document.addEv
 <p style="font-size:12px;color:#78571e;margin-top:12px">* Лише припущення, що всі гривневі оголошення задані за тонну, мають однаковий ПДВ і базис, а доставку оплачує продавець. Ставка тарифу не підставляється автоматично. Архівні оголошення (старші 30 днів) виключені. Немає впливу на барометри 0–100.</p>
 </section>
 <script type="module" src="/js/agro-decision-v9.mjs"></script>
+
+<section id="agro-freight-v11" style="max-width:1200px;margin:18px auto;padding:18px;border:1px solid #a5c6ae;border-radius:14px;background:#fff;color:#19392c;font:14px/1.55 system-ui,sans-serif;box-sizing:border-box">
+<h3 style="font-size:20px;margin:0 0 8px">🚛 Єдина база транспортних ставок — Auto V11</h3>
+<p style="margin:0 0 10px">Окремий реєстр спостережень про тарифи зерновозів. Дані не використовуються для автоматичного відсіву покупців, доки не перевірені джерела, умови, напрямки й тарифна методика.</p>
+<div id="agro-freight-v11-status" aria-live="polite">Завантаження реєстру…</div>
+<div style="overflow-x:auto"><table id="agro-freight-v11-table" style="border-collapse:collapse;width:100%;margin-top:10px;font-size:13px"><thead><tr><th>Дата</th><th>Маршрут</th><th>Км</th><th>Грн/т</th><th>ПДВ</th><th>Джерело</th></tr></thead><tbody></tbody></table></div>
+</section>
+<script type="module" src="/js/agro-freight-v11.mjs"></script>
 </body></html>
 
