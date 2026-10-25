@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "version": "city_v8",
+  "origin": "Олександрія, Кіровоградська область",
+  "routes": [
+    {
+      "city": "Ізмаїл",
+      "region": "Одеська обл.",
+      "km": 648,
+      "status": "planning_city_to_city",
+      "source": "https://flagma.ua/uk/vidstan-aleksandriyaukr-izmail/",
+      "alternatives_km": [
+        621,
+        633
+      ],
+      "note": "Відстань між містами; не до термінала і не тариф."
+    }
+  ],
+  "default_freight_rate": null,
+  "note": "Невідомі маршрути не заповнюються приблизними відстанями. Ставки перевезень задаються вручну."
+}
