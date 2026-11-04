@@ -1,7 +1,7 @@
 """
 AGRO BAROMETER — News Parser
-Збирає агро-новини за останні 24 год (вікно 7:00–7:00)
-Джерела: latifundist.com (RSS + web), agroportal.ua, apk-inform.com, ukragroconsult.com
+Збирає агро-новини за останні 30 год
+Джерела: agroportal.ua, ukrinform.net/agro, graintrade.com.ua, ukragroconsult.com
 Зберігає: news_data.json
 """
 
@@ -14,62 +14,84 @@ from pathlib import Path
 
 # ─── НАЛАШТУВАННЯ ────────────────────────────────────────────────────────────
 NEWS_FILE = "news_data.json"
-MAX_AGE_HOURS = 30          # вікно: 30 год назад (щоб не пропустити ніч)
-MAX_ITEMS_TOTAL = 25        # макс новин у підсумковому файлі
+MAX_AGE_HOURS = 30
+MAX_ITEMS_TOTAL = 25
 MAX_PER_SOURCE = 10
 
 HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/120.0.0.0 Safari/537.36"
     ),
-    "Accept-Language": "uk,en;q=0.9",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "uk-UA,uk;q=0.9,en;q=0.8",
+    "Accept-Encoding": "gzip, deflate",
+    "Connection": "keep-alive",
 }
 
-# Ключові слова для фільтрації релевантних агро-новин (достатньо одного)
-AGRO_KEYWORDS = [
-    "пшениц", "кукурудз", "соняшник", "соя", "ріпак", "ячмінь",
-    "зерно", "олія", "шрот", "врожай", "збирання", "посів",
-    "експорт", "imporт", "ціна", "тонна", "елеватор",
-    "USDA", "ФАО", "FAO", "агро", "зернов", "хліб", "борошн",
-    "тариф", "ПДВ", "митниц", "залізниц", "укрзалізниц",
-    "nibulon", "нібулон", "кернел", "kernel", "астарта",
+# Ключові слова (українські + англійські — для двомовних джерел)
+AGRO_KEYWORDS_UK = [
+    "пшениц", "кукурудз", "соняшник", "сої", "соя", "ріпак", "ячмінь", "ячменю",
+    "зерно", "зерн", "олія", "шрот", "врожай", "збирання", "посів", "жнив",
+    "експорт", "імпорт", "ціна", "ціни", "тонна", "елеватор", "зернотрейдер",
+    "агро", "аграр", "хліб", "борошн", "фермер", "землероб",
+    "нібулон", "кернел", "астарта", "прометей", "укрзерно",
+    "залізниц", "укрзалізниц", "тариф", "фрахт", "перевезення",
+    "посівна", "добрива", "добриво", "пестицид", "гербіцид",
+    "USDA", "WASDE", "ФАО", "FAO", "IGC", "чорноморськ",
+]
+AGRO_KEYWORDS_EN = [
+    "wheat", "corn", "maize", "sunflower", "soybean", "soy", "rapeseed", "canola",
+    "grain", "oilseed", "harvest", "crop", "export", "fertilizer",
+    "ukraine", "ukrainian", "USDA", "FAO", "IGC",
 ]
 
 def _is_agro(title: str, text: str = "") -> bool:
     combined = (title + " " + text).lower()
-    return any(kw.lower() in combined for kw in AGRO_KEYWORDS)
+    return (
+        any(kw.lower() in combined for kw in AGRO_KEYWORDS_UK) or
+        any(kw.lower() in combined for kw in AGRO_KEYWORDS_EN)
+    )
 
-def _fetch(url: str, timeout: int = 15) -> str | None:
+def _fetch(url: str, timeout: int = 20) -> str | None:
     try:
         req = urllib.request.Request(url, headers=HEADERS)
         with urllib.request.urlopen(req, timeout=timeout) as r:
             raw = r.read()
+            # Handle gzip
+            if r.info().get('Content-Encoding') == 'gzip':
+                import gzip
+                raw = gzip.decompress(raw)
             enc = r.headers.get_content_charset("utf-8")
             return raw.decode(enc, errors="replace")
+    except urllib.error.HTTPError as e:
+        print(f"  [fetch] ❌ {url}: HTTP {e.code}")
+        return None
     except Exception as e:
         print(f"  [fetch] ❌ {url}: {e}")
         return None
 
 def _parse_rss_item(item_xml: str) -> dict | None:
-    """Витягує title, link, pubDate, description з одного <item> RSS."""
     def _tag(tag):
-        m = re.search(rf'<{tag}[^>]*>\s*(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?\s*</{tag}>', item_xml, re.S)
+        m = re.search(rf'<{tag}[^>]*>\s*(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?\s*</{tag}>', item_xml, re.S | re.I)
         return m.group(1).strip() if m else ""
     title = re.sub(r'<[^>]+>', '', _tag("title")).strip()
     link  = _tag("link") or _tag("guid")
-    pub   = _tag("pubDate") or _tag("dc:date") or _tag("published")
-    desc  = re.sub(r'<[^>]+>', '', _tag("description")).strip()[:300]
+    # <link> sometimes contains whitespace/newlines around CDATA
+    link  = re.sub(r'\s+', '', link)
+    pub   = _tag("pubDate") or _tag("dc:date") or _tag("published") or _tag("updated")
+    desc  = re.sub(r'<[^>]+>', '', _tag("description") or _tag("summary")).strip()[:300]
     if not title or not link:
         return None
+    # Fix relative links
+    if link.startswith("/"):
+        return None  # will fix in caller
     return {"title": title, "url": link.strip(), "pub": pub.strip(), "summary": desc}
 
 def _parse_rss_date(pub: str) -> datetime | None:
-    """Намагається розпарсити RSS pubDate у timezone-aware datetime."""
     if not pub:
         return None
-    # RFC 2822: Thu, 01 Nov 2026 10:30:00 +0200
+    # RFC 2822
     m = re.search(r'(\d{1,2})\s+(\w{3})\s+(\d{4})\s+(\d{2}):(\d{2}):(\d{2})\s+([+-]\d{4}|UTC|GMT)', pub)
     if m:
         MONTHS = {"Jan":1,"Feb":2,"Mar":3,"Apr":4,"May":5,"Jun":6,
@@ -84,14 +106,17 @@ def _parse_rss_date(pub: str) -> datetime | None:
                       tzinfo=timezone(timedelta(minutes=offset)))
         return dt.astimezone(timezone.utc)
     # ISO 8601
-    m2 = re.search(r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})', pub)
+    m2 = re.search(r'(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})', pub)
     if m2:
         yr,mo,dy,hh,mm = m2.groups()
         return datetime(int(yr),int(mo),int(dy),int(hh),int(mm), tzinfo=timezone.utc)
     return None
 
 def _rss_items(rss_text: str) -> list[dict]:
-    items = re.findall(r'<item[^>]*>(.*?)</item>', rss_text, re.S)
+    items = re.findall(r'<item[^>]*>(.*?)</item>', rss_text, re.S | re.I)
+    if not items:
+        # Atom feed
+        items = re.findall(r'<entry[^>]*>(.*?)</entry>', rss_text, re.S | re.I)
     result = []
     for item_xml in items:
         parsed = _parse_rss_item(item_xml)
@@ -99,68 +124,54 @@ def _rss_items(rss_text: str) -> list[dict]:
             result.append(parsed)
     return result
 
-def _age_ok(pub_str: str, now: datetime, max_hours: int) -> bool:
+def _age_ok(pub_str: str, now: datetime) -> bool:
     dt = _parse_rss_date(pub_str)
     if not dt:
-        return True  # якщо не парситься дата — беремо
-    return (now - dt).total_seconds() / 3600 <= max_hours
+        return True
+    return (now - dt).total_seconds() / 3600 <= MAX_AGE_HOURS
+
+def _fmt_dt(pub_str: str) -> str:
+    dt = _parse_rss_date(pub_str)
+    if dt:
+        # Convert to Kyiv time (UTC+2)
+        kyiv = dt + timedelta(hours=2)
+        return kyiv.strftime("%d.%m.%Y %H:%M")
+    return pub_str[:16]
 
 # ─── ДЖЕРЕЛА ─────────────────────────────────────────────────────────────────
 
-def parse_latifundist() -> list[dict]:
-    """latifundist.com — RSS-стрічка новин."""
-    print("  [latifundist] Завантаження RSS...")
-    rss = _fetch("https://latifundist.com/rss/news", timeout=20)
-    if not rss:
-        rss = _fetch("https://latifundist.com/feed", timeout=20)
-    if not rss:
-        print("  [latifundist] ❌ RSS недоступний")
-        return []
-    items = _rss_items(rss)
-    now = datetime.now(timezone.utc)
-    records = []
-    for item in items[:40]:
-        if not _age_ok(item["pub"], now, MAX_AGE_HOURS):
-            continue
-        if not _is_agro(item["title"], item["summary"]):
-            continue
-        dt = _parse_rss_date(item["pub"])
-        records.append({
-            "source": "latifundist.com",
-            "title":  item["title"][:200],
-            "url":    item["url"],
-            "date":   dt.strftime("%d.%m.%Y %H:%M") if dt else item["pub"][:16],
-            "summary": item["summary"][:250],
-        })
-        if len(records) >= MAX_PER_SOURCE:
-            break
-    print(f"  [latifundist] ✅ {len(records)} новин")
-    return records
-
-
 def parse_agroportal() -> list[dict]:
-    """agroportal.ua — RSS-стрічка."""
+    """agroportal.ua — RSS (пробуємо uk та /en)."""
     print("  [agroportal] Завантаження RSS...")
-    rss = _fetch("https://agroportal.ua/rss/news.xml", timeout=20)
+    rss = None
+    for url in [
+        "https://agroportal.ua/uk/rss",
+        "https://agroportal.ua/rss",
+        "https://agroportal.ua/en/rss",
+        "https://agroportal.ua/news/rss",
+    ]:
+        rss = _fetch(url)
+        if rss and ("<item" in rss or "<entry" in rss):
+            print(f"  [agroportal] RSS знайдено: {url}")
+            break
+
     if not rss:
-        rss = _fetch("https://agroportal.ua/rss/", timeout=20)
-    if not rss:
-        print("  [agroportal] ❌ RSS недоступний")
-        return []
+        print("  [agroportal] ❌ RSS недоступний — парсимо HTML")
+        return _parse_agroportal_html()
+
     items = _rss_items(rss)
     now = datetime.now(timezone.utc)
     records = []
     for item in items[:40]:
-        if not _age_ok(item["pub"], now, MAX_AGE_HOURS):
+        if not _age_ok(item["pub"], now):
             continue
         if not _is_agro(item["title"], item["summary"]):
             continue
-        dt = _parse_rss_date(item["pub"])
         records.append({
             "source": "agroportal.ua",
             "title":  item["title"][:200],
             "url":    item["url"],
-            "date":   dt.strftime("%d.%m.%Y %H:%M") if dt else item["pub"][:16],
+            "date":   _fmt_dt(item["pub"]),
             "summary": item["summary"][:250],
         })
         if len(records) >= MAX_PER_SOURCE:
@@ -168,46 +179,116 @@ def parse_agroportal() -> list[dict]:
     print(f"  [agroportal] ✅ {len(records)} новин")
     return records
 
-
-def parse_apkinform() -> list[dict]:
-    """apk-inform.com — RSS."""
-    print("  [apk-inform] Завантаження RSS...")
-    rss = _fetch("https://www.apk-inform.com/uk/rss/news", timeout=20)
-    if not rss:
-        rss = _fetch("https://www.apk-inform.com/rss/", timeout=20)
-    if not rss:
-        print("  [apk-inform] ❌ RSS недоступний")
+def _parse_agroportal_html() -> list[dict]:
+    """Fallback: парсимо HTML головної сторінки agroportal.ua."""
+    html = _fetch("https://agroportal.ua/news/", timeout=25)
+    if not html:
         return []
+    records = []
+    now = datetime.now(timezone.utc)
+    # <a href="/news/...">Title</a>
+    for m in re.finditer(r'<a[^>]+href="(/(?:uk/)?news/[^"]+)"[^>]*>\s*<[^>]+>\s*([^<]{15,200}?)\s*</[^>]+>', html):
+        path, title = m.group(1), m.group(2).strip()
+        title = re.sub(r'\s+', ' ', title)
+        if not _is_agro(title):
+            continue
+        full_url = f"https://agroportal.ua{path}"
+        snippet  = html[max(0,m.start()-300):m.end()+300]
+        dm = re.search(r'(\d{2})[./](\d{2})[./](\d{4})', snippet)
+        date_str = f"{dm.group(1)}.{dm.group(2)}.{dm.group(3)}" if dm else "?"
+        records.append({"source":"agroportal.ua","title":title[:200],"url":full_url,"date":date_str,"summary":""})
+        if len(records) >= MAX_PER_SOURCE:
+            break
+    print(f"  [agroportal HTML] ✅ {len(records)} новин")
+    return records
+
+
+def parse_ukrinform_agro() -> list[dict]:
+    """ukrinform.net — RSS розділу Агро/Економіка."""
+    print("  [ukrinform] Завантаження RSS...")
+    rss = None
+    for url in [
+        "https://www.ukrinform.ua/rss/block-agroindustrial_complex",
+        "https://www.ukrinform.net/rss/block-economy.rss",
+        "https://www.ukrinform.ua/rss/rubric-economy",
+    ]:
+        rss = _fetch(url)
+        if rss and ("<item" in rss or "<entry" in rss):
+            print(f"  [ukrinform] RSS знайдено: {url}")
+            break
+
+    if not rss:
+        print("  [ukrinform] ❌ RSS недоступний")
+        return []
+
     items = _rss_items(rss)
     now = datetime.now(timezone.utc)
     records = []
-    for item in items[:40]:
-        if not _age_ok(item["pub"], now, MAX_AGE_HOURS):
+    for item in items[:50]:
+        if not _age_ok(item["pub"], now):
             continue
         if not _is_agro(item["title"], item["summary"]):
             continue
-        dt = _parse_rss_date(item["pub"])
         records.append({
-            "source": "apk-inform.com",
+            "source": "ukrinform.ua",
             "title":  item["title"][:200],
             "url":    item["url"],
-            "date":   dt.strftime("%d.%m.%Y %H:%M") if dt else item["pub"][:16],
+            "date":   _fmt_dt(item["pub"]),
             "summary": item["summary"][:250],
         })
         if len(records) >= MAX_PER_SOURCE:
             break
-    print(f"  [apk-inform] ✅ {len(records)} новин")
+    print(f"  [ukrinform] ✅ {len(records)} новин")
+    return records
+
+
+def parse_graintrade_news() -> list[dict]:
+    """graintrade.com.ua — сторінка новин (вже парсили ціни, тут беремо новинні статті)."""
+    print("  [graintrade] Завантаження новин...")
+    html = _fetch("https://graintrade.com.ua/novosti", timeout=25)
+    if not html:
+        print("  [graintrade] ❌ недоступний")
+        return []
+
+    now = datetime.now(timezone.utc)
+    records = []
+    # graintrade: <a href="/novosti/...">title</a> + дата поруч
+    for m in re.finditer(
+        r'<a[^>]+href="(/novosti/[^"?#]+)"[^>]*>\s*([^<]{15,250}?)\s*</a>',
+        html
+    ):
+        path, title = m.group(1), m.group(2).strip()
+        title = re.sub(r'\s+', ' ', title)
+        if len(title) < 15 or not _is_agro(title):
+            continue
+        full_url = f"https://graintrade.com.ua{path}"
+        # Шукаємо дату поблизу (формат DD.MM.YYYY або словесний)
+        snippet = html[max(0, m.start()-200):m.end()+200]
+        dm = re.search(r'(\d{2})[./](\d{2})[./](\d{4})', snippet)
+        if dm:
+            yr, mo, dy = int(dm.group(3)), int(dm.group(2)), int(dm.group(1))
+            pub_dt = datetime(yr, mo, dy, 12, 0, tzinfo=timezone.utc)
+            if (now - pub_dt).total_seconds() / 3600 > MAX_AGE_HOURS + 24:
+                continue
+            date_str = f"{dm.group(1)}.{dm.group(2)}.{dm.group(3)}"
+        else:
+            date_str = "?"
+        if full_url not in {r["url"] for r in records}:
+            records.append({"source":"graintrade.com.ua","title":title[:200],"url":full_url,"date":date_str,"summary":""})
+        if len(records) >= MAX_PER_SOURCE:
+            break
+    print(f"  [graintrade] ✅ {len(records)} новин")
     return records
 
 
 def parse_ukragroconsult() -> list[dict]:
-    """ukragroconsult.com — розбираємо головну сторінку новин."""
+    """ukragroconsult.com — головна сторінка аналітики."""
     print("  [ukragroconsult] Завантаження...")
     html = _fetch("https://ukragroconsult.com/analytikacin/", timeout=20)
     if not html:
         print("  [ukragroconsult] ❌ недоступний")
         return []
-    # Шукаємо блоки новин: <a href="/analytikacin/...">Заголовок</a> + дата
+
     now = datetime.now(timezone.utc)
     records = []
     for m in re.finditer(
@@ -219,22 +300,58 @@ def parse_ukragroconsult() -> list[dict]:
         if not _is_agro(title):
             continue
         full_url = f"https://ukragroconsult.com{url_path}"
-        # Шукаємо дату поблизу
-        snippet = html[max(0,m.start()-200):m.end()+200]
+        snippet = html[max(0, m.start()-200):m.end()+200]
         dm = re.search(r'(\d{2})[./](\d{2})[./](\d{4})', snippet)
-        date_str = f"{dm.group(3)}-{dm.group(2)}-{dm.group(1)}" if dm else ""
-        if date_str and not _age_ok(date_str+"T12:00", now, MAX_AGE_HOURS+24):
-            continue
-        records.append({
-            "source": "ukragroconsult.com",
-            "title":  title[:200],
-            "url":    full_url,
-            "date":   f"{dm.group(1)}.{dm.group(2)}.{dm.group(3)}" if dm else "?",
-            "summary": "",
-        })
+        if dm:
+            yr, mo, dy = int(dm.group(3)), int(dm.group(2)), int(dm.group(1))
+            pub_dt = datetime(yr, mo, dy, 12, 0, tzinfo=timezone.utc)
+            if (now - pub_dt).total_seconds() / 3600 > MAX_AGE_HOURS + 36:
+                continue
+            date_str = f"{dm.group(1)}.{dm.group(2)}.{dm.group(3)}"
+        else:
+            date_str = "?"
+        if full_url not in {r["url"] for r in records}:
+            records.append({"source":"ukragroconsult.com","title":title[:200],"url":full_url,"date":date_str,"summary":""})
         if len(records) >= MAX_PER_SOURCE:
             break
     print(f"  [ukragroconsult] ✅ {len(records)} новин")
+    return records
+
+
+def parse_latifundist_html() -> list[dict]:
+    """latifundist.com — парсимо HTML розділу новин (RSS повертає 404)."""
+    print("  [latifundist] Завантаження HTML новин...")
+    html = _fetch("https://latifundist.com/novosti/", timeout=25)
+    if not html:
+        print("  [latifundist] ❌ недоступний")
+        return []
+
+    now = datetime.now(timezone.utc)
+    records = []
+    # latifundist: <a href="/novosti/NNNNN-...">Title</a>
+    for m in re.finditer(
+        r'<a[^>]+href="(https?://latifundist\.com/novosti/\d+[^"]*)"[^>]*>\s*([^<]{15,250}?)\s*</a>',
+        html
+    ):
+        url, title = m.group(1), m.group(2).strip()
+        title = re.sub(r'\s+', ' ', title)
+        if not _is_agro(title):
+            continue
+        snippet = html[max(0, m.start()-300):m.end()+300]
+        dm = re.search(r'(\d{2})[./](\d{2})[./](\d{4})', snippet)
+        if dm:
+            yr, mo, dy = int(dm.group(3)), int(dm.group(2)), int(dm.group(1))
+            pub_dt = datetime(yr, mo, dy, 12, 0, tzinfo=timezone.utc)
+            if (now - pub_dt).total_seconds() / 3600 > MAX_AGE_HOURS + 24:
+                continue
+            date_str = f"{dm.group(1)}.{dm.group(2)}.{dm.group(3)}"
+        else:
+            date_str = "?"
+        if url not in {r["url"] for r in records}:
+            records.append({"source":"latifundist.com","title":title[:200],"url":url,"date":date_str,"summary":""})
+        if len(records) >= MAX_PER_SOURCE:
+            break
+    print(f"  [latifundist] ✅ {len(records)} новин")
     return records
 
 
@@ -244,7 +361,13 @@ def main():
     print(f"=== News Parser {datetime.now().strftime('%d.%m.%Y %H:%M')} ===")
 
     all_news: list[dict] = []
-    for parser_fn in [parse_latifundist, parse_agroportal, parse_apkinform, parse_ukragroconsult]:
+    for parser_fn in [
+        parse_latifundist_html,
+        parse_agroportal,
+        parse_ukrinform_agro,
+        parse_graintrade_news,
+        parse_ukragroconsult,
+    ]:
         try:
             all_news.extend(parser_fn())
         except Exception as e:
@@ -259,9 +382,8 @@ def main():
             seen_urls.add(u)
             unique.append(item)
 
-    # Сортуємо: найновіші вперед (за date string — підходить якщо DD.MM.YYYY HH:MM)
-    # Тримаємо тільки MAX_ITEMS_TOTAL
-    unique.sort(key=lambda x: x.get("date",""), reverse=True)
+    # Сортуємо: найновіші вперед
+    unique.sort(key=lambda x: x.get("date", ""), reverse=True)
     unique = unique[:MAX_ITEMS_TOTAL]
 
     output = {
@@ -270,8 +392,8 @@ def main():
         "items": unique,
     }
     Path(NEWS_FILE).write_text(json.dumps(output, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\n✅ {NEWS_FILE} збережено: {len(unique)} новин")
-    for n in unique[:5]:
+    print(f"\n✅ {NEWS_FILE}: {len(unique)} новин")
+    for n in unique[:8]:
         print(f"   [{n['source']}] {n['date']} — {n['title'][:70]}")
     return 0
 
