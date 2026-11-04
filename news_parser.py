@@ -328,12 +328,13 @@ def parse_latifundist_html() -> list[dict]:
 
     now = datetime.now(timezone.utc)
     records = []
-    # latifundist: <a href="/novosti/NNNNN-...">Title</a>
+    # latifundist: <a href="/novosti/..."> або абсолютне посилання
     for m in re.finditer(
-        r'<a[^>]+href="(https?://latifundist\.com/novosti/\d+[^"]*)"[^>]*>\s*([^<]{15,250}?)\s*</a>',
+        r'<a[^>]+href="((?:https?://latifundist\.com)?/novosti/[^"?#]{5,})"[^>]*>\s*([^<]{15,250}?)\s*</a>',
         html
     ):
-        url, title = m.group(1), m.group(2).strip()
+        raw_url, title = m.group(1), m.group(2).strip()
+        url = raw_url if raw_url.startswith("http") else f"https://latifundist.com{raw_url}"
         title = re.sub(r'\s+', ' ', title)
         if not _is_agro(title):
             continue
@@ -355,6 +356,43 @@ def parse_latifundist_html() -> list[dict]:
     return records
 
 
+def parse_infagro() -> list[dict]:
+    """infagro.com.ua — агро-новини."""
+    print("  [infagro] Завантаження...")
+    rss = None
+    for url in [
+        "https://infagro.com.ua/rss/",
+        "https://infagro.com.ua/feed/",
+        "https://infagro.com.ua/rss.xml",
+    ]:
+        rss = _fetch(url, timeout=15)
+        if rss and ("<item" in rss or "<entry" in rss):
+            print(f"  [infagro] RSS знайдено: {url}")
+            break
+    if not rss:
+        print("  [infagro] ❌ RSS недоступний")
+        return []
+    items = _rss_items(rss)
+    now = datetime.now(timezone.utc)
+    records = []
+    for item in items[:40]:
+        if not _age_ok(item["pub"], now):
+            continue
+        if not _is_agro(item["title"], item["summary"]):
+            continue
+        records.append({
+            "source": "infagro.com.ua",
+            "title":  item["title"][:200],
+            "url":    item["url"],
+            "date":   _fmt_dt(item["pub"]),
+            "summary": item["summary"][:250],
+        })
+        if len(records) >= MAX_PER_SOURCE:
+            break
+    print(f"  [infagro] ✅ {len(records)} новин")
+    return records
+
+
 # ─── ГОЛОВНА ФУНКЦІЯ ──────────────────────────────────────────────────────────
 
 def main():
@@ -363,6 +401,7 @@ def main():
     all_news: list[dict] = []
     for parser_fn in [
         parse_latifundist_html,
+        parse_infagro,
         parse_agroportal,
         parse_ukrinform_agro,
         parse_graintrade_news,
