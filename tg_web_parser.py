@@ -1,27 +1,38 @@
 """
-AGRO BAROMETER — Telegram Web Parser
-Читає публічні канали через t.me/s/ (без авторизації, без Telethon)
+AGRO BAROMETER — Telegram Parser
+Режим 1 (пріоритет): Telethon + TG_SESSION — читає приватні та публічні канали
+Режим 2 (fallback):  Playwright — тільки публічні t.me/s/
 Зберігає: telegram_prices.json
 """
 
 import asyncio
 import json
+import os
 import re
 from datetime import datetime, timedelta, timezone
 
-USD_UAH = 45.47
+USD_UAH = float(os.environ.get("USD_UAH_RATE", "45.47"))
 EUR_UAH = 50.80
 
 # ─── КАНАЛИ ───────────────────────────────────────────────────────────────────
+# Telethon може читати всі; Playwright — тільки публічні (без *)
 CHANNELS = [
-    ("navigate_agro", "prices"),   # щоденний прайс — основний
-    ("agrohub_od",    "prices"),   # CPT термінали, Ф-2
-    ("AgroBrok",      "prices"),   # EXW/DAP
-    ("rawagro",       "prices"),   # РО АГРО ТРЕЙД — прайс 6 культур
-    ("Agroprosperis_price", "prices"),  # Агропросперіс
-    ("spike_brokers", "context"),  # тижневий огляд
-    ("latifundistmedia", "news"),
+    ("navigate_agro",        "prices"),   # щоденний прайс — основний
+    ("agrohub_od",           "prices"),   # CPT термінали, Ф-2
+    ("AgroBrok",             "prices"),   # EXW/DAP
+    ("rawagro",              "prices"),   # РО АГРО ТРЕЙД — прайс 6 культур
+    ("Agroprosperis_price",  "prices"),   # Агропросперіс
+    ("agro_graintrade",      "prices"),   # GrainTrade прайс
+    ("uagrain",              "prices"),   # УкрАгроКонсалт ціни
+    ("apk_inform_prices",    "prices"),   # АПК-Інформ ціни
+    ("spike_brokers",        "context"),  # тижневий огляд
+    ("latifundistmedia",     "news"),
 ]
+
+# API credentials для Telethon
+TG_API_ID   = int(os.environ.get("TG_API_ID",   "30430309"))
+TG_API_HASH = os.environ.get("TG_API_HASH", "4360b5aa9c5cf78aff7f3ba2d9c661fc")
+TG_SESSION  = os.environ.get("TG_SESSION",  "")
 
 # ─── МАПИ ─────────────────────────────────────────────────────────────────────
 CULTURE_HEADERS = {
@@ -218,6 +229,69 @@ def parse_generic_msg(text, channel, date_str):
     return records
 
 
+# ─── TELETHON SCRAPER ────────────────────────────────────────────────────────
+
+async def _telethon_fetch_all(cutoff: datetime) -> list:
+    """Читає всі канали через Telethon (потребує TG_SESSION)."""
+    from telethon import TelegramClient
+    from telethon.sessions import StringSession
+    from telethon.errors import FloodWaitError, ChannelPrivateError, UsernameNotOccupiedError
+
+    all_records = []
+
+    client = TelegramClient(StringSession(TG_SESSION), TG_API_ID, TG_API_HASH,
+                            system_version="4.16.30-vxCUSTOM")
+    await client.connect()
+
+    if not await client.is_user_authorized():
+        print("  [telethon] ❌ сесія недійсна — переавторизуйся")
+        await client.disconnect()
+        return []
+
+    me = await client.get_me()
+    print(f"  [telethon] ✅ авторизовано як @{me.username or me.first_name}")
+
+    for channel, role in CHANNELS:
+        if role not in ("prices",):
+            continue
+        try:
+            msgs = []
+            async for msg in client.iter_messages(channel, limit=50):
+                if not msg.date:
+                    continue
+                msg_dt = msg.date.replace(tzinfo=timezone.utc) if msg.date.tzinfo is None else msg.date
+                if msg_dt < cutoff:
+                    break
+                if msg.text:
+                    msgs.append({"text": msg.text, "datetime": msg_dt})
+
+            print(f"  [telethon] @{channel}: {len(msgs)} свіжих повід.")
+
+            price_count = 0
+            for m in msgs:
+                date_str = (m["datetime"] + timedelta(hours=2)).strftime("%d.%m.%Y %H:%M")
+                if channel == "navigate_agro":
+                    recs = parse_navigate_agro(m["text"], date_str)
+                else:
+                    recs = parse_generic_msg(m["text"], channel, date_str)
+                all_records.extend(recs)
+                price_count += len(recs)
+            if price_count:
+                print(f"  [telethon] @{channel}: {price_count} цінових записів")
+
+        except FloodWaitError as e:
+            print(f"  [telethon] @{channel}: FloodWait {e.seconds}s — пропускаємо")
+        except (ChannelPrivateError, UsernameNotOccupiedError) as e:
+            print(f"  [telethon] @{channel}: ❌ {e}")
+        except Exception as e:
+            print(f"  [telethon] @{channel}: помилка ({e})")
+
+        await asyncio.sleep(1)  # щоб не тригернути flood limit
+
+    await client.disconnect()
+    return all_records
+
+
 # ─── PLAYWRIGHT SCRAPER ───────────────────────────────────────────────────────
 
 async def _scrape_channel(pw, channel: str, role: str, cutoff: datetime) -> list:
@@ -346,13 +420,28 @@ def _add_net(records):
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
 
 async def _run_all():
+    cutoff = datetime.now(timezone.utc) - timedelta(days=3)
+
+    # ── Режим 1: Telethon ──────────────────────────────────────────────────────
+    if TG_SESSION:
+        print("  [tg] Режим: Telethon (авторизований)")
+        try:
+            records = await _telethon_fetch_all(cutoff)
+            if records:
+                return _add_net(records)
+            print("  [tg] Telethon повернув 0 записів — fallback на Playwright")
+        except Exception as e:
+            print(f"  [tg] Telethon помилка ({e}) — fallback на Playwright")
+    else:
+        print("  [tg] TG_SESSION не задано — режим Playwright (тільки публічні)")
+
+    # ── Режим 2: Playwright fallback ──────────────────────────────────────────
     try:
         from playwright.async_api import async_playwright
     except ImportError:
         print("ПОМИЛКА: pip3 install playwright && python3 -m playwright install chromium")
         return []
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=3)
     all_records = []
 
     async with async_playwright() as pw:
@@ -364,8 +453,9 @@ async def _run_all():
 
 
 def main():
-    print(f"=== Telegram Web Parser {datetime.now().strftime('%d.%m.%Y %H:%M')} ===")
-    print(f"Джерело: t.me/s/ (без авторизації)\n")
+    print(f"=== Telegram Parser {datetime.now().strftime('%d.%m.%Y %H:%M')} ===")
+    mode = "Telethon" if TG_SESSION else "Playwright (публічні)"
+    print(f"Режим: {mode}\n")
 
     all_records = asyncio.run(_run_all())
 

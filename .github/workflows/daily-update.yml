@@ -32,9 +32,12 @@ jobs:
       - name: Install Playwright Chromium
         run: playwright install chromium --with-deps
 
-      - name: Telegram prices (web, без авторизації)
+      - name: Telegram prices (Telethon + Playwright fallback)
         env:
           USD_UAH_RATE: ${{ secrets.USD_UAH_RATE }}
+          TG_SESSION:   ${{ secrets.TG_SESSION }}
+          TG_API_ID:    ${{ secrets.TG_API_ID }}
+          TG_API_HASH:  ${{ secrets.TG_API_HASH }}
         run: |
           python3 tg_web_parser.py || echo "⚠️ tg_web_parser failed — продовжуємо без Telegram"
           COUNT=$(python3 -c "import json; d=json.load(open('telegram_prices.json')); print(d.get('records_total', len(d.get('records',[]))))" 2>/dev/null || echo "?")
