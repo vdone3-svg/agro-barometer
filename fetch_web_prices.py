@@ -84,7 +84,7 @@ EZERNO_REGION_MAP = {
 # Спільні хелпери
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _make_record(source, culture, quality, price, region, location, date_str, basis="з ПДВ"):
+def _make_record(source, culture, quality, price, region, location, date_str, basis="з ПДВ", url=""):
     fk = FREIGHT_KOPANI.get(region, 800)
     fd = FREIGHT_DOLYNSKE.get(region, 1000)
     return {
@@ -98,6 +98,7 @@ def _make_record(source, culture, quality, price, region, location, date_str, ba
         "location":     (location or source)[:60],
         "region":       region,
         "date":         date_str,
+        "url":          url,
         "net_kopani":   float(price) - fk,
         "net_dolynske": float(price) - fd,
     }
@@ -200,7 +201,8 @@ async def _parse_nibulon(pw) -> list:
                     for k, v in ELEVATOR_REGION.items():
                         if k in elev or elev in k:
                             region = v; break
-                records.append(_make_record("nibulon.com", culture, quality, price, region, elev, now_str))
+                records.append(_make_record("nibulon.com", culture, quality, price, region, elev, now_str,
+                                            url=NIBULON_URL))
 
         print(f"  [nibulon] Записів: {len(records)}")
     except Exception as e:
@@ -368,8 +370,14 @@ def _parse_ezerno_bodytext(text: str, company: str, default_region: str, now_str
                 dm = re.search(r'\d{2}[./]\d{2}[./]\d{4}', ctx)
                 date_str = dm.group(0) if dm else now_str
 
+                # URL профілю покупця якщо є
+                buyer_url = "https://e-zerno.com/grain-prices"
+                for bname, burl, _ in EZERNO_PROFILES:
+                    if bname.lower() in company.lower() or company.lower() in bname.lower():
+                        buyer_url = burl; break
                 records.append(_make_record("e-zerno.com", matched_culture, quality,
-                                             price, region, location, date_str, "EXW"))
+                                             price, region, location, date_str, "EXW",
+                                             url=buyer_url))
         i += 1
 
     # Дедуплікація
@@ -566,7 +574,8 @@ def _parse_graintrade() -> list:
 
                 rec = _make_record(
                     "graintrade.com.ua", culture, quality, price,
-                    "Україна", f"graintrade/{basis}", now_str, basis
+                    "Україна", f"graintrade/{basis}", now_str, basis,
+                    url=url
                 )
                 # Національна середня — фрахт не рахуємо (немає регіону)
                 rec["net_kopani"]   = None

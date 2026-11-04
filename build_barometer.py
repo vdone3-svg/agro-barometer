@@ -106,27 +106,51 @@ window.__AGRO_DATA__ = {data_json};
       const above=netK>=thresh;
       const sigLabel=above?'🟢 Продавати':(netK>=thresh*0.9?'🟡 Частково':'⚪ Чекати');
       const top3=(d.top_records||[]).slice(0,3);
-      const rows=top3.map(r=>`<tr><td>${{(r.location||'?').substring(0,22)}}</td><td class="num">${{fmt(r.price_uah)}} ₴</td><td class="num" style="color:var(--green)">${{fmt(r.net_kopani)}} ₴</td><td style="color:var(--fg3);font-size:10px">${{r.source||''}}</td></tr>`).join('');
-      cropsGrid.innerHTML+=`<div class="crop-card"><div class="crop-header"><div class="crop-icon-name"><span class="crop-emoji">${{emoji}}</span><span class="crop-name">${{culture.charAt(0).toUpperCase()+culture.slice(1)}}</span></div><span class="crop-rank ${{rank<=2?'top':''}}">#${{rank}}</span></div><div class="crop-body"><div class="price-row"><span class="price-label">Найкраща ціна</span><span class="price-val best">${{fmt(d.best_price_uah)}} ₴/т</span></div><div class="price-row"><span class="price-label">${{(d.best_price_loc||'').substring(0,28)}}</span><span class="price-label" style="font-size:10px;color:var(--fg3)">${{d.best_price_src||''}}</span></div><div class="divider"></div><div class="net-block"><div class="net-label">Чиста виручка (рейс 25 т)</div><div class="net-row"><span class="net-farm">📍 Копані</span><div><span class="net-val">${{fmt(netK)}} ₴/т</span><span class="net-trip"> → ${{fmtTrip(netK)}}</span></div></div><div class="net-divider"></div><div class="net-row"><span class="net-farm">📍 Долинське</span><div><span class="net-val" style="color:var(--accent2)">${{fmt(netD)}} ₴/т</span><span class="net-trip"> → ${{fmtTrip(netD)}}</span></div></div><div class="net-threshold ${{above?'above':'below'}}">Поріг: ${{fmt(thresh)}} ₴/т | ${{sigLabel}}</div></div>${{rows?`<div style="margin-top:8px;overflow-x:auto"><table class="tg-table" style="font-size:11px"><thead><tr><th>Пункт</th><th>Ціна</th><th>Net Копані</th><th>Джерело</th></tr></thead><tbody>${{rows}}</tbody></table></div>`:''}} <div style="font-size:10px;color:var(--fg3);margin-top:6px;text-align:right">${{d.records_count}} записів · ${{fmt(d.price_min)}}–${{fmt(d.price_max)}} ₴/т</div></div></div>`;
+      const rows=top3.map(r=>{{
+        const priceCell=r.url
+          ?`<td class="num"><a href="${{r.url}}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline dotted">${{fmt(r.price_uah)}} ₴</a></td>`
+          :`<td class="num">${{fmt(r.price_uah)}} ₴</td>`;
+        const netCell=r.net_kopani!=null
+          ?`<td class="num" style="color:var(--green)">${{fmt(r.net_kopani)}} ₴</td>`
+          :`<td class="num" style="color:var(--fg3)">нац.серед.</td>`;
+        return `<tr><td>${{(r.location||'?').substring(0,22)}}</td>${{priceCell}}${{netCell}}<td style="color:var(--fg3);font-size:10px">${{r.source||''}}</td></tr>`;
+      }}).join('');
+      // Посилання з кращої ціни
+      const bestUrl=d.top_records&&d.top_records[0]&&d.top_records[0].url?d.top_records[0].url:'';
+      const bestPriceHtml=bestUrl
+        ?`<a href="${{bestUrl}}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none" title="Відкрити пропозицію">${{fmt(d.best_price_uah)}} ₴/т ↗</a>`
+        :`${{fmt(d.best_price_uah)}} ₴/т`;
+      cropsGrid.innerHTML+=`<div class="crop-card"><div class="crop-header"><div class="crop-icon-name"><span class="crop-emoji">${{emoji}}</span><span class="crop-name">${{culture.charAt(0).toUpperCase()+culture.slice(1)}}</span></div><span class="crop-rank ${{rank<=2?'top':''}}">#${{rank}}</span></div><div class="crop-body"><div class="price-row"><span class="price-label">Найкраща ціна</span><span class="price-val best">${{bestPriceHtml}}</span></div><div class="price-row"><span class="price-label">${{(d.best_price_loc||'').substring(0,28)}}</span><span class="price-label" style="font-size:10px;color:var(--fg3)">${{d.best_price_src||''}}</span></div><div class="divider"></div><div class="net-block"><div class="net-label">Чиста виручка (рейс 25 т)</div><div class="net-row"><span class="net-farm">📍 Копані</span><div><span class="net-val">${{fmt(netK)}} ₴/т</span><span class="net-trip"> → ${{fmtTrip(netK)}}</span></div></div><div class="net-divider"></div><div class="net-row"><span class="net-farm">📍 Долинське</span><div><span class="net-val" style="color:var(--accent2)">${{fmt(netD)}} ₴/т</span><span class="net-trip"> → ${{fmtTrip(netD)}}</span></div></div><div class="net-threshold ${{above?'above':'below'}}">Поріг: ${{fmt(thresh)}} ₴/т | ${{sigLabel}}</div></div>${{rows?`<div style="margin-top:8px;overflow-x:auto"><table class="tg-table" style="font-size:11px"><thead><tr><th>Пункт</th><th>Ціна</th><th>Net Копані</th><th>Джерело</th></tr></thead><tbody>${{rows}}</tbody></table></div>`:''}} <div style="font-size:10px;color:var(--fg3);margin-top:6px;text-align:right">${{d.records_count}} записів · ${{fmt(d.price_min)}}–${{fmt(d.price_max)}} ₴/т</div></div></div>`;
     }});
   }}
 
+  // ── Telegram-секція ──────────────────────────────────────────────────────
+  // Статична таблиця TG_ROWS в шаблоні — основа; тут лише доповнення/заміна
+  // коли є живі дані з TG з проставленою культурою.
   const tgBody=document.getElementById('tgBody');
   const tgFilters=document.getElementById('tgFilters');
   const tgInsights=document.getElementById('tgInsights');
   const tgSub=document.querySelector('#tgSection .sec-sub');
-  if(tgBody&&D.tg_records&&D.tg_records.length>0){{
+  const liveTg=(D.tg_records||[]).filter(r=>r.culture);
+  if(tgBody&&liveTg.length>0){{
+    // Є живі записи з культурою → замінюємо таблицю свіжими даними
     if(tgSub)tgSub.textContent='Автооновлення щодня о 07:00 · '+D.generated_at;
-    const culturesInData=[...new Set(D.tg_records.map(r=>r.culture).filter(Boolean))];
+    const culturesInData=[...new Set(liveTg.map(r=>r.culture))].sort();
     if(tgFilters)tgFilters.innerHTML='<button class="tg-chip active" onclick="tgFilter(null,this)">Всі</button>'+culturesInData.map(c=>`<button class="tg-chip" onclick="tgFilter('${{c}}',this)">${{c}}</button>`).join('');
     window.renderTgRows=function(fc){{
-      const rows=fc?D.tg_records.filter(r=>r.culture===fc):D.tg_records;
-      tgBody.innerHTML=rows.map(r=>`<tr><td style="color:var(--accent);white-space:nowrap">${{r.source||'?'}}</td><td>${{r.culture||'?'}}</td><td class="num">${{r.price_uah?fmt(r.price_uah)+' ₴':r.price_usd?r.price_usd+'$':'—'}}</td><td style="font-size:11px">✅ з ПДВ</td><td>${{(r.location||'?').substring(0,30)}}</td><td style="color:var(--fg3)">${{(r.date||'?').substring(0,10)}}</td><td style="font-size:11px;color:var(--fg3)">${{r.basis||''}} ${{r.region_norm&&r.region_norm!=='невідомо'?'· '+r.region_norm:''}}</td></tr>`).join('');
-    }}
+      const rows=fc?liveTg.filter(r=>r.culture===fc):liveTg;
+      tgBody.innerHTML=rows.map(r=>{{
+        const prUrl=r.url?`<a href="${{r.url}}" target="_blank" rel="noopener" style="color:var(--accent)">↗</a>`:'';
+        return `<tr><td style="color:var(--accent);white-space:nowrap">${{r.source||'?'}} ${{prUrl}}</td><td>${{r.culture||'?'}}</td><td class="num">${{r.price_uah?fmt(r.price_uah)+' ₴':r.price_usd?r.price_usd+'$':'—'}}</td><td style="font-size:11px">✅ з ПДВ</td><td>${{(r.location||'?').substring(0,30)}}</td><td style="color:var(--fg3)">${{(r.date||'?').substring(0,10)}}</td><td style="font-size:11px;color:var(--fg3)">${{r.basis||''}} ${{r.region_norm&&r.region_norm!=='невідомо'?'· '+r.region_norm:''}}</td></tr>`;
+      }}).join('');
+    }};
     window.renderTgRows(null);
     window.tgFilter=function(c,btn){{document.querySelectorAll('.tg-chip').forEach(b=>b.classList.remove('active'));btn.classList.add('active');window.renderTgRows(c);}};
-    if(tgInsights)tgInsights.innerHTML=D.cultures.map(c=>{{const d=D.prices[c];if(!d)return'';return`<div class="tg-insight"><strong>${{d.emoji}} ${{c.charAt(0).toUpperCase()+c.slice(1)}}:</strong> ${{fmt(d.best_price_uah)}} ₴/т · net Копані <strong>${{fmt(d.best_net_kopani)}} ₴/т</strong> (${{fmtTrip(d.best_net_kopani)}} за рейс)</div>`;}} ).filter(Boolean).join('');
-  }}else if(tgBody){{tgBody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--fg3);padding:20px">Запусти telegram_parser.py для завантаження цін</td></tr>';}}
+  }}
+  // Insights — оновлюємо незалежно від TG (на основі зведених цін)
+  if(tgInsights&&Object.values(D.prices).some(Boolean)){{
+    tgInsights.innerHTML=D.cultures.map(c=>{{const d=D.prices[c];if(!d)return'';return`<div class="tg-insight"><strong>${{d.emoji}} ${{c.charAt(0).toUpperCase()+c.slice(1)}}:</strong> ${{fmt(d.best_price_uah)}} ₴/т · net Копані <strong>${{fmt(d.best_net_kopani)}} ₴/т</strong> (${{fmtTrip(d.best_net_kopani)}} за рейс)</div>`;}} ).filter(Boolean).join('');
+  }}
 
   const land=D.land;
   if(land&&land.records&&land.records.length>0){{
@@ -136,6 +160,32 @@ window.__AGRO_DATA__ = {data_json};
     sec.innerHTML=`<div class="sec-head"><div class="sec-title">🏡 Земельний ринок — Кіровоградська обл.</div><div class="sec-sub">Моніторинг паїв · ${{D.generated_at}}</div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px"><div class="signal-card"><div class="signal-name">Лотів</div><div class="signal-val">${{stats.total_lots}}</div><div class="signal-sub">${{stats.sale_lots}} продаж · ${{stats.rent_lots}} оренда</div></div><div class="signal-card"><div class="signal-name">Ціна паю</div><div class="signal-val">${{fmt(stats.avg_price_ha)}} ₴/га</div><div class="signal-sub">≈ ${{fmt(Math.round(stats.avg_price_ha/USD_UAH))}} $/га</div></div><div class="signal-card"><div class="signal-name">Дохідність</div><div class="signal-val" style="color:var(--green)">${{stats.max_yield?stats.max_yield.toFixed(1)+'%':'—'}}</div><div class="signal-sub">макс.</div></div></div><div class="tg-table-wrap"><table class="tg-table" style="min-width:500px"><thead><tr><th>Тип/Район</th><th>Площа</th><th>Ціна/га</th><th>Оренда/пай</th><th>Дохідність</th><th>Джерело</th></tr></thead><tbody>${{rows}}</tbody></table></div>`;
     const calc=document.getElementById('calcSection');
     if(calc)calc.parentNode.insertBefore(sec,calc);else{{const m=document.querySelector('.main');if(m)m.appendChild(sec);}}
+  }}
+
+  // ── Новини ───────────────────────────────────────────────────────────────
+  const newsSection=document.getElementById('newsSection');
+  const newsGrid=document.getElementById('newsGrid');
+  const newsListStatic=document.getElementById('newsListStatic');
+  if(newsGrid&&D.news&&D.news.length>0){{
+    if(newsListStatic)newsListStatic.style.display='none';
+    const newsUpdSub=document.querySelector('#newsSection .sec-sub');
+    if(newsUpdSub&&D.news_generated_at){{
+      const gt=new Date(D.news_generated_at);
+      const gtStr=gt.toLocaleString('uk-UA',{{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}});
+      newsUpdSub.textContent='Оновлено: '+gtStr+' · 7:00–7:00 наступного дня';
+    }}
+    const srcColors={{'latifundist.com':'var(--accent)','agroportal.ua':'#4caf50','apk-inform.com':'#ff9800','ukragroconsult.com':'#9c27b0'}};
+    newsGrid.innerHTML=D.news.map(n=>{{
+      const col=srcColors[n.source]||'var(--fg3)';
+      const summ=n.summary?`<div class="news-summary">${{n.summary}}</div>`:'';
+      return `<a class="news-card" href="${{n.url}}" target="_blank" rel="noopener">
+        <div class="news-src" style="color:${{col}}">${{n.source}}</div>
+        <div class="news-title">${{n.title}}</div>
+        ${{summ}}
+        <div class="news-date">${{n.date}}</div>
+      </a>`;
+    }}).join('');
+    if(newsSection)newsSection.style.display='';
   }}
 
   window.__PRICES__=D.prices;window.__FREIGHT__=D.freight;window.__USD_UAH__=D.usd_uah;
@@ -170,16 +220,18 @@ def main():
     template_html = TEMPLATE.read_text(encoding="utf-8")
     print(f"✅ Шаблон: {TEMPLATE} ({len(template_html):,} символів)")
 
-    tg_data  = load_json("telegram_prices.json", {"records":[],"by_culture":{}})
-    web_data = load_json("web_prices.json", {"records":[]})
-    land_raw = load_json("land_data.json", {"records":[]})
+    tg_data   = load_json("telegram_prices.json", {"records":[],"by_culture":{}})
+    web_data  = load_json("web_prices.json", {"records":[]})
+    land_raw  = load_json("land_data.json", {"records":[]})
+    news_raw  = load_json("news_data.json", {"items":[],"total":0})
 
     tg_records = tg_data.get("records",[])
     if not tg_records:
         for v in tg_data.get("by_culture",{}).values(): tg_records.extend(v)
 
     all_records = tg_records + web_data.get("records",[])
-    print(f"   Telegram: {len(tg_records)} | Web: {len(web_data.get('records',[]))} | Земля: {len(land_raw.get('records',[]))}")
+    news_items = news_raw.get("items", [])
+    print(f"   Telegram: {len(tg_records)} | Web: {len(web_data.get('records',[]))} | Земля: {len(land_raw.get('records',[]))} | Новини: {len(news_items)}")
 
     prices   = best_prices(all_records)
     land_out = prepare_land(land_raw)
@@ -196,6 +248,8 @@ def main():
             [r for r in all_records if r.get("source","").startswith("@")],
             key=lambda x: x.get("date",""), reverse=True
         )[:50],
+        "news": news_items[:25],
+        "news_generated_at": news_raw.get("generated_at",""),
     }
 
     patched = re.sub(

@@ -670,6 +670,14 @@ body::before {
 .news-text a { color: var(--accent); text-decoration: none; }
 .news-text a:hover { text-decoration: underline; }
 .news-meta { font-size: 10px; color: var(--fg3); margin-top: 2px; }
+/* ── Dynamic news grid ── */
+.news-grid-dynamic { display: grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap: 10px; margin-top: 10px; }
+.news-card { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--fg); transition: border-color 0.15s; }
+.news-card:hover { border-color: var(--accent); }
+.news-src { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.news-title { font-size: 13px; line-height: 1.4; color: var(--fg); font-weight: 500; }
+.news-summary { font-size: 11px; color: var(--fg3); line-height: 1.4; }
+.news-date { font-size: 10px; color: var(--fg3); margin-top: auto; padding-top: 4px; }
 
 /* ── Clickable price links ── */
 a.price-val {
@@ -1175,9 +1183,13 @@ a.price-val.best:hover {
   </div>
 
   <!-- ── NEWS / ANALYTICS ── -->
-  <div class="news-panel">
-    <div class="panel-title"><span class="panel-title-icon">📰</span> Новини та аналітика (29.10.2026)</div>
-    <div class="news-list">
+  <div class="news-panel" id="newsSection">
+    <div class="panel-title"><span class="panel-title-icon">📰</span> Новини та аналітика</div>
+    <div class="sec-sub" style="font-size:11px;color:var(--fg3);margin-bottom:10px">Завантаження новин...</div>
+    <!-- Динамічна сітка новин (заповнюється JS-ін'єкцією) -->
+    <div id="newsGrid" class="news-grid-dynamic"></div>
+    <!-- Статичні новини як fallback, показуємо тільки якщо newsGrid порожній -->
+    <div class="news-list" id="newsListStatic">
       <div class="news-item hot">
         <span class="news-badge src-gt">GrainTrade</span>
         <div>
@@ -1224,6 +1236,7 @@ a.price-val.best:hover {
   </div>
 
   <!-- ── NBU RATE ── -->
+  <!-- newsListStatic closed above -->
   <div class="rate-row">
     <span>Курс НБУ 29.10.2026:</span>
     <span class="rate-val">1 USD = 45,60 ₴</span>

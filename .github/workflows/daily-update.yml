@@ -51,6 +51,12 @@ jobs:
           USD_UAH_RATE: ${{ secrets.USD_UAH_RATE }}
         run: python3 fetch_web_prices.py || echo "⚠️ web prices failed — продовжуємо без web"
 
+      - name: News parser (latifundist, agroportal, apk-inform, ukragroconsult)
+        run: |
+          python3 news_parser.py || echo "⚠️ news_parser failed — продовжуємо без новин"
+          COUNT=$(python3 -c "import json; d=json.load(open('news_data.json')); print(d.get('total',0))" 2>/dev/null || echo "?")
+          echo "✅ News: $COUNT статей"
+
       - name: Build HTML
         env:
           USD_UAH_RATE: ${{ secrets.USD_UAH_RATE }}
@@ -83,5 +89,6 @@ jobs:
             telegram_prices.json
             land_data.json
             web_prices.json
+            news_data.json
             *.log
           retention-days: 3
