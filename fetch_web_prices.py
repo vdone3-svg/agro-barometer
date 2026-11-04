@@ -338,7 +338,7 @@ def _parse_ezerno_bodytext(text: str, company: str, default_region: str, now_str
                 break
 
         if matched_culture:
-            ctx = '\n'.join(lines[i:i+8])
+            ctx = '\n'.join(lines[max(0, i-2):i+5])
             # Ціна — 4–6-значне число
             price = None
             for chunk in lines[i:i+6]:
@@ -349,7 +349,13 @@ def _parse_ezerno_bodytext(text: str, company: str, default_region: str, now_str
                         price = p
                         break
             if price:
-                region = _detect_region(ctx) or default_region
+                # Шукаємо регіон по-рядково у вузькому вікні (перший hit = найближчий)
+                region = default_region
+                for cl in lines[max(0, i-2):i+5]:
+                    r = _detect_region(cl)
+                    if r != "невідомо":
+                        region = r
+                        break
                 quality = _detect_quality(ctx)
                 # Локація — місто (рядок після ціни)
                 location = company
@@ -454,6 +460,138 @@ async def _parse_ezerno(pw, target_cultures=None) -> list:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# GRAINTRADE.COM.UA — щоденна таблиця EXW/CPT (ячмінь + інші культури)
+# ─────────────────────────────────────────────────────────────────────────────
+
+UA_MONTHS_GEN = {
+    1: 'sichnya', 2: 'lyutoho', 3: 'bereznya', 4: 'kvitnya',
+    5: 'travnya', 6: 'chervnya', 7: 'lypnya', 8: 'serpnya',
+    9: 'veresnya', 10: 'zhovtnya', 11: 'lystopada', 12: 'hrudnya',
+}
+GT_CULTURE_MAP = {
+    'ячмінь': 'ячмінь', 'ячміню': 'ячмінь',
+    'пшениц': 'пшениця',
+    'кукурудз': 'кукурудза',
+    'соняшник': 'соняшник',
+    'соя': 'соя',
+    'ріпак': 'ріпак', 'рапс': 'ріпак',
+}
+GT_BASIS_MAP = {
+    'cpt термінал': 'CPT', 'cpt переробник': 'CPT переробник',
+    'exw елевато': 'EXW', 'exw': 'EXW',
+    'fca': 'FCA', 'daf': 'DAF', 'cif': 'CIF',
+}
+
+
+def _parse_graintrade() -> list:
+    """Парсить щоденну статтю graintrade.com.ua — EXW/CPT по 6 культурах.
+    Fallback: пробує сьогодні і вчора (стаття виходить ~8:30, pipeline — 07:00).
+    """
+    from datetime import timedelta
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        print("  [graintrade] bs4 не встановлено")
+        return []
+
+    today = datetime.now()
+    records = []
+
+    for delta in (0, 1):
+        d = today - timedelta(days=delta)
+        month_gen = UA_MONTHS_GEN.get(d.month, 'nevid')
+        url = (
+            f"https://graintrade.com.ua/novosti/"
+            f"zakupivelni-tcini-na-zerno-v-ukraini-"
+            f"na-{d.day:02d}-{month_gen}-{d.year}-roku.html"
+        )
+        now_str = d.strftime("%d.%m.%Y")
+        try:
+            req = Request(url, headers=HEADERS)
+            with urlopen(req, timeout=20) as resp:
+                if resp.getcode() != 200:
+                    continue
+                html = resp.read().decode('utf-8', errors='replace')
+        except Exception as e:
+            print(f"  [graintrade] Не вдалося завантажити ({d.strftime('%d.%m')}): {e}")
+            continue
+
+        soup = BeautifulSoup(html, 'html.parser')
+
+        for table in soup.find_all('table'):
+            rows = table.find_all('tr')
+            for row in rows:
+                cells = row.find_all(['td', 'th'])
+                if len(cells) < 3:
+                    continue
+                c0 = cells[0].get_text(' ', strip=True).lower()
+                c1 = cells[1].get_text(' ', strip=True).lower() if len(cells) > 1 else ''
+                c2 = cells[2].get_text(' ', strip=True) if len(cells) > 2 else ''
+
+                # Визначаємо культуру
+                culture = None
+                for key, cname in GT_CULTURE_MAP.items():
+                    if key in c0:
+                        culture = cname
+                        break
+                if not culture:
+                    continue
+
+                # Якість пшениці
+                quality = None
+                if '2 кл' in c0 or '2кл' in c0: quality = '2 кл'
+                elif '3 кл' in c0 or '3кл' in c0: quality = '3 кл'
+                elif '4 кл' in c0 or '4кл' in c0: quality = '4 кл'
+                elif '1 кл' in c0 or '1кл' in c0: quality = '1 кл'
+                elif 'вис' in c0 and 'ол' in c0: quality = 'вис.ол.'
+                elif 'без гмо' in c0 or 'б/гмо' in c0: quality = 'не-ГМО'
+
+                # Базис
+                basis = 'невідомо'
+                for key, bname in GT_BASIS_MAP.items():
+                    if key in c1:
+                        basis = bname
+                        break
+
+                # Ціна (прибираємо всі нецифри)
+                price_str = re.sub(r'[^\d]', '', c2)
+                if not price_str:
+                    continue
+                try:
+                    price = float(price_str)
+                except ValueError:
+                    continue
+                if not (3000 <= price <= 60000):
+                    continue
+
+                rec = _make_record(
+                    "graintrade.com.ua", culture, quality, price,
+                    "Україна", f"graintrade/{basis}", now_str, basis
+                )
+                # Національна середня — фрахт не рахуємо (немає регіону)
+                rec["net_kopani"]   = None
+                rec["net_dolynske"] = None
+                records.append(rec)
+
+        if records:
+            print(f"  [graintrade] {d.strftime('%d.%m')}: {len(records)} записів | URL: {url}")
+            break  # знайшли — далі не шукаємо
+
+    if not records:
+        print(f"  [graintrade] ⚠️  0 записів (сьогодні + вчора не знайдено)")
+
+    # Дедуплікація
+    seen, unique = set(), []
+    for r in records:
+        key = (r['culture'], r.get('quality'), r['price_uah'])
+        if key not in seen:
+            seen.add(key)
+            unique.append(r)
+
+    return unique
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MAIN — всі парсери через єдиний Playwright контекст
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -486,6 +624,12 @@ async def _run_all() -> list:
         recs = await _parse_ezerno(pw, ['соняшник', 'соя', 'ріпак'])
         print(f"  Знайдено: {len(recs)} записів e-zerno.com")
         all_records.extend(recs)
+
+    # 4. Graintrade.com.ua — ячмінь + інші культури (EXW/CPT, urllib — не потребує Playwright)
+    print("Завантажую graintrade.com.ua (ячмінь + зведена таблиця) ...")
+    recs = _parse_graintrade()
+    print(f"  Знайдено: {len(recs)} записів graintrade.com.ua")
+    all_records.extend(recs)
 
     return all_records
 
