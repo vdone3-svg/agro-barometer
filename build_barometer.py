@@ -2,7 +2,7 @@ import json, os, re
 from datetime import datetime, timezone
 from pathlib import Path
 
-USD_UAH   = float(os.environ.get("USD_UAH", "41.5"))
+USD_UAH   = float(os.environ.get("USD_UAH_RATE") or os.environ.get("USD_UAH") or "41.5")
 TEMPLATE  = Path(os.environ.get("TEMPLATE_PATH", "barometer_template.html"))
 CULTURES  = ["ріпак", "соняшник", "соя", "кукурудза", "ячмінь", "пшениця"]
 CULTURE_EMOJI = {"ріпак":"💛","соняшник":"🌻","соя":"🫘","кукурудза":"🌽","ячмінь":"🌾","пшениця":"🌱"}
@@ -206,6 +206,25 @@ def main():
         r'(НБУ:.*?<strong>)[\d,]+(\s*₴/\$)',
         lambda m: m.group(1) + f"{USD_UAH:,.2f}".replace(".",",") + m.group(2), patched
     )
+    # Оновлюємо всі статичні дати у тижневому огляді, заголовках панелей і футерах
+    # Замінюємо ДД.ММ.РРРР → today у text-вузлах HTML (не в JS-рядках з цінами)
+    old_date_pat = re.compile(r'(\b\d{1,2}\.\d{1,2}\.\d{4}\b)')
+    today_short = now_str.split()[0]  # DD.MM.YYYY
+    # Замінюємо тільки у видимих HTML-текстах: заголовки секцій, підписи, span/div
+    # Не чіпаємо JS-об'єкти (рядки з 'val:', 'label:')
+    def _update_html_dates(html, today):
+        lines_out = []
+        for line in html.splitlines(keepends=True):
+            stripped = line.lstrip()
+            # Пропускаємо JS-рядки з даними та коментарі
+            if (stripped.startswith('{') or stripped.startswith('//') or
+                    'val:' in line or 'label:' in line or 'note:' in line or
+                    stripped.startswith('/*') or '*//' in line):
+                lines_out.append(line)
+            else:
+                lines_out.append(old_date_pat.sub(today, line))
+        return ''.join(lines_out)
+    patched = _update_html_dates(patched, today_short)
 
     injection = build_injection(agro_data)
     patched = patched.replace("</body>", injection + "\n</body>") if "</body>" in patched else patched + injection
