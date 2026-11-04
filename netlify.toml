@@ -1,0 +1,10 @@
+[build]
+  publish = "dist"
+  ignore = "exit 0"   # Вимикаємо auto-build Netlify; CI сам публікує через netlify-cli
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"

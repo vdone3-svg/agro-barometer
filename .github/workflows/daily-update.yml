@@ -1,0 +1,87 @@
+name: 🌾 AGRO BAROMETER — Daily Update
+
+on:
+  schedule:
+    # 07:00 Kyiv зима (UTC+2) = 05:00 UTC
+    # Влітку змінити на '0 4 * * *'
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: barometer-deploy
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright Chromium
+        run: playwright install chromium --with-deps
+
+      - name: Telegram prices (web, без авторизації)
+        env:
+          USD_UAH_RATE: ${{ secrets.USD_UAH_RATE }}
+        run: |
+          python3 tg_web_parser.py || echo "⚠️ tg_web_parser failed — продовжуємо без Telegram"
+          COUNT=$(python3 -c "import json; d=json.load(open('telegram_prices.json')); print(d.get('records_total', len(d.get('records',[]))))" 2>/dev/null || echo "?")
+          echo "✅ Telegram: $COUNT записів"
+
+      - name: Land market
+        run: |
+          python3 land_parser.py || echo "⚠️ land_parser failed"
+          COUNT=$(python3 -c "import json; print(len(json.load(open('land_data.json'))))" 2>/dev/null || echo "?")
+          echo "✅ Land: $COUNT лотів"
+
+      - name: Web prices — Nibulon + e-zerno
+        env:
+          USD_UAH_RATE: ${{ secrets.USD_UAH_RATE }}
+        run: python3 fetch_web_prices.py || echo "⚠️ web prices failed — продовжуємо без web"
+
+      - name: Build HTML
+        env:
+          USD_UAH_RATE: ${{ secrets.USD_UAH_RATE }}
+        run: |
+          python3 build_barometer.py
+          SIZE=$(wc -c < index.html | xargs)
+          echo "✅ index.html: $SIZE байт"
+
+      - name: Prepare dist
+        run: |
+          mkdir -p dist
+          cp index.html dist/
+
+      - name: Deploy to Netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID:    ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          npx --yes netlify-cli@17 deploy \
+            --prod \
+            --dir=dist \
+            --message "auto: $(date -u +'%Y-%m-%d %H:%M UTC')"
+
+      - name: Upload debug on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-${{ github.run_number }}
+          path: |
+            telegram_prices.json
+            land_data.json
+            web_prices.json
+            *.log
+          retention-days: 3

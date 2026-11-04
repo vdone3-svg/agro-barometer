@@ -1,0 +1,2193 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>AGRO BAROMETER V13</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap">
+
+<style>
+/* ═══════════════════════════════════════════════
+   AGRO BAROMETER V13 — Кіровоградська обл.
+   Layout: fixed header + scrollable main, 2-col grid crops
+   ═══════════════════════════════════════════════ */
+:root {
+  /* Color tokens — light */
+  --bg:        #f7f6f2;
+  --surface:   #ffffff;
+  --surface2:  #f0efe9;
+  --border:    #e2e0d8;
+  --fg:        #1a1a18;
+  --fg2:       #5a5a52;
+  --fg3:       #8c8c82;
+  --green:     #1a6b3a;
+  --green-bg:  #e8f5ee;
+  --amber:     #8a6000;
+  --amber-bg:  #fff8e1;
+  --red:       #9b2020;
+  --red-bg:    #fdeaea;
+  --wheat:     #c8860a;
+  --accent:    #2d6a2f;
+  --accent2:   #4a7c59;
+  --mono-bg:   #f0ede5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:        #141410;
+    --surface:   #1e1e1a;
+    --surface2:  #252520;
+    --border:    #333328;
+    --fg:        #f0efe6;
+    --fg2:       #a8a89a;
+    --fg3:       #6a6a5e;
+    --green:     #5ecb7e;
+    --green-bg:  #0f2e1c;
+    --amber:     #f0b840;
+    --amber-bg:  #2a2010;
+    --red:       #f07070;
+    --red-bg:    #2e1010;
+    --wheat:     #e8a030;
+    --accent:    #5ecb7e;
+    --accent2:   #7bba8e;
+    --mono-bg:   #1a1a14;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:        #141410;
+  --surface:   #1e1e1a;
+  --surface2:  #252520;
+  --border:    #333328;
+  --fg:        #f0efe6;
+  --fg2:       #a8a89a;
+  --fg3:       #6a6a5e;
+  --green:     #5ecb7e;
+  --green-bg:  #0f2e1c;
+  --amber:     #f0b840;
+  --amber-bg:  #2a2010;
+  --red:       #f07070;
+  --red-bg:    #2e1010;
+  --wheat:     #e8a030;
+  --accent:    #5ecb7e;
+  --accent2:   #7bba8e;
+  --mono-bg:   #1a1a14;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; margin: 0; }
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+}
+
+/* ── Header ── */
+.header {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 20;
+  background: var(--surface);
+  border-bottom: 1.5px solid var(--border);
+  padding: 12px 0;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 21;
+  background: var(--surface);
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.logo-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--fg);
+  letter-spacing: -0.3px;
+}
+.logo-version {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 600;
+  background: var(--green-bg);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--fg2);
+  flex-wrap: wrap;
+}
+.meta-item { display: flex; align-items: center; gap: 4px; }
+.meta-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  flex-shrink: 0;
+}
+.meta-dot.live { background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.farm-toggle {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.farm-btn {
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: var(--fg2);
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.farm-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ── Main layout ── */
+.main {
+  padding-block: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Section labels ── */
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg3);
+  margin-bottom: 10px;
+}
+
+/* ── Warning banner ── */
+.warning-banner {
+  background: var(--amber-bg);
+  border: 1px solid var(--amber);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--amber);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.warning-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── Crops grid ── */
+.crops-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.crop-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.crop-card:hover { border-color: var(--accent2); }
+
+.crop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.crop-icon-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.crop-emoji { font-size: 22px; }
+.crop-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.crop-rank {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  background: var(--surface2);
+  color: var(--fg3);
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+.crop-rank.top { background: var(--green-bg); color: var(--green); }
+
+.crop-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.price-label { font-size: 11px; color: var(--fg2); min-width: 0; }
+.price-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.price-val.best { color: var(--green); }
+.price-val.stale { color: var(--fg3); }
+
+.divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+.net-block {
+  background: var(--mono-bg);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.net-label { font-size: 10px; color: var(--fg3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+.net-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+}
+.net-farm { font-size: 11px; color: var(--fg2); }
+.net-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.net-trip {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--fg3);
+  font-variant-numeric: tabular-nums;
+}
+.net-divider { height: 1px; background: var(--border); margin: 5px 0; }
+.net-threshold {
+  font-size: 10px;
+  color: var(--fg3);
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+.net-threshold.above { color: var(--green); }
+.net-threshold.below { color: var(--amber); }
+/* ── Стрілки зміни ціни ── */
+.price-delta {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  margin-left: 4px;
+}
+.delta-up   { background: var(--green-bg); color: var(--green); }
+.delta-down { background: var(--red-bg);   color: var(--red);   }
+.delta-flat { background: var(--surface2); color: var(--fg3);   }
+/* ── Week summary block ── */
+.week-summary {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.week-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fg2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.week-rows { display: flex; flex-direction: column; gap: 5px; }
+.week-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--fg);
+  line-height: 1.4;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.week-row:last-child { border-bottom: none; }
+.week-icon { font-size: 14px; flex-shrink: 0; }
+/* ── Trip calculator ── */
+.calc-section {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.calc-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fg2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.calc-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.calc-field label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--fg3);
+  margin-bottom: 4px;
+}
+.calc-field select, .calc-field input {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface2);
+  color: var(--fg);
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.calc-field select:focus, .calc-field input:focus { border-color: var(--accent2); }
+.calc-btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 7px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  align-self: end;
+  transition: opacity 0.15s;
+}
+.calc-btn:hover { opacity: 0.85; }
+.calc-result {
+  display: none;
+  background: var(--mono-bg);
+  border-radius: 8px;
+  padding: 14px;
+}
+.calc-result.show { display: block; }
+.calc-res-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.calc-res-item { }
+.calc-res-label { font-size: 10px; color: var(--fg3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 3px; }
+.calc-res-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.calc-res-sub { font-size: 11px; color: var(--fg3); margin-top: 2px; }
+.calc-warn { font-size: 11px; color: var(--amber); margin-top: 8px; padding: 6px 8px; background: var(--amber-bg); border-radius: 5px; }
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.badge-unconfirmed {
+  background: var(--amber-bg);
+  color: var(--amber);
+}
+.badge-stale {
+  background: var(--surface2);
+  color: var(--fg3);
+}
+.badge-missing { background: var(--red-bg); color: var(--red); }
+
+/* ── Fuel + Fert panels ── */
+.panels-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 540px) { .panels-row { grid-template-columns: 1fr; } }
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.panel-title-icon { font-size: 16px; }
+
+.fuel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.fuel-row:last-child { border-bottom: none; }
+.fuel-name { font-size: 12px; color: var(--fg2); }
+.fuel-price-wrap { display: flex; align-items: center; gap: 8px; }
+.fuel-price {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.fuel-up { color: var(--red); }
+.fuel-trigger {
+  font-size: 10px;
+  color: var(--fg3);
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+.trigger-hit { color: var(--green); font-weight: 500; }
+.trigger-watch { color: var(--amber); font-weight: 500; }
+
+.fert-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+.fert-row:last-child { border-bottom: none; }
+.fert-name { font-size: 11px; color: var(--fg2); min-width: 0; }
+.fert-range {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── Rate + footer ── */
+.rate-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--fg2);
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.rate-val {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+/* ── Global signals block ── */
+.global-signals {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.global-signals .panel-title { margin-bottom: 10px; }
+.signals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.signal-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+}
+.signal-name {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg3);
+  margin-bottom: 4px;
+}
+.signal-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.signal-val a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dashed var(--accent2);
+}
+.signal-val a:hover { color: var(--accent); }
+.signal-sub { font-size: 11px; color: var(--fg3); margin-top: 2px; }
+.signal-alert {
+  background: var(--amber-bg);
+  border: 1px solid var(--amber);
+  border-radius: 5px;
+  padding: 7px 10px;
+  font-size: 11px;
+  color: var(--amber);
+  margin-top: 10px;
+}
+
+/* ── Logistics block ── */
+.logistics-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.logistics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.logi-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+.logi-row:last-child { border-bottom: none; }
+.logi-name { font-size: 11px; color: var(--fg2); }
+.logi-val {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+}
+.logi-up { color: var(--red); }
+.logi-note { font-size: 10px; color: var(--fg3); margin-top: 6px; }
+
+/* ── News block ── */
+.news-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.news-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.news-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border-radius: 6px;
+  border-left: 3px solid var(--border);
+}
+.news-item.hot { border-left-color: var(--amber); }
+.news-item.green { border-left-color: var(--green); }
+.news-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--amber-bg);
+  color: var(--amber);
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.news-badge.src-gt { background: var(--green-bg); color: var(--green); }
+.news-badge.src-lf { background: var(--mono-bg); color: var(--fg2); }
+.news-badge.src-ua { background: var(--mono-bg); color: var(--fg2); }
+.news-text { font-size: 12px; color: var(--fg); line-height: 1.4; }
+.news-text a { color: var(--accent); text-decoration: none; }
+.news-text a:hover { text-decoration: underline; }
+.news-meta { font-size: 10px; color: var(--fg3); margin-top: 2px; }
+
+/* ── Clickable price links ── */
+a.price-val {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px dashed var(--accent2);
+  transition: color 0.15s, border-color 0.15s;
+}
+a.price-val:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+a.price-val.best {
+  color: var(--green);
+  border-bottom-color: var(--green);
+}
+a.price-val.best:hover {
+  opacity: 0.8;
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .crops-grid { grid-template-columns: 1fr; }
+  .header-inner { flex-direction: column; align-items: flex-start; }
+  .logo-name { font-size: 16px; }
+  .baro-cards { grid-template-columns: repeat(2, 1fr); }
+  .baro-hz-tabs { gap: 4px; }
+}
+
+/* ══════════════════════════════════════════
+   SELL / WAIT BAROMETER
+   ══════════════════════════════════════════ */
+.barometer-section {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.baro-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.baro-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg2);
+}
+.baro-hz-tabs {
+  display: flex;
+  gap: 6px;
+}
+.baro-hz-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface2);
+  color: var(--fg2);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.baro-hz-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.baro-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (max-width: 700px) {
+  .baro-cards { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 400px) {
+  .baro-cards { grid-template-columns: repeat(2, 1fr); }
+}
+.baro-card {
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface2);
+  padding: 12px 10px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+.baro-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+.baro-card.baro-signal-now {
+  border-color: #f0a500;
+  animation: baro-pulse 1.8s ease-in-out infinite;
+}
+@keyframes baro-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(240,165,0,0); }
+  50%      { box-shadow: 0 0 0 6px rgba(240,165,0,0.25); }
+}
+.baro-crop-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--fg3);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.baro-score-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.baro-score {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+.baro-score-max {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  color: var(--fg3);
+}
+.baro-signal-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+.baro-reasons {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.baro-card.expanded .baro-reasons { display: flex; }
+.baro-reason {
+  font-size: 10.5px;
+  color: var(--fg2);
+  line-height: 1.4;
+  padding-left: 10px;
+  position: relative;
+}
+.baro-reason::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--fg3);
+  font-size: 9px;
+}
+.baro-expand-hint {
+  font-size: 9.5px;
+  color: var(--fg3);
+  text-align: right;
+  margin-top: 6px;
+}
+/* score color variants */
+.baro-wait   { color: #c0392b; }
+.baro-caution{ color: #e67e22; }
+.baro-neutral{ color: #f39c12; }
+.baro-sell   { color: #27ae60; }
+.baro-sell-now { color: #e6a817; }
+.baro-legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--fg3);
+}
+.baro-leg-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.baro-leg-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.baro-disclaimer {
+  font-size: 10px;
+  color: var(--fg3);
+  line-height: 1.5;
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border-radius: 6px;
+  border-left: 3px solid var(--border);
+}
+/* ── Мої покупці + Telegram ── */
+.tg-section,.mybuyers-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.sec-title{font-size:15px;font-weight:700;color:var(--fg)}
+.sec-sub{font-size:11px;color:var(--fg3)}
+.tg-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tg-chip{font:inherit;font-size:11px;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface2);color:var(--fg2);cursor:pointer}
+.tg-chip.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.tg-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tg-table{width:100%;border-collapse:collapse;font-size:12px;min-width:680px}
+.tg-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg3);padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600}
+.tg-table td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--fg)}
+.tg-table td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
+.tg-table tr.old td{color:var(--fg3)}
+.tg-table tr.old td.num{font-weight:400}
+.tg-note{font-size:11px;color:var(--fg3)}
+.age{font-size:10px;padding:1px 6px;border-radius:999px;white-space:nowrap}
+.age.fresh{background:var(--green-bg);color:var(--green)}
+.age.mid{background:var(--amber-bg);color:var(--amber)}
+.age.old{background:var(--red-bg);color:var(--red)}
+.flag{color:var(--red);font-size:11px}
+.tg-insights{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin-top:14px}
+.tg-insight{font-size:12px;line-height:1.45;padding:8px 10px;border-radius:8px;background:var(--surface2);border-left:3px solid var(--accent2);color:var(--fg2)}
+.tg-insight strong{color:var(--fg)}
+.buyers-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:10px}
+.buyer-card{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--surface2);display:flex;flex-direction:column;gap:8px;min-width:0}
+.buyer-card.risk{border-color:var(--red)}
+.buyer-name{font-weight:700;font-size:14px;color:var(--fg)}
+.buyer-meta{font-size:11px;color:var(--fg3);line-height:1.45}
+.buyer-risk{font-size:11px;background:var(--red-bg);color:var(--red);padding:6px 8px;border-radius:6px;line-height:1.4}
+.buyer-howto{font-size:11px;color:var(--fg2);line-height:1.45}
+.buyer-howto a{color:var(--accent)}
+.buyer-sub{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg3);margin-top:2px}
+.q-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;font-size:12px;padding:5px 0;border-bottom:1px dashed var(--border)}
+.q-row:last-child{border-bottom:0}
+.q-main{min-width:0}
+.q-price{font-weight:700;font-variant-numeric:tabular-nums;color:var(--fg)}
+.q-net{font-size:11px;color:var(--fg3);line-height:1.4}
+.q-net .up{color:var(--green);font-weight:600}
+.q-net .down{color:var(--red);font-weight:600}
+.q-del{font:inherit;font-size:13px;line-height:1;border:0;background:none;color:var(--fg3);cursor:pointer;padding:2px 4px}
+.q-empty{font-size:12px;color:var(--fg3);font-style:italic}
+.thr-row{font-size:11px;color:var(--fg2);line-height:1.45}
+.thr-row strong{color:var(--fg);font-variant-numeric:tabular-nums}
+.q-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.q-form select,.q-form input{font:inherit;font-size:12px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--fg);min-width:0;width:100%}
+.q-form button{font:inherit;font-size:12px;font-weight:600;padding:7px 10px;border:0;border-radius:6px;background:var(--accent);color:var(--bg);cursor:pointer}
+.q-form button:disabled{opacity:.5;cursor:default}
+.q-status{font-size:11px;color:var(--fg3);grid-column:1/-1}
+/* ── Резюме по культурах ── */
+.sum-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px}
+.sum-card{border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--surface2);display:flex;flex-direction:column;gap:8px;min-width:0}
+.sum-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.sum-name{font-weight:700;font-size:15px;color:var(--fg)}
+.sum-verdict{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.v-sell{background:var(--green-bg);color:var(--green)}
+.v-split{background:var(--amber-bg);color:var(--amber)}
+.v-hold{background:var(--red-bg);color:var(--red)}
+.sum-card p{margin:0;font-size:13px;line-height:1.55;color:var(--fg2)}
+.sum-card p strong{color:var(--fg)}
+.sum-do{font-size:12px;line-height:1.5;color:var(--fg);background:var(--surface);border-left:3px solid var(--accent);padding:7px 10px;border-radius:6px}
+</style>
+
+<!-- ─────────────────────── PAGE ─────────────────────── -->
+
+<div class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-name">🌾 AGRO BAROMETER</span>
+      <span class="logo-version">V13</span>
+    </div>
+    <div class="header-meta">
+      <span class="meta-item">
+        <span class="meta-dot live"></span>
+        29.10.2026
+      </span>
+      <span class="meta-item">НБУ: <strong>45,60 ₴/$</strong></span>
+      <div class="farm-toggle">
+        <button class="farm-btn active" onclick="setFarm('dolynske',this)">Долинське</button>
+        <button class="farm-btn" onclick="setFarm('kopani',this)">Копані</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="warning-banner">
+    <span class="warning-icon">⚠</span>
+    <span>Статус цін: <strong>published_unconfirmed</strong> — опублікована оферта, не підтверджена виконувана угода. Джерела: tripoli.land 29.10, graintrade.com.ua 28.10, ukragroconsult.com 26.10, e-zerno, Grossdorf 16.10 + 8 Telegram-каналів (окремий блок, неверифіковані).</span>
+  </div>
+
+  <!-- ══ ЩО ВІДБУЛОСЯ ЗА ТИЖДЕНЬ ══ -->
+  <div class="week-summary">
+    <div class="week-title">📅 Що відбулося за тиждень (22–29.10.2026)</div>
+    <div class="week-rows">
+      <div class="week-row"><span class="week-icon">🔴</span><span><strong>УЗ підвищила тариф на зерновози з 01.11:</strong> 632 → 850 ₴/добу (+34,8%). Перевезення залізницею дорожчає — тиск на CPT ціни вниз.</span></div>
+      <div class="week-row"><span class="week-icon">🟡</span><span><strong>Соняшник Голованівськ (AGRO HUB):</strong> ціна знизилась з 12 600 до 12 200 ₴/т за тиждень (−3,2%). Місцевий ринок Кіровоградщини під тиском збирання.</span></div>
+      <div class="week-row"><span class="week-icon">🟢</span><span><strong>Єгипет купив 480 тис. т пшениці:</strong> CPT $235, тендер 28.10. Підтримує попит на чорноморську пшеницю та ціни 8 600–8 800 ₴/т.</span></div>
+      <div class="week-row"><span class="week-icon">🔴</span><span><strong>Добрива дорожчають:</strong> OSTCHEM підвищив аміачну селітру на 900 ₴/т (+12%) у жовтні. Селітра: 27 500–28 000 ₴/т.</span></div>
+      <div class="week-row"><span class="week-icon">⏳</span><span><strong>Наступна ключова подія — WASDE 10.11.2026</strong> (12:00 ET). Баланси пшениці, кукурудзи, сої можуть змінити орієнтири ринку.</span></div>
+    </div>
+  </div>
+
+  <!-- ══ SELL/WAIT BAROMETER ══ -->
+  <div class="barometer-section" id="barometerSection">
+    <div class="baro-header">
+      <div class="baro-title">📊 Барометр продати / чекати</div>
+      <div class="baro-hz-tabs">
+        <button class="baro-hz-btn active" onclick="setBaroHz('1m',this)">1 міс.</button>
+        <button class="baro-hz-btn" onclick="setBaroHz('3m',this)">3 міс.</button>
+        <button class="baro-hz-btn" onclick="setBaroHz('6m',this)">6 міс.</button>
+      </div>
+    </div>
+    <div class="baro-cards" id="baroCards"></div>
+    <div class="baro-legend">
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#c0392b"></div>0–25 🔴 ЧЕКАЙ</div>
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#e67e22"></div>26–45 🟠 Обережно</div>
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#f39c12"></div>46–60 🟡 Нейтрально</div>
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#27ae60"></div>61–75 🟢 Продавай</div>
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#e6a817"></div>76–100 ⚡ ПРОДАВАЙ ЗАРАЗ</div>
+    </div>
+    <div class="baro-disclaimer">⚠️ Барометр — аналітичний орієнтир на основі публічних даних (<strong>published_unconfirmed</strong>). Не є рекомендацією до угоди. Перевіряй ціни напряму з покупцем перед укладенням договору. Клікни на карточку культури — побачиш 3 причини оцінки.</div>
+  </div>
+
+  <!-- ── РЕЗЮМЕ ПО КУЛЬТУРАХ ── -->
+  <div class="sum-section" id="summarySection">
+    <div class="sec-head">
+      <div class="sec-title">🧑‍🌾 Резюме по культурах — по-простому</div>
+      <div class="sec-sub">Станом на 29.10.2026 · ціни — опубліковані пропозиції, не підписані угоди · net — з Долинського, рейс 25 т</div>
+    </div>
+    <div class="sum-grid">
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">💛 Ріпак</span><span class="sum-verdict v-sell">Продавати до кінця грудня</span></div>
+        <p>Ріпак зараз — найдорожча культура в розрахунку на тонну. Порт в Одесі дає <strong>21 200 ₴/т</strong>, після фрахту з Долинського (1 500 ₴/т) лишається <strong>~19 700 ₴/т</strong>, це близько 490 тис. ₴ за машину. Біржа в Парижі стоїть на місці, ціна тримається рівно — ні вниз, ні вгору не тягне.</p>
+        <p>А от далі краще не буде: з весни на ринок заходить новий ріпак з Європи і тисне ціну. І є важливий момент: ГрадОлія в Кропивницькому сама переробляє ріпак, а везти туди в 5 разів дешевше, ніж в Одесу. Якщо вони дадуть від <strong>19 975 ₴/т</strong> з доставкою на завод — це вже вигідніше за Одесу, і гроші ближче.</p>
+        <div class="sum-do">Що робити: першим ділом подзвонити в ГрадОлію по ріпаку. Продавати в листопаді–грудні, весни не чекати.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🌻 Соняшник</span><span class="sum-verdict v-split">Частину зараз, решту — зимою</span></div>
+        <p>Зараз пік збирання, соняшника на ринку повно, і заводи цим користуються. Найближчі до нас платять мало: Kernel ~<strong>15 000</strong>, Власівка 14 000, Голованівськ за тиждень зрізав з 12 600 до <strong>12 200</strong> (і то без ПДВ). Водночас на заході й у Вінниці за високоолеїновий дають 18 500–20 000 — тобто заводи на олії заробляють добре (олія в порту ~$1 010/т), а ціну на насіння тиснуть.</p>
+        <p>Історично з грудня по березень пропозиції меншає, і переробники піднімають ціну — бувало на 8–12% вище жовтневої. Барометр зараз «обережно» на місяць і нейтральний на 3–6 місяців. Продавати весь урожай по 14–15 тис. — означає віддати заводу свою маржу.</p>
+        <div class="sum-do">Що робити: продати стільки, скільки треба на поточні гроші. Решту тримати на своєму складі до грудня–лютого. Взяти ціни в ГрадОлії й Kernel і торгуватись за олійність.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🫘 Соя</span><span class="sum-verdict v-split">Частину зараз, решту — до лютого</span></div>
+        <p>Реальна ціна сої зараз <strong>18 600–19 000 ₴/т</strong> (Глобине, Ізмаїл). Ізмаїл в одному місці показував 20 500, але це значно вище ринку — поки не подзвониш і не почуєш це від живої людини, на цю цифру не розраховувати. З Ізмаїлом проблема — далеко, фрахт 1 400–1 500 ₴/т з'їдає перевагу; Власівка поруч, але дає 17 200.</p>
+        <p>Найкраще вікно для сої — грудень–лютий: свій урожай уже розібрали, а Бразилія й Аргентина ще не зібрали. З березня їхня нова соя давить світову ціну вниз. Біржа в Чикаго зараз без руху, тому різких стрибків найближчим часом не чекаю.</p>
+        <div class="sum-do">Що робити: подзвонити в «В АГРО» і перевірити 20 500. Частину продати зараз, решту — до кінця лютого, весни не чекати.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🌽 Кукурудза</span><span class="sum-verdict v-hold">Не поспішати, сушити й тримати</span></div>
+        <p>Найгірша ситуація з усіх культур. Кукурудзи всюди повно, порти забиті, покупці вибирають. Дунай дає $155–160 (~7 000–7 200 ₴/т), найкраща пропозиція <strong>7 500</strong>, а після фрахту на Одесу лишається <strong>~6 000 ₴/т</strong>. Америка має великий урожай, Чикаго падає, Бразилія вже посіяла більше половини. Плюс дощі: сушіння коштує ще $10–20 на тонні, подекуди до $30.</p>
+        <p>Барометр кукурудзи найнижчий — 32 з 100 на місяць. Продавати зараз — означає віддавати по дну сезону. Зазвичай кукурудза дорожчає в березні–травні, коли запаси закінчуються. Свій склад тут — головний козир. Ще одне: зараз багато покупців платять 86% одразу, а 14% — лише коли держава поверне ПДВ, тобто з рейсу ~26 тис. ₴ «зависають».</p>
+        <div class="sum-do">Що робити: досушити й закласти на свій склад. Продавати лише якщо горять гроші або склад потрібен. Основну масу — березень–травень. Умову 86/14 враховувати в кожній угоді.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🌾 Ячмінь</span><span class="sum-verdict v-sell">Продавати, коли зручно, до весни</span></div>
+        <p>Ячмінь — тиха культура. Ціна останні два тижні стоїть на <strong>7 000–7 300 ₴/т</strong> в портах, три різні джерела показують одне й те саме. Після фрахту з Долинського лишається <strong>~5 800 ₴/т</strong>. Покупців небагато, біржового руху майже немає.</p>
+        <p>Чекати тут нема чого: зимою особливого попиту не буде, а навесні новий урожай почне тиснути старий. Барометр нейтральний на всі горизонти, на 6 місяців — трохи гірше. Тримати ячмінь на складі — це займати місце, яке краще віддати під кукурудзу.</p>
+        <div class="sum-do">Що робити: продати в листопаді–грудні, коли буде зручна машина чи попутний рейс. Звільнити склад під кукурудзу.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🌱 Пшениця</span><span class="sum-verdict v-sell">Продавати поступово до грудня</span></div>
+        <p>По пшениці зараз найкраща картина. Рені й Ізмаїл дають <strong>8 600–8 900 ₴/т</strong> за 2–3 клас, після фрахту <strong>~7 300 ₴/т</strong> (~183 тис. ₴ за машину). Є сильний зовнішній попит: Єгипет щойно закупив 480 тис. т. Барометр — найвищий з усіх культур, 58 на місяць.</p>
+        <p>Але ціни на Дунаї потроху сповзають, бо покупці закривають потреби, а Америка дешевшає через сильний долар. До весни ціна старого врожаю зазвичай падає. 10 листопада — звіт USDA (WASDE), він може смикнути ринок у будь-який бік, тому все одним махом до нього продавати не варто.</p>
+        <div class="sum-do">Що робити: продавати партіями з листопада до кінця грудня — частину до 10.11, частину після звіту. Весни не чекати.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── CROPS ── -->
+  <div>
+    <div class="section-label">Культури — закупівельні ціни та чиста виручка</div>
+    <div style="font-size:11px;color:var(--fg3);margin:-6px 0 10px;padding:0 2px;">
+      Найкраща знайдена ціна по кожній культурі (опублікована оферта, не підтверджена угода) + net після фрахту наймано-авто до покупця, рейс 25 т.
+      Перемикай <strong>Долинське / Копані</strong> вгорі — чиста виручка перерахується.
+      <strong>Поріг</strong> — мінімальна net-ціна по договору з ГрадОлією; 🟢 — вище порогу, ⚪ — нижче.
+    </div>
+    <div class="crops-grid" id="cropsGrid"></div>
+  </div>
+
+  <!-- ── TELEGRAM-ОФЕРТИ ── -->
+  <div class="tg-section" id="tgSection">
+    <div class="sec-head">
+      <div class="sec-title">📡 Telegram-оферти трейдерів</div>
+      <div class="sec-sub">Тимчасовий знімок зі скриншотів 19–29.10. Після запуску щоденного автооновлення (9:00) тут будуть живі пости каналів</div>
+    </div>
+    <div class="tg-filters" id="tgFilters"></div>
+    <div class="tg-table-wrap">
+      <table class="tg-table">
+        <thead><tr><th>Канал</th><th>Продукт</th><th style="text-align:right">Ціна</th><th>ПДВ</th><th>Пункт / базис</th><th>Дата</th><th>Примітка</th></tr></thead>
+        <tbody id="tgBody"></tbody>
+      </table>
+    </div>
+    <div class="tg-insights" id="tgInsights"></div>
+  </div>
+
+  <!-- ── КАЛЬКУЛЯТОР РЕЙСУ ── -->
+
+
+  <!-- ── FUEL + FERT ── -->
+  <div class="panels-row">
+    <div class="panel">
+      <div class="panel-title"><span class="panel-title-icon">⛽</span> Паливо (29.10.2026)</div>
+      <div class="fuel-row">
+        <span class="fuel-name">Дизель (ДП) АЗС сер.</span>
+        <div class="fuel-price-wrap">
+          <a class="fuel-price fuel-up" href="https://index.minfin.com.ua/ua/markets/fuel/dt/" target="_blank" rel="noopener">104,21 ₴/л ↗</a>
+          <span class="status-badge badge-unconfirmed">↑ зростає</span>
+        </div>
+      </div>
+      <div class="fuel-row">
+        <span class="fuel-name">Бензин А-95</span>
+        <div class="fuel-price-wrap">
+          <a class="fuel-price" href="https://index.minfin.com.ua/ua/markets/fuel/a95/" target="_blank" rel="noopener">90,08 ₴/л ↗</a>
+        </div>
+      </div>
+      <div class="fuel-row">
+        <span class="fuel-name">А-95 Преміум</span>
+        <div class="fuel-price-wrap">
+          <span class="fuel-price">93,88 ₴/л</span>
+        </div>
+      </div>
+      <div class="fuel-row">
+        <span class="fuel-name">Автогаз</span>
+        <div class="fuel-price-wrap">
+          <a class="fuel-price" href="https://index.minfin.com.ua/ua/markets/fuel/gas/" target="_blank" rel="noopener">56,19 ₴/л ↗</a>
+        </div>
+      </div>
+      <div class="fuel-trigger">
+        Джерело: <a href="https://index.minfin.com.ua/ua/markets/fuel/dt/" target="_blank" rel="noopener">minfin.com.ua (А-95 консалтинг)</a> — середня по АЗС України, 28.10.2026.<br>
+        Тригер закупки ДП: <span class="trigger-watch">≥ 107–110 ₴/л</span> — форвардна закупка.<br>
+        Прогноз зима: <strong>115–120 ₴/л</strong> (Prime Group).
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><span class="panel-title-icon">🧪</span> Добрива (жовт. 2026)</div>
+      <div class="fert-row">
+        <span class="fert-name">Аміачна селітра N:34</span>
+        <a class="fert-range" href="https://latifundist.com/novosti/71407-ostchem-pidvishchiv-tsini-na-amiachnu-selitru-na-900-grn-t-u-zhovtni" target="_blank" rel="noopener">27 500–28 000 ₴/т FCA ↗</a>
+      </div>
+      <div class="fert-row">
+        <span class="fert-name">Карбамід N:46</span>
+        <a class="fert-range" href="https://grossdorf.com/price/" target="_blank" rel="noopener">31 500–32 000 ₴/т ↗</a>
+      </div>
+      <div class="fert-row">
+        <span class="fert-name">КАС-32</span>
+        <a class="fert-range" href="https://grossdorf.com/price/" target="_blank" rel="noopener">26 000 ₴/т (Grossdorf) ↗</a>
+      </div>
+      <div class="fert-row">
+        <span class="fert-name">КАС 26+4S</span>
+        <a class="fert-range" href="https://e-zerno.com/fertilizer-prices" target="_blank" rel="noopener">20 000–21 000 ₴/т ↗</a>
+      </div>
+      <div class="fert-row">
+        <span class="fert-name">Сульфат амонію N:21 S:24</span>
+        <a class="fert-range" href="https://e-zerno.com/fertilizer-prices" target="_blank" rel="noopener">18 650–19 500 ₴/т ↗</a>
+      </div>
+      <div class="fert-row">
+        <span class="fert-name">НАФ 15:15:15</span>
+        <a class="fert-range" href="https://e-zerno.com/fertilizer-prices" target="_blank" rel="noopener">31 500–36 000 ₴/т ↗</a>
+      </div>
+      <div class="fert-row">
+        <span class="fert-name">Амофос N:11 P:52</span>
+        <a class="fert-range" href="https://e-zerno.com/fertilizer-prices" target="_blank" rel="noopener">55 600–57 400 ₴/т ↗</a>
+      </div>
+      <div class="fuel-trigger">
+        ⚠️ OSTCHEM підвищив аміачну селітру на 900 грн/т у жовтні 2026 (+12% за місяць).<br>
+        Джерела: <a href="https://grossdorf.com/price/" target="_blank" rel="noopener">Grossdorf</a> (прайс 26.10) · <a href="https://latifundist.com/novosti/71407-ostchem-pidvishchiv-tsini-na-amiachnu-selitru-na-900-grn-t-u-zhovtni" target="_blank" rel="noopener">Latifundist</a> · <a href="https://e-zerno.com/fertilizer-prices" target="_blank" rel="noopener">e-zerno</a><br>
+        Тригер: селітра <span class="trigger-hit">&lt; 26 тис.</span>, карбамід <span class="trigger-hit">&lt; 29 тис.</span> — форвардна закупка.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LOGISTICS ── -->
+  <div class="logistics-panel">
+    <div class="panel-title"><span class="panel-title-icon">🚛</span> Автомобільний фрахт — наймані зерновози (~25 т)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--fg3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Від Долинського</div>
+        <div class="logi-row"><span class="logi-name">→ Кропивницький (Kernel) ~110 км</span><span class="logi-val">275 ₴/т</span></div>
+        <div class="logi-row"><span class="logi-name">→ Черкаси ~165 км</span><span class="logi-val">525 ₴/т</span></div>
+        <div class="logi-row"><span class="logi-name">→ Одеса / Дунай ~420 км</span><span class="logi-val">1 500 ₴/т</span></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--fg3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Від Копань</div>
+        <div class="logi-row"><span class="logi-name">→ Кропивницький (Kernel) ~40 км</span><span class="logi-val">105 ₴/т</span></div>
+        <div class="logi-row"><span class="logi-name">→ Черкаси ~110–130 км</span><span class="logi-val">375 ₴/т</span></div>
+        <div class="logi-row"><span class="logi-name">→ Одеса / Дунай ~400 км</span><span class="logi-val">1 400 ₴/т</span></div>
+      </div>
+    </div>
+    <div class="logi-note">
+      ⚠️ Тарифи орієнтовні — потрібна верифікація у реального перевізника. <a href="https://agtransport.usda.gov/stories/s/nb3e-9fyt" target="_blank" rel="noopener">USDA Transport Dashboard ↗</a> — ставки по областях України.
+    </div>
+  </div>
+
+  <!-- ── NEWS / ANALYTICS ── -->
+  <div class="news-panel">
+    <div class="panel-title"><span class="panel-title-icon">📰</span> Новини та аналітика (29.10.2026)</div>
+    <div class="news-list">
+      <div class="news-item hot">
+        <span class="news-badge src-gt">GrainTrade</span>
+        <div>
+          <div class="news-text">УЗ підвищує тариф на зерновози з 01.11.2026: 632 → 850 грн/добу (+34,8%). Вплив на CPT/CIF ціни.</div>
+          <div class="news-meta"><a href="https://graintrade.com.ua/novosti/zakupivelni-tcini-na-zerno-v-ukraini-na-28-zhovtnya-2026-roku.html" target="_blank" rel="noopener">graintrade.com.ua 28.10 ↗</a></div>
+        </div>
+      </div>
+      <div class="news-item hot">
+        <span class="news-badge">Latifundist</span>
+        <div>
+          <div class="news-text">OSTCHEM підвищив аміачну селітру на 900 грн/т (+12%) у жовтні 2026. Ринкові ціни: 27 500–28 000 грн/т.</div>
+          <div class="news-meta"><a href="https://latifundist.com/novosti/" target="_blank" rel="noopener">latifundist.com ↗</a></div>
+        </div>
+      </div>
+      <div class="news-item">
+        <span class="news-badge src-lf">Latifundist</span>
+        <div>
+          <div class="news-text">Наступний USDA WASDE — 10.11.2026, 12:00 ET. Баланси пшениці, кукурудзи, сої — головний ціновий каталізатор листопада.</div>
+          <div class="news-meta"><a href="https://usda.gov/oce/commodity/wasde" target="_blank" rel="noopener">usda.gov WASDE ↗</a></div>
+        </div>
+      </div>
+      <div class="news-item">
+        <span class="news-badge src-ua">UkrAgroConsult</span>
+        <div>
+          <div class="news-text">Огляд цін: пшениця, ячмінь, кукурудза, соняшник, соя, ріпак + добрива + логістика. Щоденний моніторинг.</div>
+          <div class="news-meta"><a href="https://ukragroconsult.com/analytikacin/" target="_blank" rel="noopener">ukragroconsult.com/analytikacin/ ↗</a> · <a href="https://ukragroconsult.com/grain-prices/" target="_blank" rel="noopener">ціни ↗</a></div>
+        </div>
+      </div>
+      <div class="news-item green">
+        <span class="news-badge src-gt">APK-Inform</span>
+        <div>
+          <div class="news-text">FOB/CPT/EXW — найточніші верифіковані ціни по Україні. Частина платно, заголовки безкоштовно.</div>
+          <div class="news-meta"><a href="https://apk-inform.com" target="_blank" rel="noopener">apk-inform.com ↗</a></div>
+        </div>
+      </div>
+      <div class="news-item">
+        <span class="news-badge src-lf">ThePage</span>
+        <div>
+          <div class="news-text">Бізнес-аналітика по агросектору: урожай, ціни, холдинги, інтерв'ю Nibulon/Kernel.</div>
+          <div class="news-meta"><a href="https://thepage.ua/ua/agro" target="_blank" rel="noopener">thepage.ua/ua/agro ↗</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── NBU RATE ── -->
+  <div class="rate-row">
+    <span>Курс НБУ 29.10.2026:</span>
+    <span class="rate-val">1 USD = 45,60 ₴</span>
+    <span>·</span>
+    <span>Авто зерновоз 25 т</span>
+    <span>·</span>
+    <span style="color:var(--fg3)">Джерела: tripoli.land · graintrade.com.ua · ukragroconsult.com · e-zerno.com · AGRO HUB MARKET</span>
+  </div>
+
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────
+const FREIGHT = {
+  dolynske: { kernel: 275, cherkasy: 525, mykolaiv: 1050, odesa: 1500 },
+  kopani:   { kernel: 105, cherkasy: 375, mykolaiv: 975,  odesa: 1400 }
+};
+
+// ДЖЕРЕЛА ЦІН (верифіковані відкриті ресурси):
+// • tripoli.land/ua/traders — трейдери, щодня (29.10.2026 ✅)
+// • graintrade.com.ua — CPT/EXW по культурах (28.10.2026 ✅)
+// • ukragroconsult.com/grain-prices/ — EXW + FOB (26.10.2026 ✅)
+// • e-zerno.com/grain-prices — закупівельники по регіонах (29.10.2026 ✅)
+// Всі ціни: published_unconfirmed
+
+// URL кожного джерела для клікабельних посилань
+const SOURCES = {
+  tripoli:    'https://tripoli.land/ua/traders',
+  graintrade: 'https://graintrade.com.ua/novosti/zakupivelni-tcini-na-zerno-v-ukraini-na-28-zhovtnya-2026-roku.html',
+  ezerno:     'https://e-zerno.com/grain-prices',
+  ukragro:    'https://ukragroconsult.com/grain-prices/',
+  myfin:      'https://index.minfin.com.ua/ua/markets/fuel/dt/',
+  grossdorf:  'https://grossdorf.com/price/',
+  latifundist:'https://latifundist.com/novosti/71407-ostchem-pidvishchiv-tsini-na-amiachnu-selitru-na-900-grn-t-u-zhovtni',
+};
+
+const CROPS = [
+  {
+    id: 'rapeseed', emoji: '💛', name: 'Ріпак', rank: 1,
+    bestBuyer: 'В АГРО (Одеса Новотех)',
+    bestPrice: 21200, weekDelta: -200,
+    prices: [
+      { label: 'В АГРО, Одеса Новотех 28.10', val: 21200, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'GrainTrade CPT термінал 1 кл. 28.10', val: 21200, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'GrainTrade EXW елеватор 1 кл. 28.10', val: 20400, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'ExpoGrain, Одеса 20.10', val: 20200, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'Tripoli.land трейдери 29.10', val: 20000, status: 'unconfirmed', url: SOURCES.tripoli },
+      { label: 'UkrAgroConsult DAP $525/т (×45,6) 27.10', val: 23940, status: 'unconfirmed', url: SOURCES.ukragro },
+    ],
+    freight: { dolynske: 'odesa', kopani: 'odesa' },
+    note: 'В АГРО (Одеса Новотех) 28.10: 21 200. GrainTrade 28.10: CPT 21 200, EXW 20 400. ExpoGrain Одеса 20.10: 20 200. Tripoli.land трейдери 29.10: 20 000. FOB Чорне море $525/т (~23 940 грн).'
+  },
+  {
+    id: 'sunflower', emoji: '🌻', name: 'Соняшник', rank: 2,
+    bestBuyer: 'Tripoli.land трейдери 29.10',
+    bestPrice: 18700, weekDelta: -400,
+    prices: [
+      { label: 'Tripoli.land трейдери 29.10', val: 18700, status: 'unconfirmed', url: SOURCES.tripoli },
+      { label: 'РО АГРО ТРЕЙД, Вінниця 29.10 вис.ол.', val: 17500, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'ТК УКР.БОРОШНОМ., Чернівці 20.10', val: 16700, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'GrainTrade CPT переробник 28.10', val: 15250, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'RISOIL, Роздільна 28.10', val: 16000, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'МХП, Миронівка 22.10', val: 15700, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'GrainTrade EXW елеватор 28.10', val: 15386, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'KERNEL Придніпровськ. ОЕЗ 27.10', val: 15000, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'КОРОЛІВСТВО СМАК, Власівка (Кіровогр.) 28.10', val: 14000, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'AGRO HUB, ОЕЗ Голованівськ (Кіровогр.) 29.10', val: 12600, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'TG · РО АГРО ТРЕЙД ВО, Вінниця 19.10', val: 18500, status: 'unconfirmed' },
+      { label: 'TG · AGRO HUB Голованівськ Ф-2, останній пост ▼', val: 12200, status: 'unconfirmed' },
+    ],
+    freight: { dolynske: 'kernel', kopani: 'kernel' },
+    note: 'Tripoli.land 29.10: 18 700 (трейдери). GrainTrade 28.10: CPT 15 250, EXW 15 386. AGRO HUB Голованівськ 29.10: 12 600 (Ф-2, умови знижень за якість). Тренд: -3,5% за тиждень 9-15.10.'
+  },
+  {
+    id: 'soy', emoji: '🫘', name: 'Соя не ГМО', rank: 3,
+    bestBuyer: 'В АГРО, Ізмаїл 28.10',
+    bestPrice: 20500, weekDelta: +250,
+    prices: [
+      { label: 'В АГРО, Ізмаїл 28.10', val: 20500, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'АСТАРТА-КИЇВ, Глобине 20.10', val: 18600, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'Tripoli.land трейдери 29.10', val: 18750, status: 'unconfirmed', url: SOURCES.tripoli },
+      { label: 'GrainTrade не-ГМО EXW 28.10', val: 17700, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'GrainTrade CPT термінал 28.10', val: 18333, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'РО АГРО ТРЕЙД, Ерки (Черкас.) 29.10', val: 17500, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'КОРОЛІВСТВО СМАК, Власівка (Кіровогр.) 28.10', val: 17200, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'МХП, Єрки (Черкас.) 22.10', val: 16800, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'GrainTrade EXW ГМО 28.10', val: 16850, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'Гіпер Трейд Агро, Ізмаїл 20.10', val: 18500, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'TG · РО АГРО ТРЕЙД не-ГМО, Глобине 19.10', val: 19000, status: 'unconfirmed' },
+      { label: 'TG · РО АГРО ТРЕЙД ГМО, Ізмаїл/Орлівка 19.10', val: 18000, status: 'unconfirmed' },
+    ],
+    freight: { dolynske: 'odesa', kopani: 'odesa' },
+    note: 'УВАГА: В АГРО Ізмаїл 28.10: 20 500 — значно вище ринку (потребує дзвінка). Tripoli.land 29.10: 18 750. GrainTrade 28.10: не-ГМО EXW 17 700, CPT 18 333. КОРОЛІВСТВО СМАК Власівка (Кіровоград): соя 17 200.'
+  },
+  {
+    id: 'corn', emoji: '🌽', name: 'Кукурудза', rank: 4,
+    bestBuyer: 'Tripoli.land трейдери 29.10',
+    bestPrice: 7500, weekDelta: -150,
+    prices: [
+      { label: 'Tripoli.land трейдери 29.10', val: 7500, status: 'unconfirmed', url: SOURCES.tripoli },
+      { label: 'ExpoGrain, Рені 20.10', val: 7200, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'GrainTrade CPT термінал 28.10', val: 7000, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'ТОВ Агро Фонд, Ізмаїл 15.10', val: 7000, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'В АГРО, Тіс вугілля 28.10', val: 6550, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'GrainTrade EXW елеватор 28.10', val: 6000, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'my.ua середня внутрішня 9-15.10', val: 5891, status: 'unconfirmed', url: 'https://my.ua/en/analytics/grain' },
+      { label: 'TG · РО АГРО ТРЕЙД, Орлівка 19.10', val: 7500, status: 'unconfirmed' },
+      { label: 'TG · Алмейда DAP Вадул-Сірет ($140)', val: 7000, status: 'unconfirmed' },
+    ],
+    freight: { dolynske: 'odesa', kopani: 'odesa' },
+    note: 'Tripoli.land 29.10: 7 500. ExpoGrain Рені 20.10: 7 200. GrainTrade 28.10: CPT 7 000, EXW 6 000. В АГРО Тіс вугілля: 6 550. Спадний тренд (-5,2% за тиждень 9-15.10). Дунай CPT $160-162/т (~7 300 грн).'
+  },
+  {
+    id: 'barley', emoji: '🌾', name: 'Ячмінь', rank: 5,
+    bestBuyer: 'Tripoli.land трейдери 29.10',
+    bestPrice: 7300, weekDelta: 0,
+    prices: [
+      { label: 'Tripoli.land трейдери 29.10', val: 7300, status: 'unconfirmed', url: SOURCES.tripoli },
+      { label: 'GrainTrade CPT термінал 28.10', val: 7250, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'Гіпер Трейд Агро, Ізмаїл 20.10', val: 7000, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'АГРОХІМТЕХНОЛОДЖІ, Орлівка 27.10', val: 6800, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'GrainTrade пивоварний CPT 28.10', val: 6500, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'GrainTrade FCA 28.10', val: 5500, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'TG · РО АГРО ТРЕЙД, Ізмаїл 19.10', val: 7000, status: 'unconfirmed' },
+    ],
+    freight: { dolynske: 'odesa', kopani: 'odesa' },
+    note: 'Tripoli.land 29.10: 7 300. GrainTrade 28.10: CPT 7 250, пивоварний CPT 6 500. Гіпер Трейд Ізмаїл: 7 000. АГРОХІМТЕХНОЛОДЖІ Орлівка (Одеська обл.) 27.10: 6 800. Три незалежних джерела підтверджують рівень 7 000-7 300.'
+  },
+  {
+    id: 'wheat', emoji: '🌱', name: 'Пшениця 2–3 кл.', rank: 6,
+    bestBuyer: 'Tripoli.land 2–3 кл. 29.10',
+    bestPrice: 8800, weekDelta: +200,
+    prices: [
+      { label: 'Tripoli.land 2 кл. 29.10', val: 8800, status: 'unconfirmed', url: SOURCES.tripoli },
+      { label: 'Tripoli.land 3 кл. 29.10', val: 8800, status: 'unconfirmed', url: SOURCES.tripoli },
+      { label: 'GrainTrade 2 кл. CPT 28.10', val: 8652, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'OKKO, Рені 2 кл. 23.10', val: 8600, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'OKKO, Рені 3 кл. 23.10', val: 8500, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'GrainTrade 3 кл. CPT 28.10', val: 8350, status: 'unconfirmed', url: SOURCES.graintrade },
+      { label: 'ГЛЕНПОРТ ОДЕСА, Рені 2 кл. 27.10', val: 8400, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'ГЛЕНПОРТ ОДЕСА, Рені 3 кл. 27.10', val: 8300, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'РАМБУРС, Ізмаїл 2 кл. 27.10', val: 8000, status: 'unconfirmed', url: SOURCES.ezerno },
+      { label: 'TG · РО АГРО ТРЕЙД 2 кл., Рені 19.10', val: 8800, status: 'unconfirmed' },
+      { label: 'TG · РО АГРО ТРЕЙД 3 кл., Рені 19.10', val: 8650, status: 'unconfirmed' },
+    ],
+    freight: { dolynske: 'odesa', kopani: 'odesa' },
+    note: 'Tripoli.land 29.10: 8 800 (2 і 3 кл.) — найкраща ціна. GrainTrade 28.10: 2 кл. 8 652, 3 кл. 8 350. OKKO Рені: 2 кл. 8 600, 3 кл. 8 500. ГЛЕНПОРТ Рені 27.10: 2 кл. 8 400, 3 кл. 8 300. Чотири джерела підтверджують: пшениця CPT Дунай 8 000–8 800.'
+  }
+];
+
+let currentFarm = 'dolynske';
+
+function fmt(n) {
+  return n.toLocaleString('uk-UA');
+}
+
+// Task #5: обидва farms одночасно; Task #9: поріг ГрадОлія
+const GRADOLIA_THRESHOLDS = { rapeseed: 19975, sunflower: 19905 };
+const DIST_LABELS = {
+  dolynske: { kernel: '~110 км → Кропивницький', cherkasy: '~165 км → Черкаси', odesa: '~420 км → Одеса', mykolaiv: '~300 км → Миколаїв' },
+  kopani:   { kernel: '~40 км → Кропивницький',  cherkasy: '~120 км → Черкаси', odesa: '~400 км → Одеса', mykolaiv: '~280 км → Миколаїв' }
+};
+
+function buildNetBlock(crop) {
+  const farms = ['dolynske', 'kopani'];
+  const threshold = GRADOLIA_THRESHOLDS[crop.id];
+  let rows = '';
+  farms.forEach(farm => {
+    const fk = crop.freight[farm];
+    const fv = FREIGHT[farm][fk];
+    const net = crop.bestPrice - fv;
+    const trip = net * 25;
+    const label = farm === 'dolynske' ? 'Долинське' : 'Копані';
+    const dist = DIST_LABELS[farm][fk];
+    let thresholdHtml = '';
+    if (threshold) {
+      const netVsThreshold = net - threshold;
+      const cls = netVsThreshold >= 0 ? 'above' : 'below';
+      const sign = netVsThreshold >= 0 ? '+' : '';
+      thresholdHtml = `<div class="net-threshold ${cls}">ГрадОлія CPT ${fmt(threshold)}: ${sign}${fmt(netVsThreshold)} ₴/т від порогу</div>`;
+    }
+    rows += `
+      <div class="net-row" style="margin-top:5px;">
+        <span class="net-farm" style="font-weight:600;">${label}:</span>
+        <span class="net-farm">${dist} · −${fmt(fv)} ₴/т</span>
+      </div>
+      <div class="net-row">
+        <span class="net-farm">Net (25 т рейс):</span>
+        <span class="net-val">${fmt(net)} ₴/т → <span class="net-trip">${(trip/1000).toFixed(0)} тис.</span></span>
+      </div>
+      ${thresholdHtml}`;
+    if (farm === 'dolynske') rows += '<div class="net-divider"></div>';
+  });
+  return `<div class="net-block"><div class="net-label">Чиста виручка — обидва пункти</div>${rows}</div>`;
+}
+
+function renderCrops() {
+  const grid = document.getElementById('cropsGrid');
+  grid.innerHTML = '';
+
+  CROPS.forEach(crop => {
+    const isStale = crop.note && crop.note.includes('серпня');
+    const hasNote = !!crop.note;
+
+    // Task #6: стрілка зміни ціни
+    let deltaHtml = '';
+    if (crop.weekDelta !== undefined) {
+      const pct = ((crop.weekDelta / (crop.bestPrice - crop.weekDelta)) * 100).toFixed(1);
+      const sign = crop.weekDelta > 0 ? '+' : '';
+      const cls = crop.weekDelta > 0 ? 'delta-up' : crop.weekDelta < 0 ? 'delta-down' : 'delta-flat';
+      const arrow = crop.weekDelta > 0 ? '↑' : crop.weekDelta < 0 ? '↓' : '→';
+      deltaHtml = `<span class="price-delta ${cls}">${arrow} ${sign}${fmt(crop.weekDelta)} ₴ (${sign}${pct}%)</span>`;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'crop-card';
+    card.innerHTML = `
+      <div class="crop-header">
+        <div class="crop-icon-name">
+          <span class="crop-emoji">${crop.emoji}</span>
+          <span class="crop-name">${crop.name}</span>
+        </div>
+        <span class="crop-rank${crop.rank <= 3 ? ' top' : ''}">#${crop.rank}</span>
+      </div>
+      <div class="crop-body">
+        ${crop.prices.map((p, i) => `
+          <div class="price-row">
+            <span class="price-label">${p.label}</span>
+            <span style="display:flex;align-items:center;gap:4px;">
+              ${p.url
+                ? `<a class="price-val${i === 0 ? ' best' : ''}" href="${p.url}" target="_blank" rel="noopener">${fmt(p.val)} ₴/т ↗</a>`
+                : `<span class="price-val${i === 0 ? ' best' : ''}">${fmt(p.val)} ₴/т</span>`
+              }
+              ${i === 0 ? deltaHtml : ''}
+            </span>
+          </div>
+        `).join('')}
+        <div class="divider"></div>
+        ${buildNetBlock(crop)}
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;">
+          <span class="status-badge badge-unconfirmed">published_unconfirmed</span>
+          ${isStale ? '<span class="status-badge badge-stale">серпень 2026</span>' : ''}
+          ${hasNote && !isStale ? '<span class="status-badge badge-missing">ID покупця — очікується</span>' : ''}
+        </div>
+        ${hasNote ? `<div style="font-size:11px;color:var(--fg3);line-height:1.4;">${crop.note}</div>` : ''}
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function setFarm(farm, btn) {
+  currentFarm = farm;
+  document.querySelectorAll('.farm-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCrops();
+}
+
+// Task #8: Калькулятор рейсу
+function runCalc() {
+  const cropId = document.getElementById('calcCrop').value;
+  const farm   = document.getElementById('calcFarm').value;
+  const dir    = document.getElementById('calcDir').value;
+  const tons   = parseFloat(document.getElementById('calcTons').value) || 25;
+  const priceInput = document.getElementById('calcPrice').value;
+
+  const crop = CROPS.find(c => c.id === cropId);
+  if (!crop) return;
+
+  const price = priceInput ? parseFloat(priceInput) : crop.bestPrice;
+  const freight = FREIGHT[farm][dir];
+  const net = price - freight;
+  const totalNet = net * tons;
+  const farmLabel = farm === 'dolynske' ? 'Долинське' : 'Копані';
+  const dirLabels = { kernel: 'Кропивницький', cherkasy: 'Черкаси', mykolaiv: 'Миколаїв', odesa: 'Одеса/Дунай' };
+  const threshold = GRADOLIA_THRESHOLDS[cropId];
+  let thresholdNote = '';
+  if (threshold) {
+    const diff = net - threshold;
+    const cls = diff >= 0 ? 'above' : 'below';
+    const sign = diff >= 0 ? '+' : '';
+    thresholdNote = `<div class="net-threshold ${cls}" style="margin-top:8px;">ГрадОлія поріг ${fmt(threshold)} ₴/т: ${sign}${fmt(diff)} ₴/т від порогу</div>`;
+  }
+  const warn = priceInput ? '' : `<div class="calc-warn">⚠️ Ціна авто (bestPrice ${fmt(price)} ₴/т) — published_unconfirmed</div>`;
+  const resHtml = `
+    <div class="calc-res-grid">
+      <div class="calc-res-item">
+        <div class="calc-res-label">Закупівельна ціна</div>
+        <div class="calc-res-val">${fmt(price)} <span class="calc-res-sub">₴/т</span></div>
+      </div>
+      <div class="calc-res-item">
+        <div class="calc-res-label">Фрахт ${farmLabel} → ${dirLabels[dir]}</div>
+        <div class="calc-res-val">−${fmt(freight)} <span class="calc-res-sub">₴/т</span></div>
+      </div>
+      <div class="calc-res-item">
+        <div class="calc-res-label">Net ціна</div>
+        <div class="calc-res-val">${fmt(net)} <span class="calc-res-sub">₴/т</span></div>
+      </div>
+      <div class="calc-res-item">
+        <div class="calc-res-label">Виручка рейсу (${tons} т)</div>
+        <div class="calc-res-val" style="color:var(--green);font-size:20px;">${fmt(Math.round(totalNet))} <span class="calc-res-sub">₴</span></div>
+      </div>
+    </div>
+    ${thresholdNote}
+    ${warn}
+  `;
+  const el = document.getElementById('calcResult');
+  el.innerHTML = resHtml;
+  el.style.display = 'block';
+}
+
+renderCrops();
+
+// ══════════════════════════════════════════════════
+// SELL / WAIT BAROMETER ENGINE
+// Методологія: 7 сигналів × 3 горизонти × 6 культур
+// Шкала 0–100: 0-25🔴 / 26-45🟠 / 46-60🟡 / 61-75🟢 / 76-100⚡
+// Всі дані: published_unconfirmed, 29.10.2026
+// ══════════════════════════════════════════════════
+
+// Ваги сигналів по горизонту (сума = 100)
+const BARO_WEIGHTS = {
+  '1m': { priceTrend: 30, seasonal: 20, cbot: 15, usd: 10, wasde: 10, logistics: 10, news: 5 },
+  '3m': { priceTrend: 20, seasonal: 25, cbot: 15, usd: 15, wasde: 10, logistics: 10, news: 5 },
+  '6m': { priceTrend: 10, seasonal: 25, cbot: 15, usd: 15, wasde: 15, logistics: 10, news: 10 }
+};
+
+// Сигнали по культурах (0–100 по кожному сигналу)
+// Джерело: аналіз публічних даних станом на 29.10.2026
+const BARO_SIGNALS = {
+  rapeseed: {
+    // Ріпак: ціна 21 200 грн/т, DAP $525/т, сезон — збирання у серпні вже позаду
+    priceTrend: {
+      score: 58,
+      note: 'Спотова ціна 21 200 грн/т (+300 від тижня тому). Три незалежні джерела збігаються. Боковий тренд.'
+    },
+    seasonal: {
+      '1m': { score: 65, note: 'Жовтень–листопад: сезонний попит з ЄС збільшується перед зимою. Гістор. зростання +3-5%.' },
+      '3m': { score: 55, note: 'Грудень–лютий: ціна зазвичай консолідується. WASDE 10.11 може змінити картину.' },
+      '6m': { score: 40, note: 'До квітня: нова сезонна пропозиція з ЄС тисне вниз. Продавати зараз вигідніше.' }
+    },
+    cbot: { score: 52, note: 'Euronext ріпак консолідується біля €470-480/т. Без чіткого тренду вгору.' },
+    usd: { score: 60, note: 'USD/UAH 45,60 — стабільно. Ціна у гривні підтримана курсом.' },
+    wasde: { score: 50, note: 'WASDE 10.11: очікується без різких змін по ріпаку. Глобальна пропозиція помірна.' },
+    logistics: { score: 45, note: 'УЗ +34,8% з листопада (850 грн/день). Авто фрахт Одеса: 1500 грн/т з Долинського.' },
+    news: { score: 55, note: 'Геополітика — без ескалації. Попит ЄС на ріпакову олію стабільний.' }
+  },
+  sunflower: {
+    // Соняшник: ціна 18 700 грн/т, але -3,5% за тиждень 9-15.10 — спадний тренд
+    priceTrend: {
+      score: 38,
+      note: 'Спадний тренд: -3,5% за тиждень 9-15.10. Різниця між Tripoli 18700 і MHP 15700 вказує на нерівномірний попит.'
+    },
+    seasonal: {
+      '1m': { score: 30, note: 'Жовтень–листопад: пік пропозиції соняшника після збирання. Ціна під тиском.' },
+      '3m': { score: 55, note: 'Грудень–лютий: пропозиція зменшується, олійні переробники активізуються.' },
+      '6m': { score: 65, note: 'Березень–квітень: залишки вичерпуються, ціна зазвичай на 8-12% вище жовтня.' }
+    },
+    cbot: { score: 48, note: 'CBOT соняшникова олія — без сильного імпульсу. Ціна залежить від локального попиту.' },
+    usd: { score: 60, note: 'USD/UAH 45,60 — нейтрально для соняшника (внутрішній ринок).' },
+    wasde: { score: 42, note: 'USDA прогнозує рекордний урожай соняшника Україна 2025/26 — тиск на ціну.' },
+    logistics: { score: 40, note: 'Kernel Придніпровськ — найближчий покупець. Фрахт 275 грн/т з Долинського.' },
+    news: { score: 35, note: 'AGRO HUB Голованівськ знизив Ф-2: 12 600 → 12 200 (TG). Олія нерафінована Ізмаїл $1 010/т (Гудгрейноіл 19.10) — маржа заводів тримається, локальний попит слабкий.' }
+  },
+  soy: {
+    // Соя: ціна 20 500 грн/т В АГРО Ізмаїл (потребує підтвердження), ринок 17-18 750
+    priceTrend: {
+      score: 55,
+      note: 'В АГРО Ізмаїл 20 500 — потребує дзвінка. Ринковий рівень 17 500–18 750 підтверджений 3 джерелами.'
+    },
+    seasonal: {
+      '1m': { score: 48, note: 'Жовтень–листопад: соя щойно зібрана, пропозиція велика. Ціна під помірним тиском.' },
+      '3m': { score: 60, note: 'Грудень–лютий: Аргентина/Бразилія не почали збирання — вікно для продажу.' },
+      '6m': { score: 45, note: 'Березень–квітень: новий урожай Пів. Америки тисне на глобальну ціну.' }
+    },
+    cbot: { score: 50, note: 'CBOT соя ZS консолідується. Без чіткого тренду. Бразильський врожай — ризик.' },
+    usd: { score: 58, note: 'USD/UAH стабільний. Соя торгується у доларах — курс нейтральний.' },
+    wasde: { score: 52, note: 'WASDE 10.11: USDA очікується підвищення запасів сої Бразилії — помірно негативно.' },
+    logistics: { score: 38, note: 'Ізмаїл — далеко (1400-1500 грн/т фрахт). Місцеві покупці платять менше.' },
+    news: { score: 55, note: 'Нішевий ринок не-ГМО. Попит від МХП та олійних заводів стабільний.' }
+  },
+  corn: {
+    // Кукурудза: ціна 7 500 грн/т, але -5,2% за тиждень 9-15.10 — сильний спадний тренд
+    priceTrend: {
+      score: 25,
+      note: 'Спадний тренд -5,2% за тиждень. USDA прогнозує рекордний урожай кукурудзи 2025/26. Ціна під тиском.'
+    },
+    seasonal: {
+      '1m': { score: 20, note: 'Жовтень–листопад: пік пропозиції кукурудзи — найгірший час для продажу.' },
+      '3m': { score: 45, note: 'Грудень–лютий: пропозиція зменшується, ціна стабілізується. Можливе зростання 3-5%.' },
+      '6m': { score: 60, note: 'Березень–травень: залишки мінімальні, США ще не зібрали — ціна часто на піку.' }
+    },
+    cbot: { score: 38, note: 'CBOT грудень 186,7 $/т (−1,5; Barva Invest). Пропозиція США тисне, Бразилія посіяла 59% першого врожаю. Висхідного каталізатора немає.' },
+    usd: { score: 55, note: 'USD/UAH 45,60 — помірно позитивно для експортних котирувань Дунай CPT.' },
+    wasde: { score: 30, note: 'WASDE: USDA підвищило прогноз запасів кукурудзи США. Негативний сигнал для ціни.' },
+    logistics: { score: 42, note: 'DAP-Дунай $155–160/т (Barva). Сушіння +$10–20/т, подекуди до $30 (ПУСК). Фрахт Одеса 1 400–1 500 ₴/т.' },
+    news: { score: 35, note: 'Ринок кукурудзи в дисбалансі: виробники шукають збут, логістика забита, попит обмежений (Barva Invest).' }
+  },
+  barley: {
+    // Ячмінь: ціна 7 300 грн/т, три джерела підтверджують 7 000-7 300
+    priceTrend: {
+      score: 55,
+      note: 'Стабільна ціна 7 000–7 300 від трьох незалежних джерел. Без різких рухів.'
+    },
+    seasonal: {
+      '1m': { score: 50, note: 'Жовтень–листопад: ячмінь вже 3 місяці у зберіганні. Ціна консолідується.' },
+      '3m': { score: 45, note: 'Грудень–лютий: ячмінь для пива — нішевий попит. Без сезонного зростання.' },
+      '6m': { score: 35, note: 'Березень–квітень: новий сезон наближається, тиск на старий врожай.' }
+    },
+    cbot: { score: 50, note: 'Euronext ячмінь — без тренду. Ринок вузький.' },
+    usd: { score: 55, note: 'USD/UAH стабільний — нейтрально для ячменю.' },
+    wasde: { score: 48, note: 'WASDE: ячмінь — не ключова культура у звіті. Слабкий вплив.' },
+    logistics: { score: 45, note: 'Одеса/Дунай — стандартна логістика. Фрахт 1 050–1 500 грн/т.' },
+    news: { score: 50, note: 'Пивоварний ячмінь: GrainTrade CPT 6 500 — вузька аудиторія покупців.' }
+  },
+  wheat: {
+    // Пшениця 2-3 кл.: ціна 8 800 грн/т, чотири джерела підтверджують 8 000-8 800
+    priceTrend: {
+      score: 62,
+      note: 'Пшениця 8 800 від Tripoli — підтверджена 4 джерелами. Стабільно у коридорі 8 000–8 800.'
+    },
+    seasonal: {
+      '1m': { score: 60, note: 'Жовтень–листопад: попит Єгипту та Туреччини — традиційно сильний. Ціна тримається.' },
+      '3m': { score: 55, note: 'Грудень–лютий: зимовий попит підтримує ціну. Гістор. зростання 2-4%.' },
+      '6m': { score: 35, note: 'Березень–квітень: новий урожай наближається — тиск на ціну старого.' }
+    },
+    cbot: { score: 55, note: 'CBOT ZW просів у пт: сильний долар, експорт США 320 тис. т (Barva). DAP-Дунай 11,5% $165–176. Ринок чекає WASDE 10.11.' },
+    usd: { score: 60, note: 'USD/UAH 45,60 — підтримує експортні ціни. Нейтрально-позитивно.' },
+    wasde: { score: 52, note: 'WASDE 10.11: пшениця Чорне море — очікується без різких змін. Баланси стабільні.' },
+    logistics: { score: 48, note: 'Велика маса — критично важливо звільнити склад. УЗ +34,8% з листопада.' },
+    news: { score: 60, note: 'Єгипет 28.10 купив 480 тис.т пшениці CPT $235 — сильний зовнішній попит. Умова 86/14% (РО АГРО ТРЕЙД, YUROL): 14% — після відшкодування ПДВ.' }
+  }
+};
+
+const CROP_ORDER = ['rapeseed','sunflower','soy','corn','barley','wheat'];
+const CROP_META = {
+  rapeseed:  { emoji:'💛', name:'Ріпак' },
+  sunflower: { emoji:'🌻', name:'Соняшник' },
+  soy:       { emoji:'🫘', name:'Соя' },
+  corn:      { emoji:'🌽', name:'Кукурудза' },
+  barley:    { emoji:'🌾', name:'Ячмінь' },
+  wheat:     { emoji:'🌱', name:'Пшениця' }
+};
+
+let currentBaroHz = '1m';
+
+function calcBaroScore(cropId, hz) {
+  const s = BARO_SIGNALS[cropId];
+  const w = BARO_WEIGHTS[hz];
+  const priceTrend = s.priceTrend.score;
+  const seasonal   = s.seasonal[hz].score;
+  const cbot       = s.cbot.score;
+  const usd        = s.usd.score;
+  const wasde      = s.wasde.score;
+  const logistics  = s.logistics.score;
+  const news       = s.news.score;
+  const total = (
+    priceTrend * w.priceTrend +
+    seasonal   * w.seasonal   +
+    cbot       * w.cbot       +
+    usd        * w.usd        +
+    wasde      * w.wasde      +
+    logistics  * w.logistics  +
+    news       * w.news
+  ) / 100;
+  return Math.round(total);
+}
+
+function baroSignalInfo(score) {
+  if (score <= 25) return { cls: 'baro-wait',    label: '🔴 Чекати' };
+  if (score <= 45) return { cls: 'baro-caution', label: '🟠 Обережно' };
+  if (score <= 60) return { cls: 'baro-neutral', label: '🟡 Нейтрально' };
+  if (score <= 75) return { cls: 'baro-sell',    label: '🟢 Продавати' };
+  return              { cls: 'baro-sell-now',    label: '⚡ ПРОДАВАЙ ЗАРАЗ' };
+}
+
+function baroReasons(cropId, hz) {
+  const s = BARO_SIGNALS[cropId];
+  return [
+    s.priceTrend.note,
+    s.seasonal[hz].note,
+    s.cbot.note,
+    s.logistics.note,
+    s.news.note
+  ];
+}
+
+function renderBarometer() {
+  const container = document.getElementById('baroCards');
+  if (!container) return;
+  container.innerHTML = '';
+  CROP_ORDER.forEach(cropId => {
+    const score = calcBaroScore(cropId, currentBaroHz);
+    const info  = baroSignalInfo(score);
+    const meta  = CROP_META[cropId];
+    const reasons = baroReasons(cropId, currentBaroHz);
+    const isNow = score >= 76;
+
+    const card = document.createElement('div');
+    card.className = 'baro-card' + (isNow ? ' baro-signal-now' : '');
+    card.innerHTML = `
+      <div class="baro-crop-label">${meta.emoji} ${meta.name}</div>
+      <div class="baro-score-wrap">
+        <span class="baro-score ${info.cls}">${score}</span>
+        <span class="baro-score-max">/100</span>
+      </div>
+      <div class="baro-signal-label ${info.cls}">${info.label}</div>
+      <div class="baro-reasons">
+        ${reasons.map(r => `<div class="baro-reason">${r}</div>`).join('')}
+      </div>
+      <div class="baro-expand-hint">↓ деталі</div>
+    `;
+    card.addEventListener('click', () => {
+      const isExp = card.classList.toggle('expanded');
+      card.querySelector('.baro-expand-hint').textContent = isExp ? '↑ сховати' : '↓ деталі';
+    });
+    container.appendChild(card);
+  });
+}
+
+function setBaroHz(hz, btn) {
+  currentBaroHz = hz;
+  document.querySelectorAll('.baro-hz-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderBarometer();
+}
+
+renderBarometer();
+
+// ══════════════════════════════════════════════════
+// TELEGRAM-ОФЕРТИ (скриншоти власника, 29.10.2026)
+// Статус: published_unconfirmed, допоміжне джерело
+// ══════════════════════════════════════════════════
+const TG_ROWS = [
+  // РО АГРО ТРЕЙД (RawAgroTrade) — 19.10, з ПДВ, партії від 100 т
+  { ch:'РО АГРО ТРЕЙД', crop:'sunflower', item:'Соняшник ВО', price:'18 500 ₴', vat:'з ПДВ', place:'Вінниця', date:'2026-10-19', note:'партії від 100 т' },
+  { ch:'РО АГРО ТРЕЙД', crop:'sunflower', item:'Соняшник', price:'17 000 ₴', vat:'з ПДВ', place:'Львів', date:'2026-10-19', note:'' },
+  { ch:'РО АГРО ТРЕЙД', crop:'soy', item:'Соя не-ГМО', price:'19 000 ₴', vat:'з ПДВ', place:'Глобине', date:'2026-10-19', note:'' },
+  { ch:'РО АГРО ТРЕЙД', crop:'soy', item:'Соя ГМО', price:'18 000 ₴', vat:'з ПДВ', place:'Ізмаїл, Орлівка', date:'2026-10-19', note:'' },
+  { ch:'РО АГРО ТРЕЙД', crop:'corn', item:'Кукурудза', price:'7 500 ₴', vat:'з ПДВ', place:'Орлівка', date:'2026-10-19', note:'' },
+  { ch:'РО АГРО ТРЕЙД', crop:'barley', item:'Ячмінь', price:'7 000 ₴', vat:'з ПДВ', place:'Ізмаїл', date:'2026-10-19', note:'' },
+  { ch:'РО АГРО ТРЕЙД', crop:'wheat', item:'Пшениця 2 кл.', price:'8 800 ₴', vat:'з ПДВ', place:'Рені', date:'2026-10-19', note:'' },
+  { ch:'РО АГРО ТРЕЙД', crop:'wheat', item:'Пшениця 3 кл.', price:'8 650 ₴', vat:'з ПДВ', place:'Рені', date:'2026-10-19', note:'' },
+  { ch:'РО АГРО ТРЕЙД', crop:'wheat', item:'Пшениця 4 кл.', price:'7 600 ₴', vat:'з ПДВ', place:'Рені', date:'2026-10-19', note:'' },
+  { ch:'РО АГРО ТРЕЙД', crop:'wheat', item:'Пшениця 4 кл.', price:'7 500 ₴', vat:'з ПДВ', place:'Вадул-Сірет', date:'2026-10-19', note:'' },
+  { ch:'РО АГРО ТРЕЙД', crop:'other', item:'Горох', price:'8 000 ₴', vat:'з ПДВ', place:'Ізмаїл', date:'2026-10-19', note:'' },
+  // AGRO HUB MARKET
+  { ch:'AGRO HUB MARKET', crop:'sunflower', item:'Соняшник (8/3/48)', price:'12 200 ₴', vat:'Ф-2', place:'ОЕЗ Голованівськ (Кіровогр.)', date:null, note:'останній пост, ▼ з 12 600; доплата за олійність' },
+  // RGC / ТОВ Кублич Грейн (ЄДРПОУ 40856467) — індикативні
+  { ch:'RGC / Кублич Грейн', crop:'wheat', item:'Пшениця 2 кл.', price:'8 900 ₴ / $177', vat:'?', place:'Порт Ізмаїл', date:'2026-10-12', note:'індикатив, торг за обсяг' },
+  { ch:'RGC / Кублич Грейн', crop:'wheat', item:'Пшениця 3 кл.', price:'8 800 ₴ / $175', vat:'?', place:'Порт Ізмаїл', date:'2026-10-12', note:'' },
+  { ch:'RGC / Кублич Грейн', crop:'corn', item:'Кукурудза', price:'8 000 ₴ / $160', vat:'?', place:'Порт Ізмаїл', date:'2026-10-12', note:'' },
+  { ch:'RGC / Кублич Грейн', crop:'wheat', item:'Пшениця 2 кл.', price:'7 950 ₴ / $177', vat:'?', place:'Порт Ізмаїл', date:'2026-10-09', note:'', flag:'гривня −950 при $ +1 — суперечить курсу, не використовувати' },
+  { ch:'RGC / Кублич Грейн', crop:'rapeseed', item:'Ріпак', price:'23 000 ₴ / $490', vat:'?', place:'Порт Ізмаїл', date:'2026-09-17', note:'' },
+  { ch:'RGC / Кублич Грейн', crop:'rapeseed', item:'Ріпак', price:'20 000 / 19 700 ₴', vat:'?', place:'Ел. Березівка / Кублич, Бар', date:null, note:'пост до 17.09' },
+  { ch:'RGC / Кублич Грейн', crop:'barley', item:'Ячмінь', price:'7 500 ₴ / $150', vat:'?', place:'Порт Ізмаїл', date:null, note:'пост до 17.09' },
+  // АЛМЕЙДА ГРУП — CPT/DAP, з ПДВ, курс у пості $44,86 / €50,92, оплата 10 р.д.
+  { ch:'АЛМЕЙДА ГРУП', crop:'sunflower', item:'Соняшник', price:'20 000 ₴ / €355', vat:'з ПДВ', place:'DAP Чоп', date:null, note:'обсяги лімітовані' },
+  { ch:'АЛМЕЙДА ГРУП', crop:'sunflower', item:'Соняшник ВО / звич.', price:'19 000 / 17 500 ₴', vat:'з ПДВ', place:'Богданівецький КХП (Хмельн.)', date:null, note:'' },
+  { ch:'АЛМЕЙДА ГРУП', crop:'corn', item:'Кукурудза', price:'7 000 ₴ / $140', vat:'з ПДВ', place:'DAP Вадул-Сірет', date:null, note:'' },
+  { ch:'АЛМЕЙДА ГРУП', crop:'corn', item:'Кукурудза', price:'€155', vat:'?', place:'DAP Чоп', date:null, note:'поставка грудень–березень' },
+  { ch:'АЛМЕЙДА ГРУП', crop:'corn', item:'Кукурудза', price:'5 800 ₴', vat:'з ПДВ', place:'Богданівецький КХП', date:null, note:'' },
+  { ch:'АЛМЕЙДА ГРУП', crop:'wheat', item:'Пшениця 3 кл. (б. 11,5)', price:'7 500 ₴ / $149', vat:'з ПДВ', place:'DAP Вадул-Сірет', date:null, note:'' },
+  { ch:'АЛМЕЙДА ГРУП', crop:'wheat', item:'Пшениця 4 кл. (б. 9)', price:'6 700 ₴ / $133', vat:'з ПДВ', place:'DAP Вадул-Сірет', date:null, note:'клоп до 2%' },
+  { ch:'АЛМЕЙДА ГРУП', crop:'wheat', item:'Пшениця 3 / 4 кл.', price:'6 300 / 5 500 ₴', vat:'з ПДВ', place:'Богданівецький КХП', date:null, note:'' },
+  { ch:'АЛМЕЙДА ГРУП', crop:'soy', item:'Соя протеїн 38% / 37%', price:'$345 / €290', vat:'?', place:'Вадул-Сірет / Чоп', date:null, note:'' },
+  // Barva Invest — біржа та DAP
+  { ch:'Barva Invest', crop:'wheat', item:'Пшениця 11,5%', price:'$165–176', vat:'—', place:'DAP-Дунай', date:null, note:'спотовий попит Дунай/Констанца, ціни коригуються вниз' },
+  { ch:'Barva Invest', crop:'corn', item:'Кукурудза', price:'$155–160', vat:'—', place:'DAP-Дунай', date:null, note:'дисбаланс попиту, забита логістика' },
+  { ch:'Barva Invest', crop:'corn', item:'CBOT грудень', price:'186,7 $/т', vat:'—', place:'Чикаго', date:null, note:'−1,5 $/т' },
+  { ch:'Barva Invest', crop:'corn', item:'Euronext листопад', price:'328,7', vat:'—', place:'Париж', date:null, note:'−9,2', flag:'рівень не схожий на кукурудзу Euronext — не використовується' },
+  // Гудгрейноіл — продукти переробки
+  { ch:'Гудгрейноіл', crop:'product', item:'Олія соняшникова нераф.', price:'53 400 ₴ / $1 010', vat:'з ПДВ', place:'Ізмаїл', date:'2026-10-19', note:'вивантаження 25–27.10, від 100 т' },
+  { ch:'Гудгрейноіл', crop:'product', item:'Олія соняшникова нераф.', price:'59 700 ₴ / €1 010', vat:'з ПДВ', place:'DAP Ізов, ж/д', date:'2026-10-19', note:'листопад' },
+  { ch:'Гудгрейноіл', crop:'product', item:'Шрот соняшниковий', price:'10 250 ₴ / $200', vat:'з ПДВ', place:'DAP Ізов, ж/д', date:'2026-10-19', note:'' },
+  { ch:'Гудгрейноіл', crop:'product', item:'Шрот (розсип)', price:'6 500 ₴ / $130', vat:'з ПДВ', place:'Ізмаїл', date:'2026-10-16', note:'' },
+  { ch:'Гудгрейноіл', crop:'product', item:'Шрот (розсип)', price:'6 100 ₴ / $120', vat:'з ПДВ', place:'Одеса', date:null, note:'залишалось 1 000 т' },
+  // Добрива
+  { ch:'Grossdorf', crop:'inputs', item:'КАС-32 / КАС 26+4S', price:'25 500 / 20 500 ₴', vat:'?', place:'Вознесенськ', date:'2026-10-16', note:'з понеділка КАС +500 ₴' },
+  { ch:'Grossdorf', crop:'inputs', item:'Нітроамофоска 15:15:15+11S', price:'37 500 ₴', vat:'?', place:'Вознесенськ', date:'2026-10-16', note:'' },
+  { ch:'Grossdorf', crop:'inputs', item:'Сульфат амонію', price:'21 000 ₴', vat:'?', place:'Вознесенськ', date:'2026-10-16', note:'07.10: гранула 20 000, база Хацьки, 300–400 т' },
+  { ch:'Grossdorf', crop:'inputs', item:'Селітра / карбамід', price:'27 500 / 31 500 ₴', vat:'?', place:'Вознесенськ', date:'2026-10-13', note:'' },
+  { ch:'YUROL TRADING', crop:'inputs', item:'Карбамід (продаж)', price:'33 600 ₴', vat:'?', place:'FCA, біги по 0,7 т', date:null, note:'' },
+  { ch:'Агропросперіс', crop:'inputs', item:'Добрива, ЗЗР, насіння', price:'—', vat:'—', place:'склади', date:'2026-10-16', note:'прайс-картинка нечитабельна на скриншоті' },
+  // Умови / ризики
+  { ch:'YUROL TRADING', crop:'terms', item:'Оплата 86% / 14%', price:'—', vat:'—', place:'Ізмаїл', date:null, note:'86% — 3 б.д. після розвантаження; 14% — після бюджетного відшкодування ПДВ; ліміт 300 т; цілодобово до 20.10' },
+  { ch:'РО АГРО ТРЕЙД', crop:'terms', item:'Ринок переходить на 86/14', price:'—', vat:'—', place:'—', date:'2026-10-19', note:'решту виплачують після повернення ПДВ' },
+  { ch:'РО АГРО ТРЕЙД', crop:'terms', item:'Сушіння кукурудзи', price:'+$10–20/т', vat:'—', place:'—', date:'2026-10-16', note:'подекуди до $30/т (ПУСК)' },
+  { ch:'Гудгрейноіл', crop:'terms', item:'Шахрайство з водіями', price:'—', vat:'—', place:'—', date:null, note:'дзвінки водіям зі зміною місця вивантаження — ігнорувати, звіряти з диспетчером' },
+  { ch:'Аналітичний Батон', crop:'terms', item:'Огляд ринків', price:'—', vat:'—', place:'Patreon', date:'2026-10-29', note:'платний контент, цін немає' },
+];
+
+const TG_FILTERS = [['all','Усі'],['sunflower','Соняшник'],['soy','Соя'],['corn','Кукурудза'],['wheat','Пшениця'],['barley','Ячмінь'],['rapeseed','Ріпак'],['product','Олія / шрот'],['inputs','Добрива'],['terms','Умови / ризики']];
+let tgFilter = 'all';
+
+function daysSince(d) {
+  return Math.floor((Date.now() - new Date(d + 'T12:00:00').getTime()) / 864e5);
+}
+function ageBadge(d) {
+  if (!d) return '<span class="age mid">дата не видна</span>';
+  const n = daysSince(d);
+  const cls = n <= 7 ? 'fresh' : n <= 14 ? 'mid' : 'old';
+  return `<span class="age ${cls}">${n <= 0 ? 'сьогодні' : n + ' дн.'}</span>`;
+}
+function ddmm(d) { if (!d) return ''; const p = d.split('-'); return p[2] + '.' + p[1] + ' '; }
+
+function renderTg() {
+  const f = document.getElementById('tgFilters');
+  f.innerHTML = TG_FILTERS.map(([k, l]) =>
+    `<button class="tg-chip${k === tgFilter ? ' active' : ''}" data-k="${k}">${l}</button>`).join('');
+  f.querySelectorAll('.tg-chip').forEach(b => b.onclick = () => { tgFilter = b.dataset.k; renderTg(); });
+  const rows = TG_ROWS.filter(r => tgFilter === 'all' || r.crop === tgFilter);
+  document.getElementById('tgBody').innerHTML = rows.map(r => {
+    const old = r.date && daysSince(r.date) > 14;
+    return `<tr class="${old ? 'old' : ''}">
+      <td>${r.ch}</td><td>${r.item}</td><td class="num">${r.price}</td><td>${r.vat}</td>
+      <td>${r.place}</td><td style="white-space:nowrap">${ddmm(r.date)}${ageBadge(r.date)}</td>
+      <td class="tg-note">${r.note}${r.flag ? `<div class="flag">⚠ ${r.flag}</div>` : ''}</td></tr>`;
+  }).join('');
+}
+
+const TG_INSIGHTS = [
+  '<strong>Соняшник, Кіровоградщина:</strong> найближчий ОЕЗ Голованівськ знизив Ф-2 з 12 600 до 12 200 (−3,2%). Чоп DAP 20 000 і Вінниця ВО 18 500 вищі на 6–8 тис., але це інша якість/базис і 400–1 000 км фрахту.',
+  '<strong>Кукурудза:</strong> DAP-Дунай $155–160 ≈ 6 950–7 180 ₴/т (курс 44,86). Сушіння +$10–20/т (≈450–900 ₴), подекуди $30 (≈1 350 ₴) — для вологого зерна net падає відчутно.',
+  '<strong>Оплата 86/14:</strong> 14% (≈ПДВ) — лише після бюджетного відшкодування. 25 т кукурудзи по 7 500 = 187 500 ₴, з них 26 250 ₴ відкладено без строку. Порівнюючи покупців, враховуй цю умову.',
+  '<strong>Пшениця:</strong> RGC Ізмаїл 2 кл. 8 900 (12.10) вище Tripoli 8 800, але ціні 17 днів. Ряд RGC 09.10 (7 950 ₴ при $177) суперечить курсу — помилка джерела або інша умова.',
+  '<strong>Курс:</strong> Алмейда рахує $ по 44,86, барометр — 45,60 (НБУ). Різниця 0,74 ₴ = 1,6% на будь-якій доларовій ціні.',
+  '<strong>Безпека відвантажень:</strong> Гудгрейноіл попереджає про дзвінки водіям зі зміною місця вивантаження. Інструктувати водіїв: зміни маршруту — тільки через диспетчера.',
+];
+document.getElementById('tgInsights').innerHTML = TG_INSIGHTS.map(t => `<div class="tg-insight">${t}</div>`).join('');
+renderTg();
+
+// Мета-рядок дати та наступного оновлення
+(function() {
+  const baroSection = document.getElementById('baroCards');
+  if (!baroSection) return;
+  const parent = baroSection.closest('.barometer-section') || baroSection.parentElement;
+  if (!parent) return;
+  const meta = document.createElement('div');
+  meta.style.cssText = 'font-size:10px;color:var(--fg3,#8a8fa8);text-align:right;margin-top:6px;padding:0 4px 2px;';
+  meta.innerHTML = 'Оновлено: 29.10.2026 &nbsp;·&nbsp; Наступний перегляд: WASDE <strong>10.11.2026</strong>';
+  parent.appendChild(meta);
+})();
+
+// ══════════════════════════════════════════════════════════════
+//  БЛОК ГРАФІКІВ ЦІН 2022–2026 + ЩОДЕННИЙ ТРЕКЕР ДЕЛЬТИ
+//  Джерела: USDA AMS (пшениця/кукурудза верифіковано),
+//           агрегатовані FOB/farm-gate оцінки (олійні),
+//           поточні ціни BAROMETER (жовтень 2026)
+// ══════════════════════════════════════════════════════════════
+
+// ── CSS для блоку графіків ──
+(function injectChartStyles() {
+  const s = document.createElement('style');
+  s.textContent = `
+  /* Chart block */
+  .charts-section{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:0}
+  .charts-title{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fg2);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+  .charts-note{font-size:11px;color:var(--fg3);line-height:1.5;margin-bottom:14px}
+  .chart-tab-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .chart-tab-btn{font:inherit;font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--fg2);cursor:pointer;transition:.15s}
+  .chart-tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  .chart-wrap-inner{position:relative;width:100%;height:300px}
+  canvas.price-canvas{width:100%!important;height:100%!important;display:block}
+  .chart-leg{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .chart-leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--fg2)}
+  .chart-leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .chart-leg-ring{width:9px;height:9px;border-radius:50%;flex-shrink:0;border:1.5px solid currentColor}
+  /* Delta tracker */
+  .delta-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .delta-grid-inner{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:10px}
+  .delta-card-inner{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 13px}
+  .dc-name-i{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--fg3);margin-bottom:5px}
+  .dc-price-i{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:700;color:var(--fg)}
+  .dc-unit-i{font-size:11px;color:var(--fg3)}
+  .dc-delta-i{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;margin-top:3px}
+  .dci-up{color:var(--green)}.dci-dn{color:var(--red)}.dci-fl{color:var(--fg3)}
+  .dc-prev-i{font-size:10px;color:var(--fg3);margin-top:1px}
+  /* UAH bar chart */
+  .chart-wrap-uah{position:relative;width:100%;height:240px;margin-top:14px}
+  /* Tooltip */
+  .chart-tt{position:absolute;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.12);min-width:170px;z-index:99;display:none}
+  .chart-tt-title{font-weight:700;color:var(--fg);margin-bottom:5px}
+  .chart-tt-row{display:flex;align-items:center;gap:5px;margin:2px 0}
+  .chart-tt-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .chart-tt-lbl{color:var(--fg2);flex:1}
+  .chart-tt-val{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--fg)}
+  `;
+  document.head.appendChild(s);
+})();
+
+// ── HTML блоків вставляємо в .main ──
+(function injectChartHTML() {
+  const main = document.querySelector('.main');
+  if (!main) return;
+
+  // Delta tracker
+  const deltaEl = document.createElement('div');
+  deltaEl.className = 'delta-section';
+  deltaEl.innerHTML = `
+    <div class="charts-title">📊 Щоденний трекер дельти — 29.10.2026</div>
+    <div class="charts-note">Зміна за тиждень (22–29.10) по культурах, паливу та добривах. ↑ зростання · ↓ падіння · → без змін. Дані: <strong>published_unconfirmed</strong>.</div>
+    <div class="delta-grid-inner" id="deltaGridInner"></div>
+    <div style="font-size:10px;color:var(--amber);margin-top:10px;padding:7px 10px;background:var(--amber-bg);border-radius:6px">⚠ Дельти: культури — bestPrice 22–29.10 · добрива — OSTCHEM жовт. vs вер. · паливо — minfin.com.ua</div>`;
+
+  // Charts
+  const chartsEl = document.createElement('div');
+  chartsEl.className = 'charts-section';
+  chartsEl.innerHTML = `
+    <div class="charts-title">📈 Динаміка цін 2022–2026 (USD/т)</div>
+    <div class="charts-note">Пшениця і кукурудза: ✅ USDA AMS farm-gate (верифіковано). Олійні та ячмінь: ○ агрегована FOB/farm-gate оцінка (published_unconfirmed). Жовтень 2026 — поточні ціни барометру / курс 45,60.</div>
+    <div class="chart-tab-row">
+      <button class="chart-tab-btn active" data-tab="grain">🌾 Зернові</button>
+      <button class="chart-tab-btn" data-tab="oilseed">🌻 Олійні</button>
+      <button class="chart-tab-btn" data-tab="all">📊 Всі</button>
+    </div>
+    <div class="chart-wrap-inner">
+      <canvas class="price-canvas" id="mainPriceCanvas"></canvas>
+      <div class="chart-tt" id="mainPriceTT"></div>
+    </div>
+    <div class="chart-leg" id="mainChartLeg"></div>
+    <div style="margin-top:16px;font-size:12px;font-weight:700;color:var(--fg2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">₴ Поточні ціни 29.10.2026 (₴/т)</div>
+    <div class="chart-wrap-uah">
+      <canvas class="price-canvas" id="mainUahCanvas"></canvas>
+      <div class="chart-tt" id="mainUahTT"></div>
+    </div>`;
+
+  main.appendChild(deltaEl);
+  main.appendChild(chartsEl);
+})();
+
+// ── Дані ──
+const CH_YEARS = ['2022','2023','2024','2025','Жовт. 2026'];
+// Categorical palette (validated adjacent CVD ΔE≥8)
+const CH_SERIES = {
+  wheat:     { label:'Пшениця',   emoji:'🌱', color:'#2a78d6', group:['grain','all'],    data:[188,140,177,224,+(8800/45.6).toFixed(0)] },
+  corn:      { label:'Кукурудза', emoji:'🌽', color:'#eb6834', group:['grain','all'],    data:[172,136,158,217,+(7500/45.6).toFixed(0)] },
+  sunflower: { label:'Соняшник',  emoji:'🌻', color:'#1baf7a', group:['oilseed','all'], data:[420,380,340,380,+(18700/45.6).toFixed(0)], ind:[0,1,2,3] },
+  rapeseed:  { label:'Ріпак',     emoji:'💛', color:'#eda100', group:['oilseed','all'], data:[480,420,400,430,+(21200/45.6).toFixed(0)], ind:[0,1,2,3] },
+  soy:       { label:'Соя',       emoji:'🫘', color:'#e87ba4', group:['oilseed','all'], data:[430,360,350,370,+(20500/45.6).toFixed(0)], ind:[0,1,2,3] },
+  barley:    { label:'Ячмінь',    emoji:'🌾', color:'#6250d6', group:['grain','all'],   data:[160,130,145,185,+(7300/45.6).toFixed(0)],  ind:[0,1,2,3] },
+};
+const CH_UAH = [
+  {label:'Ріпак 💛',     val:21200,color:'#eda100'},
+  {label:'Соя 🫘',       val:20500,color:'#e87ba4'},
+  {label:'Соняшник 🌻',  val:18700,color:'#1baf7a'},
+  {label:'Пшениця 🌱',   val:8800, color:'#2a78d6'},
+  {label:'Кукурудза 🌽', val:7500, color:'#eb6834'},
+  {label:'Ячмінь 🌾',    val:7300, color:'#6250d6'},
+];
+const CH_DELTA = [
+  {name:'Ріпак',       price:'21 200',unit:'₴/т', delta:-200,pct:-0.9,prev:'21 400 (22.10)',type:'crop'},
+  {name:'Соняшник',    price:'18 700',unit:'₴/т', delta:-400,pct:-2.1,prev:'19 100 (22.10)',type:'crop'},
+  {name:'Соя не ГМО', price:'20 500',unit:'₴/т', delta:+250,pct:+1.2,prev:'20 250 (22.10)',type:'crop'},
+  {name:'Кукурудза',   price:'7 500', unit:'₴/т', delta:-150,pct:-2.0,prev:'7 650 (22.10)', type:'crop'},
+  {name:'Ячмінь',      price:'7 300', unit:'₴/т', delta:0,   pct:0,   prev:'7 300 (22.10)', type:'crop'},
+  {name:'Пшениця',     price:'8 800', unit:'₴/т', delta:+200,pct:+2.3,prev:'8 600 (22.10)', type:'crop'},
+  {name:'Дизель ДП',   price:'104,21',unit:'₴/л', delta:+0.8,pct:+0.8,prev:'103,41 (21.10)',type:'fuel'},
+  {name:'А-95',        price:'90,08', unit:'₴/л', delta:+0.5,pct:+0.6,prev:'89,58 (21.10)', type:'fuel'},
+  {name:'Селітра N34', price:'27 750',unit:'₴/т', delta:+900,pct:+3.4,prev:'26 850 (вер.)', type:'fert'},
+  {name:'Карбамід N46',price:'31 750',unit:'₴/т', delta:+500,pct:+1.6,prev:'31 250 (вер.)', type:'fert'},
+];
+
+// ── Рендер трекера ──
+function renderDeltaTracker() {
+  const g = document.getElementById('deltaGridInner');
+  if (!g) return;
+  g.innerHTML = CH_DELTA.map(d => {
+    const cls = d.delta > 0 ? 'dci-up' : d.delta < 0 ? 'dci-dn' : 'dci-fl';
+    const arr = d.delta > 0 ? '↑' : d.delta < 0 ? '↓' : '→';
+    const sgn = d.delta > 0 ? '+' : '';
+    const ic  = d.type === 'crop' ? '🌾' : d.type === 'fuel' ? '⛽' : '🧪';
+    const pct = d.pct !== 0 ? ` (${sgn}${d.pct.toFixed(1)}%)` : '';
+    return `<div class="delta-card-inner">
+      <div class="dc-name-i">${ic} ${d.name}</div>
+      <div class="dc-price-i">${d.price} <span class="dc-unit-i">${d.unit}</span></div>
+      <div class="dc-delta-i ${cls}">${arr} ${sgn}${Math.abs(d.delta).toLocaleString('uk-UA')} ${d.unit}${pct}</div>
+      <div class="dc-prev-i">було: ${d.prev}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Canvas Charts ──
+function getCSSV(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+function drawLineChart(canvasId, ttId, labels, datasets, yUnit) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  const PAD = {t:16,r:16,b:36,l:58};
+  const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+  ctx.fillStyle = getCSSV('--surface'); ctx.fillRect(0,0,W,H);
+
+  let all = []; datasets.forEach(d => d.data.forEach(v => { if (v != null) all.push(v); }));
+  const minV = Math.floor(Math.min(...all) * 0.85 / 25) * 25;
+  const maxV = Math.ceil(Math.max(...all) * 1.08 / 25) * 25;
+  const rng = maxV - minV;
+  const xP = i => PAD.l + (i / (labels.length - 1)) * cW;
+  const yP = v => PAD.t + cH - ((v - minV) / rng) * cH;
+
+  // grid + y labels
+  for (let i = 0; i <= 5; i++) {
+    const v = minV + rng / 5 * i;
+    const y = yP(v);
+    ctx.beginPath(); ctx.moveTo(PAD.l, y); ctx.lineTo(PAD.l + cW, y);
+    ctx.strokeStyle = getCSSV('--border'); ctx.lineWidth = 1; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = getCSSV('--fg3'); ctx.font = '10px Inter,sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(v), PAD.l - 5, y + 4);
+  }
+  // x labels
+  ctx.fillStyle = getCSSV('--fg3'); ctx.font = '10px Inter,sans-serif'; ctx.textAlign = 'center';
+  labels.forEach((l, i) => ctx.fillText(l, xP(i), H - PAD.b + 14));
+
+  // lines + dots
+  datasets.forEach(ds => {
+    ctx.strokeStyle = ds.color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.setLineDash([]);
+    ctx.beginPath(); let started = false;
+    ds.data.forEach((v, i) => {
+      if (v == null) { started = false; return; }
+      if (!started) { ctx.moveTo(xP(i), yP(v)); started = true; } else ctx.lineTo(xP(i), yP(v));
+    });
+    ctx.stroke();
+    ds.data.forEach((v, i) => {
+      if (v == null) return;
+      const isInd = ds.ind && ds.ind.includes(i);
+      ctx.beginPath(); ctx.arc(xP(i), yP(v), isInd ? 4 : 5, 0, Math.PI * 2);
+      if (isInd) {
+        ctx.strokeStyle = ds.color; ctx.lineWidth = 1.5;
+        ctx.fillStyle = getCSSV('--surface'); ctx.fill(); ctx.stroke();
+      } else {
+        ctx.fillStyle = ds.color; ctx.fill();
+        ctx.strokeStyle = getCSSV('--surface'); ctx.lineWidth = 2; ctx.stroke();
+      }
+    });
+  });
+
+  // tooltip
+  const tt = document.getElementById(ttId);
+  if (tt) {
+    canvas.onmousemove = e => {
+      const r = canvas.getBoundingClientRect();
+      const mx = e.clientX - r.left;
+      let best = 0, bd = Infinity;
+      labels.forEach((_, i) => { const d = Math.abs(xP(i) - mx); if (d < bd) { bd = d; best = i; } });
+      if (bd > 40) { tt.style.display = 'none'; return; }
+      let html = `<div class="chart-tt-title">${labels[best]}</div>`;
+      datasets.forEach(ds => {
+        const v = ds.data[best]; if (v == null) return;
+        const isInd = ds.ind && ds.ind.includes(best);
+        html += `<div class="chart-tt-row"><div class="chart-tt-dot" style="background:${ds.color}${isInd?';outline:2px solid '+ds.color+';background:transparent':''}"></div>
+          <div class="chart-tt-lbl">${ds.emoji} ${ds.label}${isInd?' <span style="font-size:9px;color:var(--fg3)">(оц.)</span>':''}</div>
+          <div class="chart-tt-val">${v} ${yUnit}</div></div>`;
+      });
+      tt.innerHTML = html; tt.style.display = 'block';
+      let tx = mx + 14, ty = Math.max(0, e.clientY - r.top - 20);
+      if (tx + 190 > r.width) tx = mx - 200;
+      tt.style.left = tx + 'px'; tt.style.top = ty + 'px';
+    };
+    canvas.onmouseleave = () => { tt.style.display = 'none'; };
+  }
+}
+
+function drawUahBars(canvasId, ttId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  const PAD = {t:8,r:16,b:24,l:120};
+  const cW = W - PAD.l - PAD.r, cH = H - PAD.t - PAD.b;
+  ctx.fillStyle = getCSSV('--surface'); ctx.fillRect(0,0,W,H);
+  const items = [...CH_UAH].sort((a,b) => b.val - a.val);
+  const maxV = Math.ceil(Math.max(...items.map(d => d.val)) * 1.08 / 1000) * 1000;
+  const rowH = cH / items.length, barH = Math.min(rowH * 0.55, 28);
+
+  for (let v = 0; v <= maxV; v += 5000) {
+    const x = PAD.l + (v / maxV) * cW;
+    ctx.beginPath(); ctx.moveTo(x, PAD.t); ctx.lineTo(x, PAD.t + cH);
+    ctx.strokeStyle = getCSSV('--border'); ctx.lineWidth = 1; ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = getCSSV('--fg3'); ctx.font = '9px Inter'; ctx.textAlign = 'center';
+    ctx.fillText((v / 1000).toFixed(0) + 'к', x, PAD.t + cH + 14);
+  }
+
+  items.forEach((d, i) => {
+    const y = PAD.t + i * rowH + (rowH - barH) / 2;
+    const bW = (d.val / maxV) * cW;
+    ctx.fillStyle = d.color;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(PAD.l, y, bW, barH, [0,3,3,0]);
+    else { ctx.rect(PAD.l, y, bW, barH); }
+    ctx.fill();
+    ctx.fillStyle = getCSSV('--fg'); ctx.font = '11px Inter,sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(d.label, PAD.l - 6, y + barH / 2 + 4);
+    ctx.font = '600 11px "IBM Plex Mono",monospace'; ctx.textAlign = 'left';
+    ctx.fillText(d.val.toLocaleString('uk-UA') + ' ₴', PAD.l + bW + 5, y + barH / 2 + 4);
+  });
+
+  const tt = document.getElementById(ttId);
+  if (tt) {
+    canvas.onmousemove = e => {
+      const r = canvas.getBoundingClientRect();
+      const my = e.clientY - r.top;
+      const idx = Math.floor((my - PAD.t) / rowH);
+      if (idx < 0 || idx >= items.length) { tt.style.display = 'none'; return; }
+      const d = items[idx];
+      tt.innerHTML = `<div class="chart-tt-title">${d.label}</div>
+        <div class="chart-tt-row"><div class="chart-tt-dot" style="background:${d.color}"></div>
+        <div class="chart-tt-lbl">Ціна</div><div class="chart-tt-val">${d.val.toLocaleString('uk-UA')} ₴/т</div></div>
+        <div class="chart-tt-row"><div class="chart-tt-dot" style="background:transparent"></div>
+        <div class="chart-tt-lbl">≈ USD (45,60)</div><div class="chart-tt-val">${(d.val/45.6).toFixed(0)} USD/т</div></div>`;
+      tt.style.display = 'block';
+      tt.style.left = (e.clientX - r.left + 10) + 'px';
+      tt.style.top = Math.max(0, my - 30) + 'px';
+    };
+    canvas.onmouseleave = () => { tt.style.display = 'none'; };
+  }
+}
+
+let chCurrentTab = 'grain';
+function drawMainChart(tab) {
+  chCurrentTab = tab;
+  const active = Object.values(CH_SERIES).filter(s => s.group.includes(tab));
+  drawLineChart('mainPriceCanvas', 'mainPriceTT', CH_YEARS, active, 'USD/т');
+  // legend
+  const leg = document.getElementById('mainChartLeg');
+  if (leg) leg.innerHTML = active.map(s =>
+    `<div class="chart-leg-item"><div class="chart-leg-dot" style="background:${s.color}"></div>${s.emoji} ${s.label}</div>`
+  ).join('') +
+  `<div class="chart-leg-item" style="margin-left:8px;color:var(--fg3);font-style:italic"><div style="width:9px;height:9px;border-radius:50%;border:1.5px solid currentColor;display:inline-block;margin-right:4px;flex-shrink:0"></div>○ оцінка (FOB)</div>
+   <div class="chart-leg-item" style="color:var(--fg3);font-style:italic"><div class="chart-leg-dot" style="background:var(--accent)"></div>● підтверджено USDA</div>`;
+}
+
+function initChartBlock() {
+  renderDeltaTracker();
+  // tab buttons
+  document.querySelectorAll('.chart-tab-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.chart-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      drawMainChart(btn.dataset.tab);
+    };
+  });
+  drawMainChart('grain');
+  drawUahBars('mainUahCanvas', 'mainUahTT');
+}
+
+// Запустити після рендеру DOM
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => setTimeout(initChartBlock, 80));
+} else {
+  setTimeout(initChartBlock, 80);
+}
+window.addEventListener('resize', () => {
+  drawMainChart(chCurrentTab);
+  drawUahBars('mainUahCanvas', 'mainUahTT');
+});
+</script>
+
+</body></html>

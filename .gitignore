@@ -1,0 +1,29 @@
+# Секрети та конфіги
+.env
+*.session
+
+# Дані (генеруються при кожному запуску — не коміттити)
+telegram_prices.json
+land_data.json
+web_prices.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+
+# Деплой
+dist/
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Редактори
+.vscode/
+*.swp
+*.swo
