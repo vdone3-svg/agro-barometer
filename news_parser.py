@@ -14,7 +14,7 @@ from pathlib import Path
 
 # ─── НАЛАШТУВАННЯ ────────────────────────────────────────────────────────────
 NEWS_FILE = "news_data.json"
-MAX_AGE_HOURS = 30
+MAX_AGE_HOURS = 24          # суворо 24 год — тільки свіже
 MAX_ITEMS_TOTAL = 25
 MAX_PER_SOURCE = 10
 
@@ -29,21 +29,31 @@ HEADERS = {
     "Connection": "keep-alive",
 }
 
-# Ключові слова (українські + англійські — для двомовних джерел)
+# ─── КЛЮЧОВІ СЛОВА: тільки 6 культур і прямий ринок збуту ───────────────────
+# НЕ включаємо: молоко, тваринництво, ЖД, дороги, добрива, пестициди,
+# загальні слова "агро"/"аграр"/"хліб"/"ціна" (надто широко)
 AGRO_KEYWORDS_UK = [
-    "пшениц", "кукурудз", "соняшник", "сої", "соя", "ріпак", "ячмінь", "ячменю",
-    "зерно", "зерн", "олія", "шрот", "врожай", "збирання", "посів", "жнив",
-    "експорт", "імпорт", "ціна", "ціни", "тонна", "елеватор", "зернотрейдер",
-    "агро", "аграр", "хліб", "борошн", "фермер", "землероб",
-    "нібулон", "кернел", "астарта", "прометей", "укрзерно",
-    "залізниц", "укрзалізниц", "тариф", "фрахт", "перевезення",
-    "посівна", "добрива", "добриво", "пестицид", "гербіцид",
-    "USDA", "WASDE", "ФАО", "FAO", "IGC", "чорноморськ",
+    # 6 культур
+    "пшениц", "кукурудз", "соняшник", "соняшнику",
+    "сої", "соя", "соєв",
+    "ріпак", "рапс",
+    "ячмінь", "ячменю",
+    # ринок збуту зернових
+    "зерновий ринок", "зерновий експорт", "зернові",
+    "олія соняшникова", "шрот соняшниковий", "шрот соєвий",
+    "врожай зерн", "збирання зерн", "посівна кампані",
+    "елеватор", "зернотрейдер",
+    "нібулон", "кернел", "астарта",
+    "USDA", "WASDE", "IGC", "чорноморськ зерн",
+    "прогноз врожаю", "баланс зерн", "світовий ринок зерн",
 ]
 AGRO_KEYWORDS_EN = [
-    "wheat", "corn", "maize", "sunflower", "soybean", "soy", "rapeseed", "canola",
-    "grain", "oilseed", "harvest", "crop", "export", "fertilizer",
-    "ukraine", "ukrainian", "USDA", "FAO", "IGC",
+    "wheat", "corn", "maize", "sunflower",
+    "soybean", "soy meal", "soy oil",
+    "rapeseed", "canola", "barley",
+    "grain export", "grain market", "grain harvest",
+    "oilseed", "USDA", "WASDE", "IGC", "Black Sea grain",
+    "ukraine grain", "ukrainian grain",
 ]
 
 def _is_agro(title: str, text: str = "") -> bool:
@@ -124,10 +134,11 @@ def _rss_items(rss_text: str) -> list[dict]:
             result.append(parsed)
     return result
 
-def _age_ok(pub_str: str, now: datetime) -> bool:
+def _age_ok(pub_str: str, now: datetime, unknown_ok: bool = False) -> bool:
+    """unknown_ok=True тільки для RSS (дата є завжди); False для HTML (дата невідома = пропустити)."""
     dt = _parse_rss_date(pub_str)
     if not dt:
-        return True
+        return unknown_ok  # HTML без дати — пропускаємо, щоб не тягнути застарілі
     return (now - dt).total_seconds() / 3600 <= MAX_AGE_HOURS
 
 def _fmt_dt(pub_str: str) -> str:
@@ -163,7 +174,7 @@ def parse_agroportal() -> list[dict]:
     now = datetime.now(timezone.utc)
     records = []
     for item in items[:40]:
-        if not _age_ok(item["pub"], now):
+        if not _age_ok(item["pub"], now, unknown_ok=True):
             continue
         if not _is_agro(item["title"], item["summary"]):
             continue
@@ -225,7 +236,7 @@ def parse_ukrinform_agro() -> list[dict]:
     now = datetime.now(timezone.utc)
     records = []
     for item in items[:50]:
-        if not _age_ok(item["pub"], now):
+        if not _age_ok(item["pub"], now, unknown_ok=True):
             continue
         if not _is_agro(item["title"], item["summary"]):
             continue
@@ -376,7 +387,7 @@ def parse_infagro() -> list[dict]:
     now = datetime.now(timezone.utc)
     records = []
     for item in items[:40]:
-        if not _age_ok(item["pub"], now):
+        if not _age_ok(item["pub"], now, unknown_ok=True):
             continue
         if not _is_agro(item["title"], item["summary"]):
             continue
