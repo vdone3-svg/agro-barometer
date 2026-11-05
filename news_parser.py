@@ -369,10 +369,19 @@ def parse_infagro() -> list[dict]:
     items = _rss_items(rss)
     now = datetime.now(timezone.utc)
     records = []
+    print(f"  [infagro] RSS items: {len(items)}")
     for item in items[:40]:
-        if not _age_ok(item["pub"], now, unknown_ok=True):
+        age_ok = _age_ok(item["pub"], now, unknown_ok=True)
+        agro_ok = _is_agro(item["title"], item["summary"])
+        # DEBUG: показуємо кожен заголовок і причину пропуску
+        status = "✅" if (age_ok and agro_ok) else "⛔"
+        reason = "" if (age_ok and agro_ok) else (
+            " [old]" if not age_ok else " [not_agro]"
+        )
+        print(f"  [infagro] {status}{reason} pub={item['pub']!r} title={item['title'][:80]!r}")
+        if not age_ok:
             continue
-        if not _is_agro(item["title"], item["summary"]):
+        if not agro_ok:
             continue
         records.append({
             "source": "infagro.com.ua",
@@ -540,25 +549,33 @@ def parse_ukragroconsult() -> list[dict]:
             continue
 
         pattern = r'<a[^>]+href="(' + re.escape(path_prefix) + r'[^"?#]+)"[^>]*>(.*?)</a>'
-        for m in re.finditer(pattern, html, re.DOTALL):
+        all_matches = list(re.finditer(pattern, html, re.DOTALL))
+        print(f"  [ukragroconsult] {page_url}: знайдено {len(all_matches)} посилань за шаблоном")
+        for m in all_matches[:60]:
             url_path = m.group(1)
             # Витягуємо текст із вкладених тегів (Elementor вкладає <span>, <h3> тощо)
             title = re.sub(r'<[^>]+>', ' ', m.group(2))
             title = re.sub(r'\s+', ' ', title).strip()
             # Дозволяємо коротші заголовки (від 10 симв.) — деякі рос. заголовки стислі
             if len(title) < 10:
+                print(f"  [ukragroconsult] skip short title={title!r} url={url_path}")
                 continue
-            if not _is_agro(title):
-                continue
+            agro_ok = _is_agro(title)
             full_url = f"https://ukragroconsult.com{url_path}"
             if full_url in seen_urls:
                 continue
             # Elementor: дата може бути далеко від <a> → window=700
             date_str = _find_date_near(html, m.start(), m.end(), window=700, now=now)
+            if not agro_ok:
+                print(f"  [ukragroconsult] not_agro title={title[:60]!r}")
+                continue
             if not date_str:
+                print(f"  [ukragroconsult] no_date title={title[:60]!r} url={url_path}")
                 continue
             if _date_too_old(date_str, now, extra_hours=36):
+                print(f"  [ukragroconsult] old_date date={date_str!r} title={title[:40]!r}")
                 continue
+            print(f"  [ukragroconsult] ✅ date={date_str!r} title={title[:60]!r}")
             seen_urls.add(full_url)
             records.append({"source": "ukragroconsult.com", "title": title[:200],
                             "url": full_url, "date": date_str, "summary": ""})
