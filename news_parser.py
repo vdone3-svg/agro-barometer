@@ -201,6 +201,15 @@ def _date_too_old(date_str: str, now: datetime, extra_hours: int = 0) -> bool:
 
 # ─── HTTP ────────────────────────────────────────────────────────────────────
 def _fetch(url: str, timeout: int = 20) -> str | None:
+    # Кодуємо не-ASCII символи в path/query (кирилиця в URL-тегах WordPress)
+    try:
+        from urllib.parse import urlsplit, urlunsplit, quote
+        parts = urlsplit(url)
+        safe_path = quote(parts.path, safe="/:@!$&'()*+,;=")
+        safe_query = quote(parts.query, safe="=&+%")
+        url = urlunsplit((parts.scheme, parts.netloc, safe_path, safe_query, parts.fragment))
+    except Exception:
+        pass
     try:
         req = urllib.request.Request(url, headers=HEADERS)
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -400,60 +409,73 @@ def parse_infagro() -> list[dict]:
 
 
 def _parse_infagro_html() -> list[dict]:
-    """infagro.com.ua — HTML fallback.
-    Парсимо сторінки зернових категорій.
+    """infagro.com.ua — HTML fallback через discovery категорій.
+    1) Завантажуємо головну сторінку, знаходимо category-links
+    2) Фільтруємо зернові, пробуємо кожну
+    3) Збираємо статті
     """
-    CATEGORY_URLS = [
-        "https://infagro.com.ua/category/grain-market/",
-        "https://infagro.com.ua/category/zerno/",
-        "https://infagro.com.ua/category/zernovye/",
-        "https://infagro.com.ua/category/rinok-zerna/",
-        "https://infagro.com.ua/category/grain/",
-        "https://infagro.com.ua/novyny/",
-    ]
     now = datetime.now(timezone.utc)
     records: list[dict] = []
     seen: set[str] = set()
 
-    for cat_url in CATEGORY_URLS:
-        html = _fetch(cat_url, timeout=15)
+    # Крок 1: Discovery — знаходимо категорії на головній
+    home = _fetch("https://infagro.com.ua/", timeout=15)
+    cat_urls: list[str] = []
+    if home:
+        # Збираємо всі /category/* links
+        for m in re.finditer(r'href="(https://infagro\.com\.ua/category/[^"?#]+)"', home):
+            u = m.group(1).rstrip("/") + "/"
+            if u not in cat_urls:
+                cat_urls.append(u)
+        print(f"  [infagro] категорій на головній: {len(cat_urls)}")
+        # Показуємо всі щоб побачити в логах
+        for cu in cat_urls:
+            print(f"  [infagro]   cat: {cu}")
+
+    # Крок 2: Пробуємо категорії (зернові пріоритет — за ключовими словами в URL)
+    GRAIN_KWS = ["grain", "zerno", "zehn", "wheat", "psh", "kukurudz", "oliyn",
+                 "sunfl", "soya", "rapak", "zernovyi", "oilseed", "export"]
+    grain_cats = [u for u in cat_urls if any(kw in u.lower() for kw in GRAIN_KWS)]
+    other_cats = [u for u in cat_urls if u not in grain_cats]
+    ordered_cats = grain_cats + other_cats
+
+    if not ordered_cats:
+        # Fallback якщо головна не доступна
+        ordered_cats = ["https://infagro.com.ua/"]
+
+    for cat_url in ordered_cats[:8]:
+        html = _fetch(cat_url, timeout=15) if cat_url != "https://infagro.com.ua/" else home
         if not html:
             continue
-        # WordPress: посилання на статті /YYYY/MM/DD/slug/ або /category/slug/
-        pattern = r'<a[^>]+href="(https://infagro\.com\.ua/[^"?#]+)"[^>]*>(.*?)</a>'
+        # WordPress article links: не категорія/тег/сторінка, мінімум 1 slug
+        pattern = r'<a[^>]+href="(https://infagro\.com\.ua/(?!category|tag|page|author)[^"?#]{15,})"[^>]*>(.*?)</a>'
+        batch: list[dict] = []
         for m in re.finditer(pattern, html, re.DOTALL):
             url = m.group(1)
-            # Пропускаємо категорії, теги, сторінки
-            if any(x in url for x in ["/category/", "/tag/", "/page/", "/author/"]):
-                continue
-            # Потрібен шлях схожий на статтю (/2026/ або /novyny/ + slug)
-            if not re.search(r"/20\d{2}/|/novyny/[^/]+/$|/[a-z-]{10,}/$", url):
-                continue
             if url in seen:
                 continue
             title = re.sub(r'<[^>]+>', ' ', m.group(2))
             title = re.sub(r'\s+', ' ', title).strip()
-            if len(title) < 10:
+            if len(title) < 15:
                 continue
             if not _is_agro(title):
                 continue
             date_str = _find_date_near(html, m.start(), m.end(), window=500, now=now)
-            if not date_str:
-                date_str = _fmt_dt(None)  # unknown date
             if date_str and _date_too_old(date_str, now, extra_hours=48):
                 continue
             seen.add(url)
-            records.append({
+            batch.append({
                 "source": "infagro.com.ua",
                 "title":  title[:200],
                 "url":    url,
-                "date":   date_str,
+                "date":   date_str or _fmt_dt(None),
                 "summary": "",
             })
-            if len(records) >= MAX_PER_SOURCE:
+            if len(batch) >= MAX_PER_SOURCE:
                 break
-        if records:
-            print(f"  [infagro] HTML cat={cat_url}: {len(records)} новин")
+        if batch:
+            print(f"  [infagro] HTML cat={cat_url}: {len(batch)} новин")
+            records.extend(batch)
             break
 
     print(f"  [infagro] ✅ {len(records)} новин (HTML)")
