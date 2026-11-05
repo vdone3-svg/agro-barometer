@@ -512,7 +512,7 @@ async def _telethon_fetch_all(cutoff: datetime) -> tuple[list, list]:
             elif role in ("prices", "agrohub") and msgs:
                 # діагностика: сирий початок повідомлень, з яких нічого не розпізнано
                 for m in msgs[:2]:
-                    print(f"  [debug] @{channel} raw: {m['text'][:500]!r}")
+                    print(f"  [debug] @{channel} не розпізнано: {m['text'][:120]!r}")
             if news_count:
                 print(f"  [telethon] @{channel}: {news_count} новинних повід.")
 
