@@ -458,14 +458,25 @@ def main():
         except Exception as e:
             print(f"  ❌ {parser_fn.__name__}: {e}")
 
-    # Дедуплікація за URL
+    # Дедуплікація: за URL якщо унікальний, або за title[:60] для Telegram
     seen_urls: set[str] = set()
+    seen_titles: set[str] = set()
     unique: list[dict] = []
     for item in all_news:
         u = item["url"].rstrip("/")
-        if u not in seen_urls:
+        t = item.get("title", "")[:60].lower().strip()
+        # Telegram канали мають однаковий URL — дедублюємо за title
+        is_tg = u.startswith("https://t.me/")
+        if is_tg:
+            if t in seen_titles:
+                continue
+            seen_titles.add(t)
+        else:
+            if u in seen_urls:
+                continue
             seen_urls.add(u)
-            unique.append(item)
+            seen_titles.add(t)
+        unique.append(item)
 
     # Сортуємо: найновіші вперед
     unique.sort(key=lambda x: x.get("date", ""), reverse=True)
