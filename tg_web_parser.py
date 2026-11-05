@@ -245,7 +245,7 @@ def parse_board(text, date_str, channel="GrainTradeUA"):
         "price_raw": val, "price_uah": float(uah), "currency": cur,
         "basis": (m.group(8) or "невідомо").upper(), "vat": "невідомо",
         "location": "невідомо", "region": "невідомо",
-        "buyer": m.group(3).strip()[:50],
+        "buyer": m.group(3).replace('\\"', '"').replace("✅", "").strip()[:50],
         "volume_t": float(re.sub(r"\s", "", m.group(5))) if m.group(5) else None,
         "date": date_str, "url": url_m.group(0) if url_m else f"https://t.me/{channel}",
         "net_kopani": None, "net_dolynske": None,

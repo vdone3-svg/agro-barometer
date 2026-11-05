@@ -380,9 +380,11 @@ def _parse_ezerno_bodytext(text: str, company: str, default_region: str, now_str
                 for bname, burl, _ in EZERNO_PROFILES:
                     if bname.lower() in company.lower() or company.lower() in bname.lower():
                         buyer_url = burl; break
-                records.append(_make_record("e-zerno.com", matched_culture, quality,
-                                             price, region, location, date_str, "EXW",
-                                             url=buyer_url))
+                rec = _make_record("e-zerno.com", matched_culture, quality,
+                                   price, region, location, date_str, "EXW",
+                                   url=buyer_url)
+                rec["buyer"] = company[:50] if company else None
+                records.append(rec)
         i += 1
 
     # Дедуплікація
