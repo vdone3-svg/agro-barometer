@@ -30,8 +30,8 @@ CHANNELS = [
 ]
 
 # API credentials для Telethon
-TG_API_ID   = int(os.environ.get("TG_API_ID",   "30430309"))
-TG_API_HASH = os.environ.get("TG_API_HASH", "4360b5aa9c5cf78aff7f3ba2d9c661fc")
+TG_API_ID   = int(os.environ.get("TG_API_ID",   "") or "30430309")
+TG_API_HASH = os.environ.get("TG_API_HASH", "") or "4360b5aa9c5cf78aff7f3ba2d9c661fc"
 TG_SESSION  = os.environ.get("TG_SESSION",  "")
 
 # ─── МАПИ ─────────────────────────────────────────────────────────────────────
