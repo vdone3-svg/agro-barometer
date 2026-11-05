@@ -11,6 +11,15 @@ CHANGELOG (патч 05.11.2026):
   - parse_ukragroconsult() тепер бере статті і з /news/ (не тільки /analytikacin/)
   - parse_latifundist_html() використовує оновлений date-finder
   - загальний рефактор date-fallback у всіх HTML-парсерах
+
+CHANGELOG (патч 05.11.2026 v2):
+  - AGRO_KEYWORDS_RU: додані рос. назви культур (кукуруза, пшениця ru, ячмень, etc.)
+    → ukragroconsult та інші рос.-мовні статті тепер проходять _is_agro()
+  - _find_date_near(): додані рос. назви місяців (января, февраля, ... ноября)
+    → дати формату "27 апреля 2026" тепер парсяться коректно
+  - parse_ukragroconsult(): window розширено 400→700 для Elementor-сторінок
+    де дата знаходиться далі від тега <a>
+  - parse_infagro(): unknown_ok=False→True + мінімальна довжина заголовка знята
 """
 
 import json
@@ -63,6 +72,25 @@ AGRO_KEYWORDS_EN = [
     "crude oil", "biodiesel",
 ]
 
+# Російськомовні ключові слова (ukragroconsult, частина infagro — мікс мов)
+AGRO_KEYWORDS_RU = [
+    "пшениц",           # пшениця (рос.)
+    "кукуруз",          # кукурудза (рос.)
+    "подсолнечник", "подсолнечн",
+    "соя", "соев",
+    "рапс",
+    "ячмень", "ячмен",
+    "зерновой рынок", "зерновой экспорт", "зерновые",
+    "масличн",
+    "урожай зерн", "уборка зерн", "посевная кампани",
+    "элеватор", "зернотрейдер",
+    "нибулон", "кернел", "астарта",
+    "мировой рынок зерн",
+    "прогноз урожая", "баланс зерн",
+    "нефт",
+    "биодизел",
+]
+
 # ─── НЕГАТИВНІ КЛЮЧОВІ СЛОВА ─────────────────────────────────────────────────
 # Якщо заголовок + текст містить будь-яке з них → стаття відсівається,
 # навіть якщо позитивне слово є (наприклад, "соя" у контексті кормів).
@@ -79,23 +107,35 @@ EXCLUDE_KEYWORDS = [
 ]
 
 def _is_agro(title: str, text: str = "") -> bool:
-    """True, якщо стаття стосується 6 культур або зернового ринку."""
+    """True, якщо стаття стосується 6 культур або зернового ринку.
+    Перевіряє укр., англ. та рос. ключові слова."""
     combined = (title + " " + text).lower()
     if any(kw.lower() in combined for kw in EXCLUDE_KEYWORDS):
         return False
     return (
         any(kw.lower() in combined for kw in AGRO_KEYWORDS_UK) or
-        any(kw.lower() in combined for kw in AGRO_KEYWORDS_EN)
+        any(kw.lower() in combined for kw in AGRO_KEYWORDS_EN) or
+        any(kw.lower() in combined for kw in AGRO_KEYWORDS_RU)
     )
 
-# ─── ДАТИ: числовий + текстовий (укр.) формат ────────────────────────────────
+# ─── ДАТИ: числовий + текстовий (укр. + рос.) формат ─────────────────────────
 _UK_MONTHS = {
+    # Українська (родовий відмінок)
     "січня": 1, "лютого": 2, "березня": 3, "квітня": 4,
     "травня": 5, "червня": 6, "липня": 7, "серпня": 8,
     "вересня": 9, "жовтня": 10, "листопада": 11, "грудня": 12,
+    # Українська (короткі форми)
     "січ": 1, "лют": 2, "бер": 3, "квіт": 4,
     "трав": 5, "черв": 6, "лип": 7, "серп": 8,
     "верес": 9, "жовт": 10, "листопад": 11, "груд": 12,
+    # Російська (родовий відмінок) — для ukragroconsult та ін.
+    "января": 1, "февраля": 2, "марта": 3, "апреля": 4,
+    "мая": 5, "июня": 6, "июля": 7, "августа": 8,
+    "сентября": 9, "октября": 10, "ноября": 11, "декабря": 12,
+    # Російська (іменний) — на випадок іншого формату
+    "январь": 1, "февраль": 2, "март": 3, "апрель": 4,
+    "май": 5, "июнь": 6, "июль": 7, "август": 8,
+    "сентябрь": 9, "октябрь": 10, "ноябрь": 11, "декабрь": 12,
 }
 _UK_MONTHS_PATTERN = "|".join(sorted(_UK_MONTHS.keys(), key=len, reverse=True))
 
@@ -499,18 +539,22 @@ def parse_ukragroconsult() -> list[dict]:
             print(f"  [ukragroconsult] ❌ {page_url} недоступний")
             continue
 
-        pattern = r'<a[^>]+href="(' + re.escape(path_prefix) + r'[^"]+)"[^>]*>(.*?)</a>'
+        pattern = r'<a[^>]+href="(' + re.escape(path_prefix) + r'[^"?#]+)"[^>]*>(.*?)</a>'
         for m in re.finditer(pattern, html, re.DOTALL):
             url_path = m.group(1)
-            # Витягуємо текст із вкладених тегів
+            # Витягуємо текст із вкладених тегів (Elementor вкладає <span>, <h3> тощо)
             title = re.sub(r'<[^>]+>', ' ', m.group(2))
             title = re.sub(r'\s+', ' ', title).strip()
+            # Дозволяємо коротші заголовки (від 10 симв.) — деякі рос. заголовки стислі
+            if len(title) < 10:
+                continue
             if not _is_agro(title):
                 continue
             full_url = f"https://ukragroconsult.com{url_path}"
             if full_url in seen_urls:
                 continue
-            date_str = _find_date_near(html, m.start(), m.end(), now=now)
+            # Elementor: дата може бути далеко від <a> → window=700
+            date_str = _find_date_near(html, m.start(), m.end(), window=700, now=now)
             if not date_str:
                 continue
             if _date_too_old(date_str, now, extra_hours=36):
