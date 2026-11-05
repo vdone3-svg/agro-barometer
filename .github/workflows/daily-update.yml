@@ -87,6 +87,12 @@ jobs:
             --dir=dist \
             --message "auto: $(date -u +'%Y-%m-%d %H:%M UTC')"
 
+      - name: Dump data to log (manual runs only, for audit)
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: |
+          tar czf - telegram_prices.json telegram_news.json land_data.json web_prices.json news_data.json 2>/dev/null | base64 -w0 > dump.b64 || true
+          echo "===DUMP_BEGIN==="; cat dump.b64; echo; echo "===DUMP_END==="
+
       - name: Upload data snapshot
         if: always()
         uses: actions/upload-artifact@v4
