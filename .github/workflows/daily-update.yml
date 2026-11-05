@@ -44,6 +44,10 @@ jobs:
           echo "✅ Telegram: $COUNT записів"
 
       - name: Land market
+        env:
+          TG_SESSION:   ${{ secrets.TG_SESSION }}
+          TG_API_ID:    ${{ secrets.TG_API_ID }}
+          TG_API_HASH:  ${{ secrets.TG_API_HASH }}
         run: |
           python3 land_parser.py || echo "⚠️ land_parser failed"
           COUNT=$(python3 -c "import json; print(len(json.load(open('land_data.json'))))" 2>/dev/null || echo "?")
@@ -83,15 +87,16 @@ jobs:
             --dir=dist \
             --message "auto: $(date -u +'%Y-%m-%d %H:%M UTC')"
 
-      - name: Upload debug on failure
-        if: failure()
+      - name: Upload data snapshot
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: debug-${{ github.run_number }}
+          name: data-${{ github.run_number }}
           path: |
             telegram_prices.json
+            telegram_news.json
             land_data.json
             web_prices.json
             news_data.json
-            *.log
-          retention-days: 3
+            index.html
+          retention-days: 7

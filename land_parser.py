@@ -10,9 +10,10 @@ from datetime import datetime, timedelta, timezone
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
-SESSION  = os.environ["TELEGRAM_SESSION"]
-API_ID   = int(os.environ["TELEGRAM_API_ID"])
-API_HASH = os.environ["TELEGRAM_API_HASH"]
+# Ті самі секрети, що й tg_web_parser.py (TG_*); старі назви TELEGRAM_* — як запасні
+SESSION  = os.environ.get("TG_SESSION") or os.environ.get("TELEGRAM_SESSION") or ""
+API_ID   = int(os.environ.get("TG_API_ID") or os.environ.get("TELEGRAM_API_ID") or "30430309")
+API_HASH = os.environ.get("TG_API_HASH") or os.environ.get("TELEGRAM_API_HASH") or "4360b5aa9c5cf78aff7f3ba2d9c661fc"
 
 LAND_CHANNELS = ["landinvestua", "dobrozem_offers", "kupipai"]
 
@@ -222,8 +223,18 @@ async def main():
     cutoff = datetime.now(timezone.utc) - timedelta(days=3)
     all_records = []
 
-    async with TelegramClient(StringSession(SESSION), API_ID, API_HASH) as client:
-        for ch in LAND_CHANNELS:
+    if not SESSION:
+        print("  ⚠️ TG_SESSION не задано — пропускаємо земельний парсер")
+        return
+    client = TelegramClient(StringSession(SESSION), API_ID, API_HASH,
+                            system_version="4.16.30-vxCUSTOM")
+    await client.connect()
+    if not await client.is_user_authorized():
+        print("  ❌ сесія недійсна — пропускаємо")
+        await client.disconnect()
+        return
+    try:
+      for ch in LAND_CHANNELS:
             try:
                 found = 0
                 total = 0
@@ -242,6 +253,8 @@ async def main():
 
             except Exception as e:
                 print(f"  ❌ @{ch}: {e}")
+    finally:
+        await client.disconnect()
 
     print(f"\nВсього лотів: {len(all_records)}")
     print()
