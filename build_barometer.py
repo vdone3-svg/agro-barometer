@@ -248,7 +248,7 @@ def main():
             [r for r in all_records if r.get("source","").startswith("@")],
             key=lambda x: x.get("date",""), reverse=True
         )[:50],
-        "news": news_items[:25],
+        "news": news_items[:50],
         "news_generated_at": news_raw.get("generated_at",""),
     }
 
