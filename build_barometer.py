@@ -184,6 +184,19 @@ INJECTION_JS = r"""
   const trip=(net,t=25)=>(net==null||isNaN(net))?'':' → '+fmt(Math.round(net*t/1000))+' тис.₴';
   const ageDays=ts=>{if(!ts)return null;return Math.floor((Date.now()-new Date(ts).getTime())/864e5);};
   const ageFlag=ts=>{const a=ageDays(ts);if(a==null)return'<span class="flag flag-warn">дата?</span>';if(a>=2)return`<span class="flag flag-warn">${a} дн. тому</span>`;return'';};
+  const ra=u=>{const s=safeUrl(u);return s?` class="row-link" data-url="${s}" title="Відкрити пропозицію"`:'';};
+  const go=u=>safeUrl(u)?'<span class="go">↗</span>':'';
+  const srcLabel=u=>/t\.me\//.test(u||'')?'пост у Telegram':/graintrade\.com\.ua\/birzha/.test(u||'')?'лот на біржі GrainTrade':/nibulon/.test(u||'')?'прайс Нібулону':/e-zerno/.test(u||'')?'сторінка цін e-zerno':'джерело';
+  const openBtn=(u,label)=>{const s=safeUrl(u);return s?`<a class="open-btn" href="${s}" target="_blank" rel="noopener">${label||'Відкрити'}: ${srcLabel(u)} ↗</a>`:'<span class="open-btn off">посилання на джерело відсутнє</span>';};
+  // рядок-посилання: клік по всьому рядку відкриває пропозицію
+  document.addEventListener('click',e=>{const tr=e.target.closest('tr.row-link');if(!tr||e.target.closest('a'))return;window.open(tr.dataset.url,'_blank','noopener');});
+  if(!document.getElementById('rowLinkCss')){const st=document.createElement('style');st.id='rowLinkCss';st.textContent=`
+    tr.row-link{cursor:pointer}
+    tr.row-link:hover td{background:var(--surface2)}
+    .go{display:inline-block;color:var(--accent);font-weight:700;margin-right:4px}
+    .open-btn{display:block;margin:6px 0 2px;padding:7px 10px;border-radius:8px;background:var(--accent);color:#fff!important;font-size:12px;font-weight:600;text-align:center;text-decoration:none}
+    .open-btn:hover{filter:brightness(1.1)}
+    .open-btn.off{background:var(--surface2);color:var(--fg3)!important;font-weight:400}`;document.head.appendChild(st);}
   const link=(u,txt)=>{const s=safeUrl(u);return s?`<a href="${s}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline dotted">${txt}</a>`:txt;};
   let farm='Долинське';
 
@@ -206,13 +219,14 @@ INJECTION_JS = r"""
         if(!r)return `<div class="net-row"><span class="net-farm">📍 ${f}</span><span class="net-farm" style="color:var(--fg3)">фрахт до покупців невідомий</span></div>`;
         const fr=f==='Копані'?r.freight_kopani:r.freight_dolynske;const net=f==='Копані'?r.net_kopani:r.net_dolynske;
         return `<div class="net-row"><span class="net-farm" style="${f===farm?'font-weight:700':''}">📍 ${f}</span><div><span class="net-val">${fmt(net)} ₴/т</span><span class="net-trip">${trip(net)}</span></div></div>
-          <div style="font-size:10px;color:var(--fg3);text-align:right;margin-top:-2px">${esc(r.location)} (${esc(r.region_norm)}) ${fmt(r.price_uah)} − фрахт ${fmt(fr)} · ${esc(r.source)}</div>`;};
+          <div style="font-size:10px;color:var(--fg3);text-align:right;margin-top:-2px">${link(r.url,esc(r.location)+(safeUrl(r.url)?' ↗':''))} (${esc(r.region_norm)}) ${fmt(r.price_uah)} − фрахт ${fmt(fr)} · ${esc(r.source)}</div>`;};
       const nk=farm==='Копані'?'net_kopani':'net_dolynske';
       const place=r=>{const l=r.location&&r.location!=='невідомо'?r.location:'';const bu=r.buyer&&r.buyer!==l?r.buyer:'';return (bu&&l?bu+' · '+l:(bu||l||'пункт не вказано'));};
-      const rows=d.top.map(r=>`<tr><td>${esc(place(r).substring(0,40))}<div style="font-size:10px;color:var(--fg3)">${esc(r.source)} · ${esc((r.date||'').substring(0,5))}${r.quality?' · '+esc(String(r.quality).substring(0,18)):''}</div></td><td class="num">${link(r.url,fmt(r.price_uah))}${r.currency!=='UAH'?`<div style="font-size:10px;color:var(--fg3);font-weight:400">${fmt(r.price_raw)} ${esc(r.currency)}</div>`:''}</td><td class="num" style="color:var(--green)">${r[nk]!=null?fmt(r[nk]):'<span style="color:var(--fg3);font-weight:400">—</span>'}</td></tr>`).join('');
+      const rows=d.top.map(r=>`<tr${ra(r.url)}><td>${go(r.url)}${esc(place(r).substring(0,40))}<div style="font-size:10px;color:var(--fg3)">${esc(r.source)} · ${esc((r.date||'').substring(0,5))}${r.quality?' · '+esc(String(r.quality).substring(0,18)):''}</div></td><td class="num">${link(r.url,fmt(r.price_uah))}${r.currency!=='UAH'?`<div style="font-size:10px;color:var(--fg3);font-weight:400">${fmt(r.price_raw)} ${esc(r.currency)}</div>`:''}</td><td class="num" style="color:var(--green)">${r[nk]!=null?fmt(r[nk]):'<span style="color:var(--fg3);font-weight:400">—</span>'}</td></tr>`).join('');
       return `<div class="crop-card">${head}<div class="crop-body">
         <div class="price-row"><span class="price-label">Найвища закупівельна</span><span class="price-val best">${link(b.url,fmt(b.price_uah)+' ₴/т')}</span></div>
         <div class="price-row"><span class="price-label">${esc(place(b).substring(0,40))}</span><span class="price-label" style="font-size:10px;color:var(--fg3)">${esc(b.source)} · ${esc(b.basis||'базис?')} ${ageFlag(b.ts)}</span></div>
+        ${openBtn(b.url,'Відкрити найвищу пропозицію')}
         <div class="divider"></div>
         <div class="net-block"><div class="net-label">Найкраща чиста виручка (рейс 25 т)</div>${netRow('Долинське')}<div class="net-divider"></div>${netRow('Копані')}</div>
         <div style="margin-top:8px"><table class="tg-table crop-table" style="font-size:11px"><colgroup><col style="width:56%"><col style="width:22%"><col style="width:22%"></colgroup><thead><tr><th>Пункт / покупець</th><th style="text-align:right">Ціна ₴/т</th><th style="text-align:right">Net ${farm==='Копані'?'Коп.':'Дол.'}</th></tr></thead><tbody>${rows}</tbody></table></div>
@@ -230,7 +244,7 @@ INJECTION_JS = r"""
     const sub=document.querySelector('#tgSection .sec-sub');if(sub)sub.textContent='Живі пости каналів за 3 дні · зібрано '+D.generated_at_kyiv+' · сірим — не порівнюються (експорт, викид тощо)';
     const cs=[...new Set(live.map(r=>r.culture))].filter(Boolean);
     if(tgFilters)tgFilters.innerHTML='<button class="tg-chip active" data-c="">Всі</button>'+cs.map(c=>`<button class="tg-chip" data-c="${esc(c)}">${esc(c)}</button>`).join('');
-    const render=fc=>{tgBody.innerHTML=live.filter(r=>!fc||r.culture===fc).map(r=>`<tr style="${r.eligible?'':'opacity:.5'}" title="${esc(r.excluded_reason||'')}"><td style="color:var(--accent);white-space:nowrap">${link(r.url,esc(r.source))}</td><td>${esc(r.culture)}${r.quality?`<div style="font-size:10px;color:var(--fg3)">${esc(String(r.quality).substring(0,22))}</div>`:''}</td><td class="num">${fmt(r.price_uah)} ₴${r.currency!=='UAH'?`<div style="font-size:10px;color:var(--fg3)">${fmt(r.price_raw)} ${esc(r.currency)}</div>`:''}</td><td style="font-size:11px">${esc(r.vat&&r.vat!=='невідомо'?r.vat:(/ПДВ/.test(r.basis||'')?'з ПДВ':'невідомо'))}</td><td>${esc((r.location&&r.location!=='невідомо'?r.location:(r.buyer||'?')).substring(0,30))}</td><td style="color:var(--fg3);white-space:nowrap">${esc(r.date||'?')}</td><td style="font-size:11px;color:var(--fg3)">${esc(r.basis||'')}${r.region_norm&&r.region_norm!=='невідомо'?' · '+esc(r.region_norm):''}${r.excluded_reason?' · '+esc(r.excluded_reason):''}</td></tr>`).join('');};
+    const render=fc=>{tgBody.innerHTML=live.filter(r=>!fc||r.culture===fc).map(r=>`<tr${ra(r.url)} style="${r.eligible?'':'opacity:.5'}" title="${esc(r.excluded_reason||'')}"><td style="color:var(--accent);white-space:nowrap">${link(r.url,esc(r.source))}</td><td>${esc(r.culture)}${r.quality?`<div style="font-size:10px;color:var(--fg3)">${esc(String(r.quality).substring(0,22))}</div>`:''}</td><td class="num">${fmt(r.price_uah)} ₴${r.currency!=='UAH'?`<div style="font-size:10px;color:var(--fg3)">${fmt(r.price_raw)} ${esc(r.currency)}</div>`:''}</td><td style="font-size:11px">${esc(r.vat&&r.vat!=='невідомо'?r.vat:(/ПДВ/.test(r.basis||'')?'з ПДВ':'невідомо'))}</td><td>${esc((r.location&&r.location!=='невідомо'?r.location:(r.buyer||'?')).substring(0,30))}</td><td style="color:var(--fg3);white-space:nowrap">${esc(r.date||'?')}</td><td style="font-size:11px;color:var(--fg3)">${esc(r.basis||'')}${r.region_norm&&r.region_norm!=='невідомо'?' · '+esc(r.region_norm):''}${r.excluded_reason?' · '+esc(r.excluded_reason):''}</td></tr>`).join('');};
     render('');
     if(tgFilters)tgFilters.onclick=e=>{const b=e.target.closest('.tg-chip');if(!b)return;tgFilters.querySelectorAll('.tg-chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');render(b.dataset.c);};
   }
@@ -241,9 +255,9 @@ INJECTION_JS = r"""
   const land=D.land;
   if(land&&land.records&&land.records.length){
     const st=land.stats;
-    const rows=land.records.slice(0,12).map(r=>`<tr><td>${r.type==='продаж'?'💰':'📋'} ${esc(r.district||'?')}</td><td>${r.size_ha?Number(r.size_ha).toFixed(2)+' га':'?'}</td><td class="num">${r.price_per_ha?fmt(r.price_per_ha)+' ₴/га':'—'}</td><td class="num">${r.rent_per_lot?fmt(r.rent_per_lot)+' ₴':'—'}</td><td class="num">${r.yield_pct?Number(r.yield_pct).toFixed(1)+'%':'—'}</td><td style="color:var(--fg3);font-size:10px">${esc(r.source||'?')}</td></tr>`).join('');
+    const rows=land.records.slice(0,12).map(r=>`<tr${ra(r.url)}><td>${go(r.url)}${r.type==='продаж'?'💰':'📋'} ${esc(r.district||'?')}</td><td>${r.size_ha?Number(r.size_ha).toFixed(2)+' га':'?'}</td><td class="num">${r.price_per_ha?fmt(r.price_per_ha)+' ₴/га':'—'}</td><td class="num">${r.rent_per_lot?fmt(r.rent_per_lot)+' ₴':'—'}</td><td class="num">${r.yield_pct?Number(r.yield_pct).toFixed(1)+'%':'—'}</td><td style="color:var(--fg3);font-size:10px">${esc(r.source||'?')}</td></tr>`).join('');
     const sec=document.createElement('div');sec.className='tg-section';
-    sec.innerHTML=`<div class="sec-head"><div class="sec-title">🏡 Земельний ринок — Кіровоградська обл.</div><div class="sec-sub">Telegram-лоти за 3 дні · оголошення, не угоди</div></div>
+    sec.innerHTML=`<div class="sec-head"><div class="sec-title">🏡 Земельний ринок — Кіровоградська обл.</div><div class="sec-sub">Telegram-лоти за 3 дні · оголошення, не угоди · натисніть рядок, щоб відкрити лот</div></div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px">
       <div class="signal-card"><div class="signal-name">Лотів</div><div class="signal-val">${st.total_lots}</div><div class="signal-sub">${st.sale_lots} продаж · ${st.rent_lots} оренда</div></div>
       <div class="signal-card"><div class="signal-name">Ціна паю (сер.)</div><div class="signal-val">${st.avg_price_ha?fmt(st.avg_price_ha)+' ₴/га':'—'}</div><div class="signal-sub">${st.avg_price_ha?'≈ '+fmt(Math.round(st.avg_price_ha/D.usd_uah))+' $/га · n='+st.n_price:'недостатньо даних'}</div></div>

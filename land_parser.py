@@ -246,6 +246,7 @@ async def main():
                     total += 1
                     record = parse_land_message(msg.text, ch, msg.date)
                     if record:
+                        record["url"] = f"https://t.me/{ch}/{msg.id}"   # пряме посилання на лот
                         all_records.append(record)
                         found += 1
 

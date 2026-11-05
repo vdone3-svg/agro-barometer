@@ -499,8 +499,12 @@ async def _telethon_fetch_all(cutoff: datetime) -> tuple[list, list]:
                 date_str = m["datetime"].astimezone(KYIV).strftime("%d.%m.%Y %H:%M")
                 text = m["text"]
                 recs = _parse_by_role(channel, role, text, date_str)
+            if msg.get('post'):
                 for r in recs:
-                    if r.get("url", "").rstrip("/") == f"https://t.me/{channel}":
+                    if not r.get("url") or r["url"].rstrip("/") == f"https://t.me/{channel}":
+                        r["url"] = f"https://t.me/{msg['post']}"
+                for r in recs:
+                    if not r.get("url") or r["url"].rstrip("/") == f"https://t.me/{channel}":
                         r["url"] = f"https://t.me/{channel}/{m['id']}"
                 all_prices.extend(recs)
                 price_count += len(recs)
@@ -573,9 +577,11 @@ async def _scrape_channel(pw, channel: str, role: str, cutoff: datetime) -> list
                     const textEl = wrap.querySelector('.tgme_widget_message_text');
                     const timeEl = wrap.querySelector('time');
                     if (!textEl) return;
+                    const msgEl = wrap.querySelector('.tgme_widget_message');
                     result.push({
                         text:     textEl.innerText || textEl.textContent || '',
                         datetime: timeEl ? timeEl.getAttribute('datetime') : null,
+                        post:     msgEl ? msgEl.getAttribute('data-post') : null,
                     });
                 });
                 return result;
@@ -615,6 +621,10 @@ async def _scrape_channel(pw, channel: str, role: str, cutoff: datetime) -> list
             msg_count += 1
             date_str = msg_date.astimezone(KYIV).strftime("%d.%m.%Y %H:%M")
             recs = _parse_by_role(channel, role, text, date_str)
+            if msg.get('post'):
+                for r in recs:
+                    if not r.get("url") or r["url"].rstrip("/") == f"https://t.me/{channel}":
+                        r["url"] = f"https://t.me/{msg['post']}"
 
             records.extend(recs)
             price_count += len(recs)
