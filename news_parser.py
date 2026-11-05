@@ -15,7 +15,7 @@ from pathlib import Path
 # ─── НАЛАШТУВАННЯ ────────────────────────────────────────────────────────────
 NEWS_FILE = "news_data.json"
 MAX_AGE_HOURS = 24          # суворо 24 год — тільки свіже
-MAX_ITEMS_TOTAL = 40
+MAX_ITEMS_TOTAL = 50
 MAX_PER_SOURCE = 10
 
 HEADERS = {
@@ -432,6 +432,8 @@ def parse_telegram_news() -> list[dict]:
             "date":    r.get("date", ""),
             "summary": r.get("summary", "")[:300],
         })
+        if len(result) >= 30:   # Telegram може дати дуже багато — беремо топ-30
+            break
     print(f"  [tg-news] ✅ {len(result)} повідомлень з Telegram")
     return result
 
