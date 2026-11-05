@@ -206,7 +206,9 @@ def _parse_agroportal_html() -> list[dict]:
         full_url = f"https://agroportal.ua{path}"
         snippet  = html[max(0,m.start()-300):m.end()+300]
         dm = re.search(r'(\d{2})[./](\d{2})[./](\d{4})', snippet)
-        date_str = f"{dm.group(1)}.{dm.group(2)}.{dm.group(3)}" if dm else "?"
+        if not dm:
+            continue
+        date_str = f"{dm.group(1)}.{dm.group(2)}.{dm.group(3)}"
         records.append({"source":"agroportal.ua","title":title[:200],"url":full_url,"date":date_str,"summary":""})
         if len(records) >= MAX_PER_SOURCE:
             break
@@ -283,7 +285,7 @@ def parse_graintrade_news() -> list[dict]:
                 continue
             date_str = f"{dm.group(1)}.{dm.group(2)}.{dm.group(3)}"
         else:
-            date_str = "?"
+            continue   # без дати не беремо — інакше стара стаття висить днями
         if full_url not in {r["url"] for r in records}:
             records.append({"source":"graintrade.com.ua","title":title[:200],"url":full_url,"date":date_str,"summary":""})
         if len(records) >= MAX_PER_SOURCE:
@@ -320,7 +322,7 @@ def parse_ukragroconsult() -> list[dict]:
                 continue
             date_str = f"{dm.group(1)}.{dm.group(2)}.{dm.group(3)}"
         else:
-            date_str = "?"
+            continue   # без дати не беремо — інакше стара стаття висить днями
         if full_url not in {r["url"] for r in records}:
             records.append({"source":"ukragroconsult.com","title":title[:200],"url":full_url,"date":date_str,"summary":""})
         if len(records) >= MAX_PER_SOURCE:
@@ -347,8 +349,8 @@ def parse_latifundist_html() -> list[dict]:
         raw_url, title = m.group(1), m.group(2).strip()
         url = raw_url if raw_url.startswith("http") else f"https://latifundist.com{raw_url}"
         title = re.sub(r'\s+', ' ', title)
-        if not _is_agro(title):
-            continue
+        if len(title) < 25 or not _is_agro(title):
+            continue   # «Елеватори» тощо — це рубрика, не стаття
         snippet = html[max(0, m.start()-300):m.end()+300]
         dm = re.search(r'(\d{2})[./](\d{2})[./](\d{4})', snippet)
         if dm:
@@ -358,7 +360,7 @@ def parse_latifundist_html() -> list[dict]:
                 continue
             date_str = f"{dm.group(1)}.{dm.group(2)}.{dm.group(3)}"
         else:
-            date_str = "?"
+            continue   # без дати не беремо — інакше стара стаття висить днями
         if url not in {r["url"] for r in records}:
             records.append({"source":"latifundist.com","title":title[:200],"url":url,"date":date_str,"summary":""})
         if len(records) >= MAX_PER_SOURCE:
@@ -429,11 +431,19 @@ def parse_telegram_news() -> list[dict]:
             "source":  r.get("source", "@telegram"),
             "title":   r.get("title", "")[:200],
             "url":     r.get("url", ""),
+            "tg_url":  r.get("tg_url", ""),
             "date":    r.get("date", ""),
+            "ts":      r.get("ts", ""),
             "summary": r.get("summary", "")[:300],
         })
-        if len(result) >= 30:   # Telegram може дати дуже багато — беремо топ-30
-            break
+    # не більше 12 з одного каналу, щоб один канал не забивав стрічку
+    per = {}
+    capped = []
+    for r in sorted(result, key=lambda x: x.get("ts", ""), reverse=True):
+        per[r["source"]] = per.get(r["source"], 0) + 1
+        if per[r["source"]] <= 12:
+            capped.append(r)
+    result = capped
     print(f"  [tg-news] ✅ {len(result)} повідомлень з Telegram")
     return result
 
@@ -478,8 +488,16 @@ def main():
             seen_titles.add(t)
         unique.append(item)
 
-    # Сортуємо: найновіші вперед
-    unique.sort(key=lambda x: x.get("date", ""), reverse=True)
+    # Сортуємо за справжнім часом (рядок «дд.мм.рррр» сортується неправильно між місяцями)
+    def _key(x):
+        if x.get("ts"):
+            return x["ts"]
+        m = re.match(r"(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?", x.get("date", ""))
+        if not m:
+            return ""
+        d, mo, y, hh, mm = m.groups()
+        return f"{y}-{mo}-{d}T{hh or '12'}:{mm or '00'}"
+    unique.sort(key=_key, reverse=True)
     unique = unique[:MAX_ITEMS_TOTAL]
 
     output = {

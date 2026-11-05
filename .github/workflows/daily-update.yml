@@ -32,6 +32,19 @@ jobs:
       - name: Install Playwright Chromium
         run: playwright install chromium --with-deps
 
+      - name: Official NBU rate (bank.gov.ua)
+        run: |
+          python3 - <<'PY' || echo "⚠️ НБУ недоступний — буде курс із секрету"
+          import json, os, urllib.request
+          def get(code):
+              u = f"https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?valcode={code}&json"
+              return json.load(urllib.request.urlopen(u, timeout=20))[0]
+          usd, eur = get("USD"), get("EUR")
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              f.write(f"NBU_USD_UAH={usd['rate']}\nNBU_EUR_UAH={eur['rate']}\nNBU_DATE={usd['exchangedate']}\n")
+          print("✅ НБУ", usd["exchangedate"], "USD", usd["rate"], "EUR", eur["rate"])
+          PY
+
       - name: Telegram prices (Telethon + Playwright fallback)
         env:
           USD_UAH_RATE: ${{ secrets.USD_UAH_RATE }}

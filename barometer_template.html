@@ -889,6 +889,9 @@ a.price-val.best:hover {
 .tg-table{width:100%;border-collapse:collapse;font-size:12px;min-width:680px}
 .tg-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg3);padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600}
 .tg-table td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--fg)}
+.crop-table{min-width:0!important;table-layout:fixed}
+.crop-table td,.crop-table th{padding:5px 4px}
+.crop-table td:first-child{overflow:hidden;text-overflow:ellipsis}
 .tg-table td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
 .tg-table tr.old td{color:var(--fg3)}
 .tg-table tr.old td.num{font-weight:400}
@@ -939,6 +942,15 @@ a.price-val.best:hover {
 .sum-card p{margin:0;font-size:13px;line-height:1.55;color:var(--fg2)}
 .sum-card p strong{color:var(--fg)}
 .sum-do{font-size:12px;line-height:1.5;color:var(--fg);background:var(--surface);border-left:3px solid var(--accent);padding:7px 10px;border-radius:6px}
+.archive-box{background:var(--surface);border:1px dashed var(--border);border-radius:12px;padding:10px 14px}
+.archive-box[open]{padding-bottom:16px}
+.archive-sum{cursor:pointer;font-weight:700;font-size:14px;color:var(--fg2);list-style-position:inside}
+.archive-hint{display:block;font-weight:400;font-size:11px;color:var(--fg3);margin-top:3px}
+.archive-warn{margin:10px 0;font-size:12px;color:var(--amber);background:var(--amber-bg);border-radius:6px;padding:7px 10px}
+.archive-box>div{margin-top:12px}
+.live-note{font-size:11px;color:var(--fg3);margin:-6px 0 10px;padding:0 2px;line-height:1.5}
+.flag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:999px;background:var(--surface2);color:var(--fg3);border:1px solid var(--border);margin-left:4px}
+.flag-warn{color:var(--amber);border-color:var(--amber)}
 </style>
 
 <!-- ─────────────────────── PAGE ─────────────────────── -->
@@ -967,102 +979,16 @@ a.price-val.best:hover {
 
   <div class="warning-banner">
     <span class="warning-icon">⚠</span>
-    <span>Статус цін: <strong>published_unconfirmed</strong> — опублікована оферта, не підтверджена виконувана угода. Джерела: tripoli.land 29.10, graintrade.com.ua 28.10, ukragroconsult.com 26.10, e-zerno, Grossdorf 16.10 + 8 Telegram-каналів (окремий блок, неверифіковані).</span>
-  </div>
-
-  <!-- ══ ЩО ВІДБУЛОСЯ ЗА ТИЖДЕНЬ ══ -->
-  <div class="week-summary">
-    <div class="week-title">📅 Що відбулося за тиждень (22–29.10.2026)</div>
-    <div class="week-rows">
-      <div class="week-row"><span class="week-icon">🔴</span><span><strong>УЗ підвищила тариф на зерновози з 01.11:</strong> 632 → 850 ₴/добу (+34,8%). Перевезення залізницею дорожчає — тиск на CPT ціни вниз.</span></div>
-      <div class="week-row"><span class="week-icon">🟡</span><span><strong>Соняшник Голованівськ (AGRO HUB):</strong> ціна знизилась з 12 600 до 12 200 ₴/т за тиждень (−3,2%). Місцевий ринок Кіровоградщини під тиском збирання.</span></div>
-      <div class="week-row"><span class="week-icon">🟢</span><span><strong>Єгипет купив 480 тис. т пшениці:</strong> CPT $235, тендер 28.10. Підтримує попит на чорноморську пшеницю та ціни 8 600–8 800 ₴/т.</span></div>
-      <div class="week-row"><span class="week-icon">🔴</span><span><strong>Добрива дорожчають:</strong> OSTCHEM підвищив аміачну селітру на 900 ₴/т (+12%) у жовтні. Селітра: 27 500–28 000 ₴/т.</span></div>
-      <div class="week-row"><span class="week-icon">⏳</span><span><strong>Наступна ключова подія — WASDE 10.11.2026</strong> (12:00 ET). Баланси пшениці, кукурудзи, сої можуть змінити орієнтири ринку.</span></div>
-    </div>
-  </div>
-
-  <!-- ══ SELL/WAIT BAROMETER ══ -->
-  <div class="barometer-section" id="barometerSection">
-    <div class="baro-header">
-      <div class="baro-title">📊 Барометр продати / чекати</div>
-      <div class="baro-hz-tabs">
-        <button class="baro-hz-btn active" onclick="setBaroHz('1m',this)">1 міс.</button>
-        <button class="baro-hz-btn" onclick="setBaroHz('3m',this)">3 міс.</button>
-        <button class="baro-hz-btn" onclick="setBaroHz('6m',this)">6 міс.</button>
-      </div>
-    </div>
-    <div class="baro-cards" id="baroCards"></div>
-    <div class="baro-legend">
-      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#c0392b"></div>0–25 🔴 ЧЕКАЙ</div>
-      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#e67e22"></div>26–45 🟠 Обережно</div>
-      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#f39c12"></div>46–60 🟡 Нейтрально</div>
-      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#27ae60"></div>61–75 🟢 Продавай</div>
-      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#e6a817"></div>76–100 ⚡ ПРОДАВАЙ ЗАРАЗ</div>
-    </div>
-    <div class="baro-disclaimer">⚠️ Барометр — аналітичний орієнтир на основі публічних даних (<strong>published_unconfirmed</strong>). Не є рекомендацією до угоди. Перевіряй ціни напряму з покупцем перед укладенням договору. Клікни на карточку культури — побачиш 3 причини оцінки.</div>
-  </div>
-
-  <!-- ── РЕЗЮМЕ ПО КУЛЬТУРАХ ── -->
-  <div class="sum-section" id="summarySection">
-    <div class="sec-head">
-      <div class="sec-title">🧑‍🌾 Резюме по культурах — по-простому</div>
-      <div class="sec-sub">Станом на 29.10.2026 · ціни — опубліковані пропозиції, не підписані угоди · net — з Долинського, рейс 25 т</div>
-    </div>
-    <div class="sum-grid">
-
-      <div class="sum-card">
-        <div class="sum-top"><span class="sum-name">💛 Ріпак</span><span class="sum-verdict v-sell">Продавати до кінця грудня</span></div>
-        <p>Ріпак зараз — найдорожча культура в розрахунку на тонну. Порт в Одесі дає <strong>21 200 ₴/т</strong>, після фрахту з Долинського (1 500 ₴/т) лишається <strong>~19 700 ₴/т</strong>, це близько 490 тис. ₴ за машину. Біржа в Парижі стоїть на місці, ціна тримається рівно — ні вниз, ні вгору не тягне.</p>
-        <p>А от далі краще не буде: з весни на ринок заходить новий ріпак з Європи і тисне ціну. І є важливий момент: ГрадОлія в Кропивницькому сама переробляє ріпак, а везти туди в 5 разів дешевше, ніж в Одесу. Якщо вони дадуть від <strong>19 975 ₴/т</strong> з доставкою на завод — це вже вигідніше за Одесу, і гроші ближче.</p>
-        <div class="sum-do">Що робити: першим ділом подзвонити в ГрадОлію по ріпаку. Продавати в листопаді–грудні, весни не чекати.</div>
-      </div>
-
-      <div class="sum-card">
-        <div class="sum-top"><span class="sum-name">🌻 Соняшник</span><span class="sum-verdict v-split">Частину зараз, решту — зимою</span></div>
-        <p>Зараз пік збирання, соняшника на ринку повно, і заводи цим користуються. Найближчі до нас платять мало: Kernel ~<strong>15 000</strong>, Власівка 14 000, Голованівськ за тиждень зрізав з 12 600 до <strong>12 200</strong> (і то без ПДВ). Водночас на заході й у Вінниці за високоолеїновий дають 18 500–20 000 — тобто заводи на олії заробляють добре (олія в порту ~$1 010/т), а ціну на насіння тиснуть.</p>
-        <p>Історично з грудня по березень пропозиції меншає, і переробники піднімають ціну — бувало на 8–12% вище жовтневої. Барометр зараз «обережно» на місяць і нейтральний на 3–6 місяців. Продавати весь урожай по 14–15 тис. — означає віддати заводу свою маржу.</p>
-        <div class="sum-do">Що робити: продати стільки, скільки треба на поточні гроші. Решту тримати на своєму складі до грудня–лютого. Взяти ціни в ГрадОлії й Kernel і торгуватись за олійність.</div>
-      </div>
-
-      <div class="sum-card">
-        <div class="sum-top"><span class="sum-name">🫘 Соя</span><span class="sum-verdict v-split">Частину зараз, решту — до лютого</span></div>
-        <p>Реальна ціна сої зараз <strong>18 600–19 000 ₴/т</strong> (Глобине, Ізмаїл). Ізмаїл в одному місці показував 20 500, але це значно вище ринку — поки не подзвониш і не почуєш це від живої людини, на цю цифру не розраховувати. З Ізмаїлом проблема — далеко, фрахт 1 400–1 500 ₴/т з'їдає перевагу; Власівка поруч, але дає 17 200.</p>
-        <p>Найкраще вікно для сої — грудень–лютий: свій урожай уже розібрали, а Бразилія й Аргентина ще не зібрали. З березня їхня нова соя давить світову ціну вниз. Біржа в Чикаго зараз без руху, тому різких стрибків найближчим часом не чекаю.</p>
-        <div class="sum-do">Що робити: подзвонити в «В АГРО» і перевірити 20 500. Частину продати зараз, решту — до кінця лютого, весни не чекати.</div>
-      </div>
-
-      <div class="sum-card">
-        <div class="sum-top"><span class="sum-name">🌽 Кукурудза</span><span class="sum-verdict v-hold">Не поспішати, сушити й тримати</span></div>
-        <p>Найгірша ситуація з усіх культур. Кукурудзи всюди повно, порти забиті, покупці вибирають. Дунай дає $155–160 (~7 000–7 200 ₴/т), найкраща пропозиція <strong>7 500</strong>, а після фрахту на Одесу лишається <strong>~6 000 ₴/т</strong>. Америка має великий урожай, Чикаго падає, Бразилія вже посіяла більше половини. Плюс дощі: сушіння коштує ще $10–20 на тонні, подекуди до $30.</p>
-        <p>Барометр кукурудзи найнижчий — 32 з 100 на місяць. Продавати зараз — означає віддавати по дну сезону. Зазвичай кукурудза дорожчає в березні–травні, коли запаси закінчуються. Свій склад тут — головний козир. Ще одне: зараз багато покупців платять 86% одразу, а 14% — лише коли держава поверне ПДВ, тобто з рейсу ~26 тис. ₴ «зависають».</p>
-        <div class="sum-do">Що робити: досушити й закласти на свій склад. Продавати лише якщо горять гроші або склад потрібен. Основну масу — березень–травень. Умову 86/14 враховувати в кожній угоді.</div>
-      </div>
-
-      <div class="sum-card">
-        <div class="sum-top"><span class="sum-name">🌾 Ячмінь</span><span class="sum-verdict v-sell">Продавати, коли зручно, до весни</span></div>
-        <p>Ячмінь — тиха культура. Ціна останні два тижні стоїть на <strong>7 000–7 300 ₴/т</strong> в портах, три різні джерела показують одне й те саме. Після фрахту з Долинського лишається <strong>~5 800 ₴/т</strong>. Покупців небагато, біржового руху майже немає.</p>
-        <p>Чекати тут нема чого: зимою особливого попиту не буде, а навесні новий урожай почне тиснути старий. Барометр нейтральний на всі горизонти, на 6 місяців — трохи гірше. Тримати ячмінь на складі — це займати місце, яке краще віддати під кукурудзу.</p>
-        <div class="sum-do">Що робити: продати в листопаді–грудні, коли буде зручна машина чи попутний рейс. Звільнити склад під кукурудзу.</div>
-      </div>
-
-      <div class="sum-card">
-        <div class="sum-top"><span class="sum-name">🌱 Пшениця</span><span class="sum-verdict v-sell">Продавати поступово до грудня</span></div>
-        <p>По пшениці зараз найкраща картина. Рені й Ізмаїл дають <strong>8 600–8 900 ₴/т</strong> за 2–3 клас, після фрахту <strong>~7 300 ₴/т</strong> (~183 тис. ₴ за машину). Є сильний зовнішній попит: Єгипет щойно закупив 480 тис. т. Барометр — найвищий з усіх культур, 58 на місяць.</p>
-        <p>Але ціни на Дунаї потроху сповзають, бо покупці закривають потреби, а Америка дешевшає через сильний долар. До весни ціна старого врожаю зазвичай падає. 10 листопада — звіт USDA (WASDE), він може смикнути ринок у будь-який бік, тому все одним махом до нього продавати не варто.</p>
-        <div class="sum-do">Що робити: продавати партіями з листопада до кінця грудня — частину до 10.11, частину після звіту. Весни не чекати.</div>
-      </div>
-
-    </div>
+    <span id="statusBanner">Статус цін: <strong>published_unconfirmed</strong> — опублікована оферта, не підтверджена виконувана угода. Перед угодою підтверджуйте ціну, базис, ПДВ і якість напряму з покупцем.</span>
   </div>
 
   <!-- ── CROPS ── -->
   <div>
     <div class="section-label">Культури — закупівельні ціни та чиста виручка</div>
-    <div style="font-size:11px;color:var(--fg3);margin:-6px 0 10px;padding:0 2px;">
-      Найкраща знайдена ціна по кожній культурі (опублікована оферта, не підтверджена угода) + net після фрахту наймано-авто до покупця, рейс 25 т.
-      Перемикай <strong>Долинське / Копані</strong> вгорі — чиста виручка перерахується.
-      <strong>Поріг</strong> — мінімальна net-ціна по договору з ГрадОлією; 🟢 — вище порогу, ⚪ — нижче.
+    <div class="live-note" id="cropsNote">
+      Найвища опублікована закупівельна ціна по культурі (Telegram — 3 дні, сайти — не старші 7 днів) (оферта, не підтверджена угода).
+      Net = ціна − орієнтовний фрахт найманим зерновозом 25 т; рахується <strong>лише</strong> коли відомий регіон покупця.
+      Не беруться в «найкращу»: ціни продавців, олія/шрот/насіння, експортні DAP/DAF/FOB на кордоні, явні викиди.
     </div>
     <div class="crops-grid" id="cropsGrid"></div>
   </div>
@@ -1071,7 +997,7 @@ a.price-val.best:hover {
   <div class="tg-section" id="tgSection">
     <div class="sec-head">
       <div class="sec-title">📡 Telegram-оферти трейдерів</div>
-      <div class="sec-sub">Тимчасовий знімок зі скриншотів 19–29.10. Після запуску щоденного автооновлення (9:00) тут будуть живі пости каналів</div>
+      <div class="sec-sub">Живі пости каналів за 3 дні</div>
     </div>
     <div class="tg-filters" id="tgFilters"></div>
     <div class="tg-table-wrap">
@@ -1234,6 +1160,99 @@ a.price-val.best:hover {
       </div>
     </div>
   </div>
+
+  <!-- ══ АРХІВ: статичний аналітичний знімок 29.10.2026 ══ -->
+  <details class="archive-box" id="archiveBox">
+    <summary class="archive-sum">📦 Архів аналітики від 29.10.2026 — статичний знімок, автоматично <u>не оновлюється</u>
+      <span class="archive-hint">тижневий огляд · барометр · резюме по культурах · ціни в них — станом на 29.10</span></summary>
+    <div class="archive-warn">⚠️ Цей блок написаний вручну 29.10.2026. Ціни, оцінки й поради в ньому застаріли й не перераховуються з живих даних. Актуальні оферти — у блоках «Культури» та «Telegram-оферти» вище.</div>
+  <!-- ══ ЩО ВІДБУЛОСЯ ЗА ТИЖДЕНЬ ══ -->
+  <div class="week-summary">
+    <div class="week-title">📅 Що відбулося за тиждень (22–29.10.2026)</div>
+    <div class="week-rows">
+      <div class="week-row"><span class="week-icon">🔴</span><span><strong>УЗ підвищила тариф на зерновози з 01.11:</strong> 632 → 850 ₴/добу (+34,8%). Перевезення залізницею дорожчає — тиск на CPT ціни вниз.</span></div>
+      <div class="week-row"><span class="week-icon">🟡</span><span><strong>Соняшник Голованівськ (AGRO HUB):</strong> ціна знизилась з 12 600 до 12 200 ₴/т за тиждень (−3,2%). Місцевий ринок Кіровоградщини під тиском збирання.</span></div>
+      <div class="week-row"><span class="week-icon">🟢</span><span><strong>Єгипет купив 480 тис. т пшениці:</strong> CPT $235, тендер 28.10. Підтримує попит на чорноморську пшеницю та ціни 8 600–8 800 ₴/т.</span></div>
+      <div class="week-row"><span class="week-icon">🔴</span><span><strong>Добрива дорожчають:</strong> OSTCHEM підвищив аміачну селітру на 900 ₴/т (+12%) у жовтні. Селітра: 27 500–28 000 ₴/т.</span></div>
+      <div class="week-row"><span class="week-icon">⏳</span><span><strong>Наступна ключова подія — WASDE 10.11.2026</strong> (12:00 ET). Баланси пшениці, кукурудзи, сої можуть змінити орієнтири ринку.</span></div>
+    </div>
+  </div>
+
+  <!-- ══ SELL/WAIT BAROMETER ══ -->
+  <div class="barometer-section" id="barometerSection">
+    <div class="baro-header">
+      <div class="baro-title">📊 Барометр продати / чекати</div>
+      <div class="baro-hz-tabs">
+        <button class="baro-hz-btn active" onclick="setBaroHz('1m',this)">1 міс.</button>
+        <button class="baro-hz-btn" onclick="setBaroHz('3m',this)">3 міс.</button>
+        <button class="baro-hz-btn" onclick="setBaroHz('6m',this)">6 міс.</button>
+      </div>
+    </div>
+    <div class="baro-cards" id="baroCards"></div>
+    <div class="baro-legend">
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#c0392b"></div>0–25 🔴 ЧЕКАЙ</div>
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#e67e22"></div>26–45 🟠 Обережно</div>
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#f39c12"></div>46–60 🟡 Нейтрально</div>
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#27ae60"></div>61–75 🟢 Продавай</div>
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#e6a817"></div>76–100 ⚡ ПРОДАВАЙ ЗАРАЗ</div>
+    </div>
+    <div class="baro-disclaimer">⚠️ Барометр — аналітичний орієнтир на основі публічних даних (<strong>published_unconfirmed</strong>). Не є рекомендацією до угоди. Перевіряй ціни напряму з покупцем перед укладенням договору. Клікни на карточку культури — побачиш 3 причини оцінки.</div>
+  </div>
+
+  <!-- ── РЕЗЮМЕ ПО КУЛЬТУРАХ ── -->
+  <div class="sum-section" id="summarySection">
+    <div class="sec-head">
+      <div class="sec-title">🧑‍🌾 Резюме по культурах — по-простому</div>
+      <div class="sec-sub">Станом на 29.10.2026 · ціни — опубліковані пропозиції, не підписані угоди · net — з Долинського, рейс 25 т</div>
+    </div>
+    <div class="sum-grid">
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">💛 Ріпак</span><span class="sum-verdict v-sell">Продавати до кінця грудня</span></div>
+        <p>Ріпак зараз — найдорожча культура в розрахунку на тонну. Порт в Одесі дає <strong>21 200 ₴/т</strong>, після фрахту з Долинського (1 500 ₴/т) лишається <strong>~19 700 ₴/т</strong>, це близько 490 тис. ₴ за машину. Біржа в Парижі стоїть на місці, ціна тримається рівно — ні вниз, ні вгору не тягне.</p>
+        <p>А от далі краще не буде: з весни на ринок заходить новий ріпак з Європи і тисне ціну. І є важливий момент: ГрадОлія в Кропивницькому сама переробляє ріпак, а везти туди в 5 разів дешевше, ніж в Одесу. Якщо вони дадуть від <strong>19 975 ₴/т</strong> з доставкою на завод — це вже вигідніше за Одесу, і гроші ближче.</p>
+        <div class="sum-do">Що робити: першим ділом подзвонити в ГрадОлію по ріпаку. Продавати в листопаді–грудні, весни не чекати.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🌻 Соняшник</span><span class="sum-verdict v-split">Частину зараз, решту — зимою</span></div>
+        <p>Зараз пік збирання, соняшника на ринку повно, і заводи цим користуються. Найближчі до нас платять мало: Kernel ~<strong>15 000</strong>, Власівка 14 000, Голованівськ за тиждень зрізав з 12 600 до <strong>12 200</strong> (і то без ПДВ). Водночас на заході й у Вінниці за високоолеїновий дають 18 500–20 000 — тобто заводи на олії заробляють добре (олія в порту ~$1 010/т), а ціну на насіння тиснуть.</p>
+        <p>Історично з грудня по березень пропозиції меншає, і переробники піднімають ціну — бувало на 8–12% вище жовтневої. Барометр зараз «обережно» на місяць і нейтральний на 3–6 місяців. Продавати весь урожай по 14–15 тис. — означає віддати заводу свою маржу.</p>
+        <div class="sum-do">Що робити: продати стільки, скільки треба на поточні гроші. Решту тримати на своєму складі до грудня–лютого. Взяти ціни в ГрадОлії й Kernel і торгуватись за олійність.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🫘 Соя</span><span class="sum-verdict v-split">Частину зараз, решту — до лютого</span></div>
+        <p>Реальна ціна сої зараз <strong>18 600–19 000 ₴/т</strong> (Глобине, Ізмаїл). Ізмаїл в одному місці показував 20 500, але це значно вище ринку — поки не подзвониш і не почуєш це від живої людини, на цю цифру не розраховувати. З Ізмаїлом проблема — далеко, фрахт 1 400–1 500 ₴/т з'їдає перевагу; Власівка поруч, але дає 17 200.</p>
+        <p>Найкраще вікно для сої — грудень–лютий: свій урожай уже розібрали, а Бразилія й Аргентина ще не зібрали. З березня їхня нова соя давить світову ціну вниз. Біржа в Чикаго зараз без руху, тому різких стрибків найближчим часом не чекаю.</p>
+        <div class="sum-do">Що робити: подзвонити в «В АГРО» і перевірити 20 500. Частину продати зараз, решту — до кінця лютого, весни не чекати.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🌽 Кукурудза</span><span class="sum-verdict v-hold">Не поспішати, сушити й тримати</span></div>
+        <p>Найгірша ситуація з усіх культур. Кукурудзи всюди повно, порти забиті, покупці вибирають. Дунай дає $155–160 (~7 000–7 200 ₴/т), найкраща пропозиція <strong>7 500</strong>, а після фрахту на Одесу лишається <strong>~6 000 ₴/т</strong>. Америка має великий урожай, Чикаго падає, Бразилія вже посіяла більше половини. Плюс дощі: сушіння коштує ще $10–20 на тонні, подекуди до $30.</p>
+        <p>Барометр кукурудзи найнижчий — 32 з 100 на місяць. Продавати зараз — означає віддавати по дну сезону. Зазвичай кукурудза дорожчає в березні–травні, коли запаси закінчуються. Свій склад тут — головний козир. Ще одне: зараз багато покупців платять 86% одразу, а 14% — лише коли держава поверне ПДВ, тобто з рейсу ~26 тис. ₴ «зависають».</p>
+        <div class="sum-do">Що робити: досушити й закласти на свій склад. Продавати лише якщо горять гроші або склад потрібен. Основну масу — березень–травень. Умову 86/14 враховувати в кожній угоді.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🌾 Ячмінь</span><span class="sum-verdict v-sell">Продавати, коли зручно, до весни</span></div>
+        <p>Ячмінь — тиха культура. Ціна останні два тижні стоїть на <strong>7 000–7 300 ₴/т</strong> в портах, три різні джерела показують одне й те саме. Після фрахту з Долинського лишається <strong>~5 800 ₴/т</strong>. Покупців небагато, біржового руху майже немає.</p>
+        <p>Чекати тут нема чого: зимою особливого попиту не буде, а навесні новий урожай почне тиснути старий. Барометр нейтральний на всі горизонти, на 6 місяців — трохи гірше. Тримати ячмінь на складі — це займати місце, яке краще віддати під кукурудзу.</p>
+        <div class="sum-do">Що робити: продати в листопаді–грудні, коли буде зручна машина чи попутний рейс. Звільнити склад під кукурудзу.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🌱 Пшениця</span><span class="sum-verdict v-sell">Продавати поступово до грудня</span></div>
+        <p>По пшениці зараз найкраща картина. Рені й Ізмаїл дають <strong>8 600–8 900 ₴/т</strong> за 2–3 клас, після фрахту <strong>~7 300 ₴/т</strong> (~183 тис. ₴ за машину). Є сильний зовнішній попит: Єгипет щойно закупив 480 тис. т. Барометр — найвищий з усіх культур, 58 на місяць.</p>
+        <p>Але ціни на Дунаї потроху сповзають, бо покупці закривають потреби, а Америка дешевшає через сильний долар. До весни ціна старого врожаю зазвичай падає. 10 листопада — звіт USDA (WASDE), він може смикнути ринок у будь-який бік, тому все одним махом до нього продавати не варто.</p>
+        <div class="sum-do">Що робити: продавати партіями з листопада до кінця грудня — частину до 10.11, частину після звіту. Весни не чекати.</div>
+      </div>
+
+    </div>
+  </div>
+
+  </details>
 
   <!-- ── NBU RATE ── -->
   <!-- newsListStatic closed above -->
@@ -1937,7 +1956,7 @@ renderTg();
   const deltaEl = document.createElement('div');
   deltaEl.className = 'delta-section';
   deltaEl.innerHTML = `
-    <div class="charts-title">📊 Щоденний трекер дельти — 29.10.2026</div>
+    <div class="charts-title">📊 Трекер дельти — архів 29.10.2026 (не оновлюється)</div>
     <div class="charts-note">Зміна за тиждень (22–29.10) по культурах, паливу та добривах. ↑ зростання · ↓ падіння · → без змін. Дані: <strong>published_unconfirmed</strong>.</div>
     <div class="delta-grid-inner" id="deltaGridInner"></div>
     <div style="font-size:10px;color:var(--amber);margin-top:10px;padding:7px 10px;background:var(--amber-bg);border-radius:6px">⚠ Дельти: культури — bestPrice 22–29.10 · добрива — OSTCHEM жовт. vs вер. · паливо — minfin.com.ua</div>`;
@@ -1958,7 +1977,7 @@ renderTg();
       <div class="chart-tt" id="mainPriceTT"></div>
     </div>
     <div class="chart-leg" id="mainChartLeg"></div>
-    <div style="margin-top:16px;font-size:12px;font-weight:700;color:var(--fg2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">₴ Поточні ціни 29.10.2026 (₴/т)</div>
+    <div style="margin-top:16px;font-size:12px;font-weight:700;color:var(--fg2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">₴ Ціни станом на 29.10.2026 (архів, ₴/т)</div>
     <div class="chart-wrap-uah">
       <canvas class="price-canvas" id="mainUahCanvas"></canvas>
       <div class="chart-tt" id="mainUahTT"></div>

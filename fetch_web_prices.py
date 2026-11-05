@@ -11,7 +11,7 @@ import re
 from datetime import datetime, timezone
 from urllib.request import urlopen, Request
 
-USD_UAH = float(os.environ.get('USD_UAH_RATE', os.environ.get('USD_UAH', '45.47')))
+USD_UAH = float(os.environ.get('NBU_USD_UAH') or os.environ.get('USD_UAH_RATE') or os.environ.get('USD_UAH') or '45.47')
 
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
@@ -85,8 +85,8 @@ EZERNO_REGION_MAP = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _make_record(source, culture, quality, price, region, location, date_str, basis="з ПДВ", url=""):
-    fk = FREIGHT_KOPANI.get(region, 800)
-    fd = FREIGHT_DOLYNSKE.get(region, 1000)
+    fk = FREIGHT_KOPANI.get(region)      # невідомий регіон → net не рахуємо
+    fd = FREIGHT_DOLYNSKE.get(region)
     return {
         "source":       source,
         "culture":      culture,
@@ -99,8 +99,8 @@ def _make_record(source, culture, quality, price, region, location, date_str, ba
         "region":       region,
         "date":         date_str,
         "url":          url,
-        "net_kopani":   float(price) - fk,
-        "net_dolynske": float(price) - fd,
+        "net_kopani":   float(price) - fk if fk is not None else None,
+        "net_dolynske": float(price) - fd if fd is not None else None,
     }
 
 
@@ -352,20 +352,25 @@ def _parse_ezerno_bodytext(text: str, company: str, default_region: str, now_str
                         break
             if price:
                 # Шукаємо регіон по-рядково у вузькому вікні (перший hit = найближчий)
-                region = default_region
-                for cl in lines[max(0, i-2):i+5]:
-                    r = _detect_region(cl)
-                    if r != "невідомо":
-                        region = r
-                        break
                 quality = _detect_quality(ctx)
-                # Локація — місто (рядок після ціни)
+                # Локація — місто/область (рядок після ціни)
                 location = company
                 for chunk in lines[i:i+8]:
                     s = chunk.strip()
                     if s and re.match(r'[А-ЯІЄЇ]', s) and not re.search(r'\d{4}', s) and matched_culture not in s.lower():
                         location = s[:60]
                         break
+                # Регіон: спершу з локації покупця, потім лише вперед від назви культури
+                # (раніше вікно i-2 підхоплювало область попереднього блоку)
+                region = _detect_region(location)
+                if region == "невідомо":
+                    for cl in lines[i:i+6]:
+                        r = _detect_region(cl)
+                        if r != "невідомо":
+                            region = r
+                            break
+                if region == "невідомо":
+                    region = default_region
                 # Дата
                 dm = re.search(r'\d{2}[./]\d{2}[./]\d{4}', ctx)
                 date_str = dm.group(0) if dm else now_str

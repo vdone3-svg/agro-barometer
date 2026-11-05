@@ -11,18 +11,21 @@ import os
 import re
 from datetime import datetime, timedelta, timezone
 
-USD_UAH = float(os.environ.get("USD_UAH_RATE", "45.47"))
-EUR_UAH = 50.80
+from zoneinfo import ZoneInfo
+KYIV = ZoneInfo("Europe/Kyiv")
+# Курс: NBU_USD_UAH (бере CI з bank.gov.ua) → USD_UAH_RATE (секрет) → запасний
+USD_UAH = float(os.environ.get("NBU_USD_UAH") or os.environ.get("USD_UAH_RATE") or "45.47")
+EUR_UAH = float(os.environ.get("NBU_EUR_UAH") or "0") or None  # без курсу EUR-ціни не конвертуємо
 
 # ─── КАНАЛИ ───────────────────────────────────────────────────────────────────
 # Telethon може читати всі; Playwright — тільки публічні (без *)
 CHANNELS = [
     ("navigate_agro",        "prices"),   # щоденний прайс — основний
-    ("agrohub_od",           "prices"),   # CPT термінали, Ф-2
+    ("agrohub_od",           "agrohub"),  # структурований прайс: #КУЛЬТУРА / ✅ пункт (область) Ф-2: ціна
     ("AgroBrok",             "prices"),   # EXW/DAP
     ("rawagro",              "prices"),   # РО АГРО ТРЕЙД — прайс 6 культур
     ("Agroprosperis_price",  "prices"),   # Агропросперіс
-    ("GrainTradeUA",         "prices"),   # GrainTrade прайс
+    ("GrainTradeUA",         "board"),    # біржа: беремо лише «Куплю …» + новини
     ("apkinform",            "prices"),   # АПК-Інформ ціни
     ("spike_brokers",        "context"),  # тижневий огляд
     ("latifundistmedia",     "news"),
@@ -39,13 +42,13 @@ CULTURE_HEADERS = {
     "соя": "соя", "пшениця": "пшениця", "кукуруз": "кукурудза",
     "ячмінь": "ячмінь",
 }
-CULTURE_KW = {
-    "ріпак":     ["#ріпак", "#рапс", "ріпак", "рапс"],
-    "соняшник":  ["#соняшник", "соняшник"],
-    "соя":       ["#соя", "соя"],
-    "пшениця":   ["#пшениця", "пшениця"],
-    "кукурудза": ["#кукурудза", "кукурудза", "кукуруза"],
-    "ячмінь":    ["#ячмінь", "ячмінь"],
+CULTURE_KW = {   # основи слів — щоб ловити відмінки (пшеницю, кукурудзи, ячменю…)
+    "ріпак":     ["ріпак", "рапс"],
+    "соняшник":  ["соняшник", "подсолн"],
+    "соя":       ["соя", "сої", "сою", "соєв"],
+    "пшениця":   ["пшениц"],
+    "кукурудза": ["кукуруд", "кукуруз"],
+    "ячмінь":    ["ячмін", "ячмен"],
 }
 LOCATION_REGION = {
     "НОВОТЕХ": "Одеська", "ІЗМАЇЛ": "Одеська", "РЕНІ": "Одеська",
@@ -68,7 +71,7 @@ EUR_RE = re.compile(r"(\d{2,4})\s*(?:євро|eur|€)", re.IGNORECASE)
 
 def to_uah(val, currency):
     if currency == "USD": return round(val * USD_UAH)
-    if currency == "EUR": return round(val * EUR_UAH)
+    if currency == "EUR": return round(val * EUR_UAH) if EUR_UAH else None
     return val
 
 
@@ -98,6 +101,108 @@ def _find_culture(text):
             return culture
     return None
 
+
+
+# ─── СТРУКТУРОВАНІ ПАРСЕРИ ────────────────────────────────────────────────────
+
+REGION_WORDS = {
+    "одес": "Одеська", "черкас": "Черкаська", "миколаїв": "Миколаївська",
+    "кіровоград": "Кіровоградська", "вінниц": "Вінницька", "хмельниц": "Хмельницька",
+    "полтав": "Полтавська", "дніпро": "Дніпропетровська", "київськ": "Київська",
+    "житомир": "Житомирська", "запоріз": "Запорізька", "херсон": "Херсонська",
+    "чернів": "Чернівецька", "тернопіл": "Тернопільська", "львів": "Львівська",
+    "рівнен": "Рівненська", "волин": "Волинська", "сум": "Сумська",
+    "харків": "Харківська", "чернігів": "Чернігівська", "івано-франк": "Івано-Франківська",
+}
+
+def _region_from_text(t):
+    t = (t or "").lower()
+    for k, v in REGION_WORDS.items():
+        if k in t:
+            return v
+    return None
+
+def _clean_md(t):
+    t = re.sub(r"\[([^\]]+)\]\((https?://[^)]+)\)", r"\1", t or "")
+    return re.sub(r"[*_`]+", "", t).strip()
+
+# Продукти переробки / нецільові — не плутати з насінням культури
+NON_CROP_RE = re.compile(r"олі[яї]|шрот|макуха|жмих|лушпин|насінн|посівн|тверд|борошн|висівк|фураж", re.I)
+
+def parse_agrohub(text, date_str, channel="agrohub_od"):
+    """@agrohub_od: «#СОЯ» → рядки «✅ ІЗМАЇЛ СКЛАД (Одеська область) Ф-2: 338$ (умови)»."""
+    records = []
+    culture = None
+    for raw in (text or "").split("\n"):
+        line = _clean_md(raw)
+        if not line:
+            continue
+        hm = re.search(r"#\s*([А-ЯІЇЄA-Zа-яіїє]+)", line)
+        if hm:
+            c = _find_culture(hm.group(1))
+            culture = c  # невідомий заголовок (коріандр, льон…) → None, рядки пропускаємо
+        if not culture or "✅" not in line:
+            continue
+        pm_uah = re.search(r"(\d[\d\s]{2,6}\d)\s*грн", line, re.I)
+        pm_usd = re.search(r"(\d{2,4})\s*\$", line)
+        if pm_uah:
+            raw_val = float(re.sub(r"\s", "", pm_uah.group(1))); cur = "UAH"; uah = raw_val
+        elif pm_usd:
+            raw_val = float(pm_usd.group(1)); cur = "USD"; uah = to_uah(raw_val, "USD")
+        else:
+            continue
+        loc_m = re.search(r"✅\s*([^()]+?)\s*(?:\(|Ф-?2|$)", line)
+        location = (loc_m.group(1).strip() if loc_m else "невідомо")[:40]
+        region = _region_from_text(line) or _guess_region(location)
+        records.append({
+            "source": f"@{channel}", "culture": culture,
+            "quality": "Ф-2" if re.search(r"Ф-?2", line) else None,
+            "price_raw": raw_val, "price_uah": float(uah), "currency": cur,
+            "basis": "Ф-2 (з ПДВ)" if re.search(r"Ф-?2", line) else "невідомо",
+            "vat": "з ПДВ" if re.search(r"Ф-?2", line) else "невідомо",
+            "location": location, "region": region,
+            "date": date_str, "url": f"https://t.me/{channel}",
+            "net_kopani": None, "net_dolynske": None,
+        })
+    return records
+
+BOARD_RE = re.compile(
+    r"^\s*(Куплю|Продам)\s+([^,]+),\s*(.+?)\s*\(№\s*(\d+)\)\s*"
+    r"(?:(\d[\d\s]*)\s*тон[а-я]*)?\s*за ціною\s*(\d[\d\s.,]*)\s*(грн|USD|\$|EUR|євро)\s*за тонну"
+    r"(?:\s*на умовах\s*([A-ZА-Я]{3}))?", re.I | re.S)
+
+def parse_board(text, date_str, channel="GrainTradeUA"):
+    """@GrainTradeUA біржа: беремо лише «Куплю <культура>» — заявка покупця з посиланням на лот."""
+    t = _clean_md(text)
+    m = BOARD_RE.search(t)
+    if not m or m.group(1).lower() != "куплю":
+        return []
+    product = m.group(2).strip()
+    if NON_CROP_RE.search(product):
+        return []
+    culture = _find_culture(product)
+    if not culture:
+        return []
+    val = float(re.sub(r"[\s,]", "", m.group(6)).rstrip("."))
+    cur = {"грн": "UAH", "usd": "USD", "$": "USD"}.get(m.group(7).lower(), "EUR")
+    uah = val if cur == "UAH" else to_uah(val, cur)
+    if uah is None:
+        return []
+    url_m = re.search(r"https?://graintrade\.com\.ua/\S+", t)
+    return [{
+        "source": f"@{channel}", "culture": culture,
+        "quality": _clean_md(product)[:30],
+        "price_raw": val, "price_uah": float(uah), "currency": cur,
+        "basis": (m.group(8) or "невідомо").upper(), "vat": "невідомо",
+        "location": "невідомо", "region": "невідомо",
+        "buyer": m.group(3).strip()[:50],
+        "volume_t": float(re.sub(r"\s", "", m.group(5))) if m.group(5) else None,
+        "date": date_str, "url": url_m.group(0) if url_m else f"https://t.me/{channel}",
+        "net_kopani": None, "net_dolynske": None,
+    }]
+
+def is_board_ad(text):
+    return bool(re.match(r"\s*\**\s*(Куплю|Продам)\s", _clean_md(text or ""), re.I))
 
 # ─── ПАРСЕРИ ПОВІДОМЛЕНЬ ──────────────────────────────────────────────────────
 
@@ -173,60 +278,81 @@ def parse_navigate_agro(text, date_str):
 
 
 def parse_generic_msg(text, channel, date_str):
-    """Загальний парсер для решти цінових каналів."""
+    """Загальний парсер: розбирає по рядках; культура — із заголовка свого блоку або самого рядка."""
     records = []
     if not text or len(text) < 10:
         return records
-
-    culture = _find_culture(text)
-    if not culture:
-        return records
-
-    for m in UAH_RE.finditer(text):
-        raw = m.group(1).replace(" ", "").replace("'", "")
-        try:
-            v = float(raw)
-        except ValueError:
+    culture = None
+    for raw in text.split("\n"):
+        line = _clean_md(raw)
+        if not line:
             continue
-        if 4000 <= v <= 60000:
-            ctx = text[max(0, m.start()-80):m.start()+30]
-            if re.search(r'\bбн\b', ctx.lower()):
+        c = _find_culture(line)
+        if c:
+            culture = c
+        if not culture or NON_CROP_RE.search(line):
+            continue
+        if re.search(r'\bбн\b|без пдв', line.lower()):
+            continue
+        found = []
+        for m in UAH_RE.finditer(line):
+            try:
+                v = float(m.group(1).replace(" ", "").replace("'", ""))
+            except ValueError:
                 continue
+            if 3000 <= v <= 40000:
+                found.append((v, "UAH", v))
+        for m in USD_RE.finditer(line):
+            v = float(m.group(1))
+            if 80 <= v <= 900:
+                found.append((v, "USD", float(to_uah(v, "USD"))))
+        for raw_val, cur, uah in found:
+            location = re.split(r"[-–—:]|\d", line)[0].strip(" ✅📍•")[:40] or "невідомо"
             records.append({
-                "source":    f"@{channel}",
-                "culture":   culture,
-                "quality":   None,
-                "price_raw": v, "price_uah": v, "currency": "UAH",
-                "basis":     _find_basis(text),
-                "location":  "невідомо",
-                "region":    "невідомо",
-                "date":      date_str,
-                "net_kopani":   None,
-                "net_dolynske": None,
+                "source": f"@{channel}", "culture": culture, "quality": None,
+                "price_raw": raw_val, "price_uah": uah, "currency": cur,
+                "basis": _find_basis(line), "vat": "невідомо",
+                "location": location,
+                "region": _region_from_text(line) or _guess_region(location),
+                "date": date_str, "url": f"https://t.me/{channel}",
+                "net_kopani": None, "net_dolynske": None,
             })
-
-    for m in USD_RE.finditer(text):
-        v = float(m.group(1))
-        if 80 <= v <= 1200:
-            ctx = text[max(0, m.start()-80):m.start()+30]
-            if re.search(r'\bбн\b', ctx.lower()):
-                continue
-            uah = to_uah(v, "USD")
-            records.append({
-                "source":    f"@{channel}",
-                "culture":   culture,
-                "quality":   None,
-                "price_raw": v, "price_uah": float(uah), "currency": "USD",
-                "basis":     _find_basis(text),
-                "location":  "невідомо",
-                "region":    "невідомо",
-                "date":      date_str,
-                "net_kopani":   None,
-                "net_dolynske": None,
-            })
-
     return records
 
+
+def _parse_by_role(channel, role, text, date_str):
+    if role == "prices":
+        if channel == "navigate_agro":
+            return parse_navigate_agro(text, date_str)
+        return parse_generic_msg(text, channel, date_str)
+    if role == "agrohub":
+        return parse_agrohub(text, date_str, channel)
+    if role == "board":
+        return parse_board(text, date_str, channel)
+    return []
+
+
+def _news_record(channel, text, msg_dt, msg_id=None):
+    clean = _clean_md(text)
+    clean = re.sub(r"\s+", " ", clean).strip()
+    # Заголовок — перше речення/рядок до 140 символів
+    first = re.split(r"(?<=[.!?])\s|\n", _clean_md(text).strip(), maxsplit=1)[0]
+    title = re.sub(r"\s+", " ", first).strip()[:140] or clean[:140]
+    summary = clean[len(title):].strip()[:300] if clean.startswith(title) else clean[:300]
+    ext = re.search(r"\((https?://(?!t\.me)[^)\s]+)\)", text or "") or re.search(r"https?://(?!t\.me)\S+", text or "")
+    tg_url = f"https://t.me/{channel}/{msg_id}" if msg_id else f"https://t.me/{channel}"
+    return {
+        "source":  f"@{channel}",
+        "title":   title,
+        "url":     (ext.group(1) if ext and ext.lastindex else ext.group(0)) if ext else tg_url,
+        "tg_url":  tg_url,
+        "date":    msg_dt.astimezone(KYIV).strftime("%d.%m.%Y %H:%M"),
+        "ts":      msg_dt.astimezone(timezone.utc).isoformat(),
+        "summary": summary,
+    }
+
+
+NEWS_MAX_AGE_H = 30   # новини з Telegram — тільки за останню добу (+запас на час запуску)
 
 # ─── TELETHON SCRAPER ────────────────────────────────────────────────────────
 
@@ -260,6 +386,11 @@ def _is_news_msg(text: str) -> bool:
     t = text.lower()
     if not any(kw.lower() in t for kw in AGRO_NEWS_KW):
         return False
+    head = t[:200]
+    if re.search(r"\b(?:молок|молоч|тваринн|свин|птах|птиц|яйц|м'яс|мясн|укрзалізн|залізниц|вагон)", head):
+        return False   # нецільові теми (якщо в заголовку, а не мимохідь)
+    if re.search(r"актуальні закупівельні ціни|контакти для співпраці|пишіть в особисті|за телефоном", t) and len(t) < 600:
+        return False   # рекламні/контактні пости без змісту
     # Відкидаємо, якщо забагато цін і мало зв'язного тексту
     price_hits = len(UAH_RE.findall(text)) + len(USD_RE.findall(text))
     words = len(re.findall(r'[а-яіїєa-z]{4,}', t))
@@ -294,54 +425,36 @@ async def _telethon_fetch_all(cutoff: datetime) -> tuple[list, list]:
     me = await client.get_me()
     print(f"  [telethon] ✅ авторизовано як @{me.username or me.first_name}")
 
+    news_cutoff = datetime.now(timezone.utc) - timedelta(hours=NEWS_MAX_AGE_H)
     for channel, role in CHANNELS:
         try:
             msgs = []
-            async for msg in client.iter_messages(channel, limit=60):
+            async for msg in client.iter_messages(channel, limit=80):
                 if not msg.date:
                     continue
                 msg_dt = msg.date.replace(tzinfo=timezone.utc) if msg.date.tzinfo is None else msg.date
                 if msg_dt < cutoff:
                     break
                 if msg.text:
-                    msgs.append({"text": msg.text, "datetime": msg_dt})
+                    msgs.append({"text": msg.text, "datetime": msg_dt, "id": msg.id})
 
             print(f"  [telethon] @{channel} ({role}): {len(msgs)} свіжих повід.")
 
             price_count = 0
             news_count  = 0
             for m in msgs:
-                date_str = (m["datetime"] + timedelta(hours=2)).strftime("%d.%m.%Y %H:%M")
+                date_str = m["datetime"].astimezone(KYIV).strftime("%d.%m.%Y %H:%M")
                 text = m["text"]
+                recs = _parse_by_role(channel, role, text, date_str)
+                for r in recs:
+                    if r.get("url", "").rstrip("/") == f"https://t.me/{channel}":
+                        r["url"] = f"https://t.me/{channel}/{m['id']}"
+                all_prices.extend(recs)
+                price_count += len(recs)
 
-                # ── Ціни ──────────────────────────────────────────────────────
-                if role == "prices":
-                    if channel == "navigate_agro":
-                        recs = parse_navigate_agro(text, date_str)
-                    else:
-                        recs = parse_generic_msg(text, channel, date_str)
-                    all_prices.extend(recs)
-                    price_count += len(recs)
-
-                # ── Новини/аналітика ──────────────────────────────────────────
-                if _is_news_msg(text):
-                    # Перші 400 символів як preview
-                    preview = text[:400].replace("\n", " ").strip()
-                    # URL на конкретне повідомлення (публічні канали)
-                    msg_id = None
-                    try:
-                        async for entity_msg in client.iter_messages(channel, ids=None, limit=1):
-                            pass  # просто перевірка
-                    except Exception:
-                        pass
-
-                    all_news.append({
-                        "source":  f"@{channel}",
-                        "title":   preview[:120],
-                        "url":     f"https://t.me/{channel}",
-                        "date":    date_str,
-                        "summary": preview[:300],
-                    })
+                if (m["datetime"] >= news_cutoff and not recs
+                        and not is_board_ad(text) and _is_news_msg(text)):
+                    all_news.append(_news_record(channel, text, m["datetime"], m["id"]))
                     news_count += 1
 
             if price_count:
@@ -439,16 +552,12 @@ async def _scrape_channel(pw, channel: str, role: str, cutoff: datetime) -> list
             if msg_date < cutoff:
                 continue
 
-            if not text or role not in ("prices",):
+            if not text:
                 continue
 
             msg_count += 1
-            date_str = msg_date.strftime("%d.%m.%Y %H:%M")
-
-            if channel == "navigate_agro":
-                recs = parse_navigate_agro(text, date_str)
-            else:
-                recs = parse_generic_msg(text, channel, date_str)
+            date_str = msg_date.astimezone(KYIV).strftime("%d.%m.%Y %H:%M")
+            recs = _parse_by_role(channel, role, text, date_str)
 
             records.extend(recs)
             price_count += len(recs)
@@ -480,10 +589,13 @@ FREIGHT = {
 
 
 def _add_net(records):
+    """Net рахуємо лише коли регіон покупця відомий і є в таблиці фрахту — не вигадуємо ставку."""
     for r in records:
         region = r.get("region", "невідомо")
-        r["net_kopani"]   = r["price_uah"] - FREIGHT["Копані"].get(region, 700)
-        r["net_dolynske"] = r["price_uah"] - FREIGHT["Долинське"].get(region, 800)
+        fk = FREIGHT["Копані"].get(region) if region != "невідомо" else None
+        fd = FREIGHT["Долинське"].get(region) if region != "невідомо" else None
+        r["net_kopani"]   = r["price_uah"] - fk if fk is not None else None
+        r["net_dolynske"] = r["price_uah"] - fd if fd is not None else None
     return records
 
 
@@ -498,7 +610,7 @@ async def _run_all():
         try:
             prices, news = await _telethon_fetch_all(cutoff)
             # Зберігаємо новини окремо для news_parser.py
-            if news:
+            if True:  # пишемо завжди, навіть порожній — щоб не підхопити застарілий файл
                 import pathlib
                 pathlib.Path("telegram_news.json").write_text(
                     json.dumps({"records": news, "total": len(news),
@@ -548,8 +660,9 @@ def main():
         recs = [r for r in all_records if r["culture"] == culture]
         if not recs:
             continue
-        best_net  = max(recs, key=lambda x: x["net_kopani"])
+        with_net = [r for r in recs if r.get("net_kopani") is not None]
         best_price = max(recs, key=lambda x: x["price_uah"])
+        best_net  = max(with_net, key=lambda x: x["net_kopani"]) if with_net else best_price
         summary[culture] = {
             "records": len(recs),
             "best_price_uah":      best_price["price_uah"],
@@ -561,8 +674,9 @@ def main():
             "best_net_source":     best_net["source"],
             "best_net_date":       best_net["date"],
         }
+        nk = best_net.get('net_kopani')
         print(f"  {culture.upper()}: найвища {best_price['price_uah']:,.0f} ₴ | "
-              f"net Копані {best_net['net_kopani']:,.0f} ₴ | "
+              f"net Копані {(f'{nk:,.0f}' if nk is not None else '—')} ₴ | "
               f"{best_net['location']} | {best_net['source']}")
 
     if not all_records:
