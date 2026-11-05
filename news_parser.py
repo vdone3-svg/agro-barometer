@@ -418,19 +418,33 @@ def _parse_infagro_html() -> list[dict]:
     records: list[dict] = []
     seen: set[str] = set()
 
-    # Крок 1: Discovery — знаходимо категорії на головній
+    # Крок 1: Discovery — знаходимо розділи на головній
     home = _fetch("https://infagro.com.ua/", timeout=15)
     cat_urls: list[str] = []
     if home:
-        # Збираємо всі /category/* links
+        # Збираємо всі внутрішні посилання (1-2 сегменти — рівень розділу)
+        section_re = re.compile(
+            r'href="(https://infagro\.com\.ua/[^"?#\s]{3,60})"',
+        )
+        seen_su: set[str] = set()
+        for m in section_re.finditer(home):
+            u = m.group(1).rstrip("/") + "/"
+            if u in seen_su:
+                continue
+            seen_su.add(u)
+            # Тільки 1-2 сегменти (розділ, не стаття)
+            segs = [s for s in u.replace("https://infagro.com.ua/", "").split("/") if s]
+            if 1 <= len(segs) <= 2:
+                cat_urls.append(u)
+        print(f"  [infagro] розділів на головній: {len(cat_urls)}")
+        for cu in cat_urls[:30]:
+            print(f"  [infagro]   sec: {cu}")
+        # Також шукаємо /category/ links
         for m in re.finditer(r'href="(https://infagro\.com\.ua/category/[^"?#]+)"', home):
             u = m.group(1).rstrip("/") + "/"
             if u not in cat_urls:
                 cat_urls.append(u)
-        print(f"  [infagro] категорій на головній: {len(cat_urls)}")
-        # Показуємо всі щоб побачити в логах
-        for cu in cat_urls:
-            print(f"  [infagro]   cat: {cu}")
+                print(f"  [infagro]   cat: {u}")
 
     # Крок 2: Пробуємо категорії (зернові пріоритет — за ключовими словами в URL)
     GRAIN_KWS = ["grain", "zerno", "zehn", "wheat", "psh", "kukurudz", "oliyn",
