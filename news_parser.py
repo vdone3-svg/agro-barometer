@@ -15,7 +15,7 @@ from pathlib import Path
 # ─── НАЛАШТУВАННЯ ────────────────────────────────────────────────────────────
 NEWS_FILE = "news_data.json"
 MAX_AGE_HOURS = 24          # суворо 24 год — тільки свіже
-MAX_ITEMS_TOTAL = 25
+MAX_ITEMS_TOTAL = 40
 MAX_PER_SOURCE = 10
 
 HEADERS = {
@@ -404,6 +404,38 @@ def parse_infagro() -> list[dict]:
     return records
 
 
+def parse_telegram_news() -> list[dict]:
+    """Читає telegram_news.json, збережений tg_web_parser.py."""
+    tg_file = Path("telegram_news.json")
+    if not tg_file.exists():
+        print("  [tg-news] telegram_news.json не знайдено — пропускаємо")
+        return []
+    try:
+        data = json.loads(tg_file.read_text(encoding="utf-8"))
+        records = data.get("records", [])
+    except Exception as e:
+        print(f"  [tg-news] ❌ помилка читання: {e}")
+        return []
+
+    # Додаткова фільтрація + дедуп за title (повідомлення можуть повторюватись)
+    seen_titles: set[str] = set()
+    result = []
+    for r in records:
+        t = r.get("title", "")[:80]
+        if t in seen_titles:
+            continue
+        seen_titles.add(t)
+        result.append({
+            "source":  r.get("source", "@telegram"),
+            "title":   r.get("title", "")[:200],
+            "url":     r.get("url", ""),
+            "date":    r.get("date", ""),
+            "summary": r.get("summary", "")[:300],
+        })
+    print(f"  [tg-news] ✅ {len(result)} повідомлень з Telegram")
+    return result
+
+
 # ─── ГОЛОВНА ФУНКЦІЯ ──────────────────────────────────────────────────────────
 
 def main():
@@ -411,6 +443,7 @@ def main():
 
     all_news: list[dict] = []
     for parser_fn in [
+        parse_telegram_news,       # Telegram — найбільше свіжої аналітики
         parse_latifundist_html,
         parse_infagro,
         parse_agroportal,

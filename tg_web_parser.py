@@ -230,13 +230,39 @@ def parse_generic_msg(text, channel, date_str):
 
 # ─── TELETHON SCRAPER ────────────────────────────────────────────────────────
 
-async def _telethon_fetch_all(cutoff: datetime) -> list:
-    """Читає всі канали через Telethon (потребує TG_SESSION)."""
+AGRO_NEWS_KW = [
+    "пшениц", "кукурудз", "соняшник", "сої", "соя", "ріпак", "рапс",
+    "ячмінь", "ячменю", "зернов", "олія", "шрот", "елеватор",
+    "USDA", "WASDE", "IGC", "врожай", "прогноз", "ринок", "експорт",
+    "нібулон", "кернел", "астарта", "чорноморськ",
+    "wheat", "corn", "maize", "sunflower", "soybean", "rapeseed", "barley",
+]
+
+def _is_news_msg(text: str) -> bool:
+    """Чи є повідомлення аналітикою/новиною, а не просто прайс-рядком."""
+    if not text or len(text) < 60:
+        return False
+    t = text.lower()
+    if not any(kw.lower() in t for kw in AGRO_NEWS_KW):
+        return False
+    # Відкидаємо чисті прайс-таблиці (багато цін, мало слів)
+    price_hits = len(UAH_RE.findall(text)) + len(USD_RE.findall(text))
+    words = len(re.findall(r'[а-яіїєa-z]{4,}', t))
+    if price_hits >= 5 and words < 20:
+        return False  # це прайс, не новина
+    return True
+
+
+async def _telethon_fetch_all(cutoff: datetime) -> tuple[list, list]:
+    """Читає всі канали через Telethon (потребує TG_SESSION).
+    Повертає (price_records, news_records).
+    """
     from telethon import TelegramClient
     from telethon.sessions import StringSession
     from telethon.errors import FloodWaitError, ChannelPrivateError, UsernameNotOccupiedError
 
-    all_records = []
+    all_prices = []
+    all_news   = []
 
     client = TelegramClient(StringSession(TG_SESSION), TG_API_ID, TG_API_HASH,
                             system_version="4.16.30-vxCUSTOM")
@@ -245,17 +271,15 @@ async def _telethon_fetch_all(cutoff: datetime) -> list:
     if not await client.is_user_authorized():
         print("  [telethon] ❌ сесія недійсна — переавторизуйся")
         await client.disconnect()
-        return []
+        return [], []
 
     me = await client.get_me()
     print(f"  [telethon] ✅ авторизовано як @{me.username or me.first_name}")
 
     for channel, role in CHANNELS:
-        if role not in ("prices",):
-            continue
         try:
             msgs = []
-            async for msg in client.iter_messages(channel, limit=50):
+            async for msg in client.iter_messages(channel, limit=60):
                 if not msg.date:
                     continue
                 msg_dt = msg.date.replace(tzinfo=timezone.utc) if msg.date.tzinfo is None else msg.date
@@ -264,19 +288,48 @@ async def _telethon_fetch_all(cutoff: datetime) -> list:
                 if msg.text:
                     msgs.append({"text": msg.text, "datetime": msg_dt})
 
-            print(f"  [telethon] @{channel}: {len(msgs)} свіжих повід.")
+            print(f"  [telethon] @{channel} ({role}): {len(msgs)} свіжих повід.")
 
             price_count = 0
+            news_count  = 0
             for m in msgs:
                 date_str = (m["datetime"] + timedelta(hours=2)).strftime("%d.%m.%Y %H:%M")
-                if channel == "navigate_agro":
-                    recs = parse_navigate_agro(m["text"], date_str)
-                else:
-                    recs = parse_generic_msg(m["text"], channel, date_str)
-                all_records.extend(recs)
-                price_count += len(recs)
+                text = m["text"]
+
+                # ── Ціни ──────────────────────────────────────────────────────
+                if role == "prices":
+                    if channel == "navigate_agro":
+                        recs = parse_navigate_agro(text, date_str)
+                    else:
+                        recs = parse_generic_msg(text, channel, date_str)
+                    all_prices.extend(recs)
+                    price_count += len(recs)
+
+                # ── Новини/аналітика ──────────────────────────────────────────
+                if _is_news_msg(text):
+                    # Перші 400 символів як preview
+                    preview = text[:400].replace("\n", " ").strip()
+                    # URL на конкретне повідомлення (публічні канали)
+                    msg_id = None
+                    try:
+                        async for entity_msg in client.iter_messages(channel, ids=None, limit=1):
+                            pass  # просто перевірка
+                    except Exception:
+                        pass
+
+                    all_news.append({
+                        "source":  f"@{channel}",
+                        "title":   preview[:120],
+                        "url":     f"https://t.me/{channel}",
+                        "date":    date_str,
+                        "summary": preview[:300],
+                    })
+                    news_count += 1
+
             if price_count:
                 print(f"  [telethon] @{channel}: {price_count} цінових записів")
+            if news_count:
+                print(f"  [telethon] @{channel}: {news_count} новинних повід.")
 
         except FloodWaitError as e:
             print(f"  [telethon] @{channel}: FloodWait {e.seconds}s — пропускаємо")
@@ -288,7 +341,7 @@ async def _telethon_fetch_all(cutoff: datetime) -> list:
         await asyncio.sleep(1)  # щоб не тригернути flood limit
 
     await client.disconnect()
-    return all_records
+    return all_prices, all_news
 
 
 # ─── PLAYWRIGHT SCRAPER ───────────────────────────────────────────────────────
@@ -425,10 +478,20 @@ async def _run_all():
     if TG_SESSION:
         print("  [tg] Режим: Telethon (авторизований)")
         try:
-            records = await _telethon_fetch_all(cutoff)
-            if records:
-                return _add_net(records)
-            print("  [tg] Telethon повернув 0 записів — fallback на Playwright")
+            prices, news = await _telethon_fetch_all(cutoff)
+            # Зберігаємо новини окремо для news_parser.py
+            if news:
+                import pathlib
+                pathlib.Path("telegram_news.json").write_text(
+                    json.dumps({"records": news, "total": len(news),
+                                "generated": datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC")},
+                               ensure_ascii=False, indent=2),
+                    encoding="utf-8"
+                )
+                print(f"  [tg] ✅ telegram_news.json: {len(news)} новинних повід.")
+            if prices:
+                return _add_net(prices)
+            print("  [tg] Telethon повернув 0 цінових записів — fallback на Playwright")
         except Exception as e:
             print(f"  [tg] Telethon помилка ({e}) — fallback на Playwright")
     else:
