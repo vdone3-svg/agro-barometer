@@ -63,7 +63,7 @@ jobs:
           TG_API_HASH:  ${{ secrets.TG_API_HASH }}
         run: |
           python3 land_parser.py || echo "⚠️ land_parser failed"
-          COUNT=$(python3 -c "import json; print(len(json.load(open('land_data.json'))))" 2>/dev/null || echo "?")
+          COUNT=$(python3 -c "import json; print(json.load(open('land_data.json')).get('records_total','?'))" 2>/dev/null || echo "?")
           echo "✅ Land: $COUNT лотів"
 
       - name: Web prices — Nibulon + e-zerno

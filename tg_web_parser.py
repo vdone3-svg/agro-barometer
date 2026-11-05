@@ -129,41 +129,91 @@ def _clean_md(t):
 # Продукти переробки / нецільові — не плутати з насінням культури
 NON_CROP_RE = re.compile(r"олі[яїює]|шрот|макуха|жмих|лушпин|насінн|посівн|тверд|борошн|висівк|фураж", re.I)
 
+def _unbox(t):
+    """🅺🅴🆁🅽🅴🅻 / 🄺🄴… → KERNEL (емодзі-літери, якими agrohub пише назви покупців)."""
+    out = []
+    for ch in t:
+        o = ord(ch)
+        if 0x1F170 <= o <= 0x1F189: out.append(chr(ord("A") + o - 0x1F170))
+        elif 0x1F130 <= o <= 0x1F149: out.append(chr(ord("A") + o - 0x1F130))
+        elif 0x1F150 <= o <= 0x1F169: out.append(chr(ord("A") + o - 0x1F150))
+        else: out.append(ch)
+    return "".join(out)
+
+
 def parse_agrohub(text, date_str, channel="agrohub_od"):
-    """@agrohub_od: «#СОЯ» → рядки «✅ ІЗМАЇЛ СКЛАД (Одеська область) Ф-2: 338$ (умови)»."""
+    """@agrohub_od — блоки:
+         🌻 #СОНЯШНИК
+         ✅ ОЕЗ ЧОРНОМОРСЬК ⭐
+         🅺🅴🆁🅽🅴🅻
+         (Одеська область)
+         Ф-2: 12700 грн
+         (8/3/48 на сухе + за олійність)
+       «Всі ціни вказані за умови доставки» → базис: доставка на пункт (CPT), Ф-2 = з ПДВ.
+    """
     records = []
     culture = None
+    blk = None
+
+    def emit(price_line):
+        pm_uah = re.search(r"(\d[\d\s']{2,6}\d)\s*грн", price_line, re.I)
+        pm_usd = re.search(r"(\d{2,4})\s*\$", price_line)
+        if pm_uah:
+            raw_val = float(re.sub(r"[\s']", "", pm_uah.group(1))); cur = "UAH"; uah = raw_val
+        elif pm_usd:
+            raw_val = float(pm_usd.group(1)); cur = "USD"; uah = to_uah(raw_val, "USD")
+        else:
+            return None
+        c = blk.get("culture", culture)
+        if not c:
+            return None
+        loc = blk.get("location", "невідомо")
+        rec = {
+            "source": f"@{channel}", "culture": c, "quality": None,
+            "price_raw": raw_val, "price_uah": float(uah), "currency": cur,
+            "basis": "CPT пункт (Ф-2)" if re.search(r"Ф-?2", price_line) else "CPT пункт",
+            "vat": "з ПДВ" if re.search(r"Ф-?2", price_line) else "невідомо",
+            "location": loc[:40], "buyer": blk.get("buyer"),
+            "region": blk.get("region") or _guess_region(loc),
+            "date": date_str, "url": f"https://t.me/{channel}",
+            "net_kopani": None, "net_dolynske": None,
+        }
+        records.append(rec)
+        return rec
+
+    last = None
     for raw in (text or "").split("\n"):
-        line = _clean_md(raw)
+        line = _unbox(_clean_md(raw)).strip()
         if not line:
             continue
         hm = re.search(r"#\s*([А-ЯІЇЄA-Zа-яіїє]+)", line)
         if hm:
-            c = _find_culture(hm.group(1))
-            culture = c  # невідомий заголовок (коріандр, льон…) → None, рядки пропускаємо
-        if not culture or "✅" not in line:
+            culture = _find_culture(hm.group(1))   # нішеві / невідомі → None
+            blk = None
             continue
-        pm_uah = re.search(r"(\d[\d\s]{2,6}\d)\s*грн", line, re.I)
-        pm_usd = re.search(r"(\d{2,4})\s*\$", line)
-        if pm_uah:
-            raw_val = float(re.sub(r"\s", "", pm_uah.group(1))); cur = "UAH"; uah = raw_val
-        elif pm_usd:
-            raw_val = float(pm_usd.group(1)); cur = "USD"; uah = to_uah(raw_val, "USD")
-        else:
+        if line.startswith("✅"):
+            blk = {"location": line.lstrip("✅ ").replace("⭐", "").strip()}
+            last = None
             continue
-        loc_m = re.search(r"✅\s*([^()]+?)\s*(?:\(|Ф-?2|$)", line)
-        location = (loc_m.group(1).strip() if loc_m else "невідомо")[:40]
-        region = _region_from_text(line) or _guess_region(location)
-        records.append({
-            "source": f"@{channel}", "culture": culture,
-            "quality": "Ф-2" if re.search(r"Ф-?2", line) else None,
-            "price_raw": raw_val, "price_uah": float(uah), "currency": cur,
-            "basis": "Ф-2 (з ПДВ)" if re.search(r"Ф-?2", line) else "невідомо",
-            "vat": "з ПДВ" if re.search(r"Ф-?2", line) else "невідомо",
-            "location": location, "region": region,
-            "date": date_str, "url": f"https://t.me/{channel}",
-            "net_kopani": None, "net_dolynske": None,
-        })
+        if blk is None:
+            continue
+        rm = re.match(r"^\((.+област[ьі].*)\)$", line, re.I)
+        if rm:
+            blk["region"] = _region_from_text(rm.group(1))
+            continue
+        if re.fullmatch(r"[A-Z0-9 .&-]{3,}", line):
+            blk["buyer"] = line.strip()
+            continue
+        if re.search(r"Ф-?2\s*:|грн|\$", line) and re.search(r"\d", line):
+            last = emit(line)
+            continue
+        if line.startswith("(") and last is not None:
+            last["quality"] = line.strip("()")[:40]   # умови якості/знижок
+            continue
+        # назва культури всередині блоку (напр. «🌱КОРІАНДР») — перевизначає культуру блоку
+        if len(line) < 30 and not line.startswith("👉"):
+            c = _find_culture(line)
+            blk["culture"] = c
     return records
 
 BOARD_RE = re.compile(
