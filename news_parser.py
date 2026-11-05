@@ -273,12 +273,14 @@ def parse_latifundist_html() -> list[dict]:
     now = datetime.now(timezone.utc)
     records: list[dict] = []
     for m in re.finditer(
-        r'<a[^>]+href="((?:https?://latifundist\.com)?/novosti/[^"?#]{5,})"[^>]*>\s*([^<]{15,250}?)\s*</a>',
-        html
+        r'<a[^>]+href="((?:https?://latifundist\.com)?/novosti/[^"?#]{5,})"[^>]*>(.*?)</a>',
+        html, re.DOTALL
     ):
-        raw_url, title = m.group(1), m.group(2).strip()
+        raw_url = m.group(1)
+        # Витягуємо текст із вкладених тегів (<span>, <h2>, <generic> тощо)
+        title = re.sub(r'<[^>]+>', ' ', m.group(2))
+        title = re.sub(r'\s+', ' ', title).strip()
         url = raw_url if raw_url.startswith("http") else f"https://latifundist.com{raw_url}"
-        title = re.sub(r'\s+', ' ', title)
         if len(title) < 25 or not _is_agro(title):
             continue
         date_str = _find_date_near(html, m.start(), m.end())
@@ -443,11 +445,12 @@ def parse_graintrade_news() -> list[dict]:
     now = datetime.now(timezone.utc)
     records = []
     for m in re.finditer(
-        r'<a[^>]+href="(/novosti/[^"?#]+)"[^>]*>\s*([^<]{15,250}?)\s*</a>',
-        html
+        r'<a[^>]+href="(/novosti/[^"?#]+)"[^>]*>(.*?)</a>',
+        html, re.DOTALL
     ):
-        path, title = m.group(1), m.group(2).strip()
-        title = re.sub(r'\s+', ' ', title)
+        path = m.group(1)
+        title = re.sub(r'<[^>]+>', ' ', m.group(2))
+        title = re.sub(r'\s+', ' ', title).strip()
         if len(title) < 15 or not _is_agro(title):
             continue
         full_url = f"https://graintrade.com.ua{path}"
@@ -483,10 +486,12 @@ def parse_ukragroconsult() -> list[dict]:
             print(f"  [ukragroconsult] ❌ {page_url} недоступний")
             continue
 
-        pattern = r'<a[^>]+href="(' + re.escape(path_prefix) + r'[^"]+)"[^>]*>\s*([^<]{10,200}?)\s*</a>'
-        for m in re.finditer(pattern, html):
-            url_path, title = m.group(1), m.group(2).strip()
-            title = re.sub(r'\s+', ' ', title)
+        pattern = r'<a[^>]+href="(' + re.escape(path_prefix) + r'[^"]+)"[^>]*>(.*?)</a>'
+        for m in re.finditer(pattern, html, re.DOTALL):
+            url_path = m.group(1)
+            # Витягуємо текст із вкладених тегів
+            title = re.sub(r'<[^>]+>', ' ', m.group(2))
+            title = re.sub(r'\s+', ' ', title).strip()
             if not _is_agro(title):
                 continue
             full_url = f"https://ukragroconsult.com{url_path}"
