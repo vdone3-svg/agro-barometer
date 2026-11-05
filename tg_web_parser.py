@@ -230,26 +230,44 @@ def parse_generic_msg(text, channel, date_str):
 
 # ─── TELETHON SCRAPER ────────────────────────────────────────────────────────
 
+# Ключові слова виключно про 6 культур і зерновий ринок — без "ринок", "прогноз" (занадто широко)
 AGRO_NEWS_KW = [
     "пшениц", "кукурудз", "соняшник", "сої", "соя", "ріпак", "рапс",
-    "ячмінь", "ячменю", "зернов", "олія", "шрот", "елеватор",
-    "USDA", "WASDE", "IGC", "врожай", "прогноз", "ринок", "експорт",
-    "нібулон", "кернел", "астарта", "чорноморськ",
+    "ячмінь", "ячменю",
+    "зернов", "олія соняшник", "шрот соняшник", "шрот соєв",
+    "USDA", "WASDE", "IGC", "чорноморськ зерн",
+    "нібулон", "кернел", "астарта",
     "wheat", "corn", "maize", "sunflower", "soybean", "rapeseed", "barley",
+    "grain export", "grain market", "ukraine grain",
 ]
 
+# Паттерни прайс-повідомлень — відразу відкидаємо
+_PRICE_MSG_RE = re.compile(
+    r'ЦІНИ ЗАКУПІВЛІ|ЦІНИ ПРОДАЖУ|прайс[\s-]*лист|'
+    r'Ф-2\s*:|\bФ2\b|ЕXW\s*:\s*\d|CPT\s*:\s*\d|'
+    r'КОНТЕЙНЕРНИЙ ТЕРМІНАЛ|ЕЛЕВАТОР.*Ф-2|'
+    r'\*\*#\w+\*\*.*Ф-2',
+    re.IGNORECASE,
+)
+
 def _is_news_msg(text: str) -> bool:
-    """Чи є повідомлення аналітикою/новиною, а не просто прайс-рядком."""
-    if not text or len(text) < 60:
+    """Чи є повідомлення аналітикою/новиною, а не прайс-таблицею."""
+    if not text or len(text) < 80:
+        return False
+    # Явні прайс-повідомлення — відкидаємо одразу
+    if _PRICE_MSG_RE.search(text):
         return False
     t = text.lower()
     if not any(kw.lower() in t for kw in AGRO_NEWS_KW):
         return False
-    # Відкидаємо чисті прайс-таблиці (багато цін, мало слів)
+    # Відкидаємо, якщо забагато цін і мало зв'язного тексту
     price_hits = len(UAH_RE.findall(text)) + len(USD_RE.findall(text))
     words = len(re.findall(r'[а-яіїєa-z]{4,}', t))
-    if price_hits >= 5 and words < 20:
-        return False  # це прайс, не новина
+    bold_markers = text.count("**")
+    if price_hits >= 4 and words < 25:
+        return False  # цінова таблиця
+    if bold_markers >= 8 and price_hits >= 2:
+        return False  # markdown прайс (agrohub_od стиль)
     return True
 
 
