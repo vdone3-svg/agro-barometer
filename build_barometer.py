@@ -37,7 +37,7 @@ SANITY = {"ріпак":(12000,32000),"соняшник":(9000,30000),"соя":(1
           "кукурудза":(3500,13000),"ячмінь":(3500,13000),"пшениця":(3500,14000)}
 EXPORT_BASIS = re.compile(r"\b(DAP|DAF|FOB|CIF|CFR|DDP)\b", re.I)
 SELLER_HINT  = re.compile(r"\bпродам\b", re.I)
-NON_CROP     = re.compile(r"олі[яї]|шрот|макуха|жмих|насінн|тверд", re.I)
+NON_CROP     = re.compile(r"олі[яїює]|шрот|макуха|жмих|насінн|тверд", re.I)
 
 
 def load_json(path, default):
@@ -89,6 +89,8 @@ def classify(r):
     q = str(r.get("quality") or "")
     if NON_CROP.search(q) or SELLER_HINT.search(q):
         return False, "не насіння культури / ціна продавця"
+    if c == "соняшник" and re.search(r"високоолеїн|вис\.?\s*ол", q, re.I):
+        return False, "високоолеїновий — окремий продукт"
     return True, None
 
 

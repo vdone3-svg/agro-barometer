@@ -127,7 +127,7 @@ def _clean_md(t):
     return re.sub(r"[*_`]+", "", t).strip()
 
 # Продукти переробки / нецільові — не плутати з насінням культури
-NON_CROP_RE = re.compile(r"олі[яї]|шрот|макуха|жмих|лушпин|насінн|посівн|тверд|борошн|висівк|фураж", re.I)
+NON_CROP_RE = re.compile(r"олі[яїює]|шрот|макуха|жмих|лушпин|насінн|посівн|тверд|борошн|висівк|фураж", re.I)
 
 def parse_agrohub(text, date_str, channel="agrohub_od"):
     """@agrohub_od: «#СОЯ» → рядки «✅ ІЗМАЇЛ СКЛАД (Одеська область) Ф-2: 338$ (умови)»."""
@@ -459,6 +459,10 @@ async def _telethon_fetch_all(cutoff: datetime) -> tuple[list, list]:
 
             if price_count:
                 print(f"  [telethon] @{channel}: {price_count} цінових записів")
+            elif role in ("prices", "agrohub") and msgs:
+                # діагностика: сирий початок повідомлень, з яких нічого не розпізнано
+                for m in msgs[:2]:
+                    print(f"  [debug] @{channel} raw: {m['text'][:500]!r}")
             if news_count:
                 print(f"  [telethon] @{channel}: {news_count} новинних повід.")
 
