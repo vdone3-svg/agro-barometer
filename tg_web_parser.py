@@ -22,9 +22,8 @@ CHANNELS = [
     ("AgroBrok",             "prices"),   # EXW/DAP
     ("rawagro",              "prices"),   # РО АГРО ТРЕЙД — прайс 6 культур
     ("Agroprosperis_price",  "prices"),   # Агропросперіс
-    ("agro_graintrade",      "prices"),   # GrainTrade прайс
-    ("uagrain",              "prices"),   # УкрАгроКонсалт ціни
-    ("apk_inform_prices",    "prices"),   # АПК-Інформ ціни
+    ("GrainTradeUA",         "prices"),   # GrainTrade прайс
+    ("apkinform",            "prices"),   # АПК-Інформ ціни
     ("spike_brokers",        "context"),  # тижневий огляд
     ("latifundistmedia",     "news"),
 ]
