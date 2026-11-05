@@ -185,7 +185,7 @@ INJECTION_JS = r"""
   const ageDays=ts=>{if(!ts)return null;return Math.floor((Date.now()-new Date(ts).getTime())/864e5);};
   const ageFlag=ts=>{const a=ageDays(ts);if(a==null)return'<span class="flag flag-warn">дата?</span>';if(a>=2)return`<span class="flag flag-warn">${a} дн. тому</span>`;return'';};
   const ra=u=>{const s=safeUrl(u);return s?` class="row-link" data-url="${s}" title="Відкрити пропозицію"`:'';};
-  const go=u=>safeUrl(u)?'<span class="go">↗</span>':'';
+  const go=u=>{const s=safeUrl(u);return s?`<a class="go" href="${s}" target="_blank" rel="noopener" title="Відкрити">↗</a>`:'';};
   const srcLabel=u=>/t\.me\//.test(u||'')?'пост у Telegram':/graintrade\.com\.ua\/birzha/.test(u||'')?'лот на біржі GrainTrade':/nibulon/.test(u||'')?'прайс Нібулону':/e-zerno/.test(u||'')?'сторінка цін e-zerno':'джерело';
   const openBtn=(u,label)=>{const s=safeUrl(u);return s?`<a class="open-btn" href="${s}" target="_blank" rel="noopener">${label||'Відкрити'}: ${srcLabel(u)} ↗</a>`:'<span class="open-btn off">посилання на джерело відсутнє</span>';};
   // рядок-посилання: клік по всьому рядку відкриває пропозицію
@@ -193,7 +193,7 @@ INJECTION_JS = r"""
   if(!document.getElementById('rowLinkCss')){const st=document.createElement('style');st.id='rowLinkCss';st.textContent=`
     tr.row-link{cursor:pointer}
     tr.row-link:hover td{background:var(--surface2)}
-    .go{display:inline-block;color:var(--accent);font-weight:700;margin-right:4px}
+    .go{display:inline-block;color:var(--accent)!important;font-weight:700;margin-right:5px;text-decoration:none;padding:0 2px}
     .open-btn{display:block;margin:6px 0 2px;padding:7px 10px;border-radius:8px;background:var(--accent);color:#fff!important;font-size:12px;font-weight:600;text-align:center;text-decoration:none}
     .open-btn:hover{filter:brightness(1.1)}
     .open-btn.off{background:var(--surface2);color:var(--fg3)!important;font-weight:400}`;document.head.appendChild(st);}
