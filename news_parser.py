@@ -351,37 +351,40 @@ def parse_latifundist_html() -> list[dict]:
 
 
 def parse_infagro() -> list[dict]:
-    """infagro.com.ua — RSS."""
+    """infagro.com.ua — зерновий RSS.
+    /rss/ — молочний фід; шукаємо зерновий через category/tag RSS.
+    Fallback: HTML-парсинг сторінки /category/grain-market/.
+    """
     print("  [infagro] Завантаження...")
+    # Пробуємо зернові RSS-каталоги (WordPress patterns)
+    GRAIN_RSS_URLS = [
+        "https://infagro.com.ua/category/grain-market/feed/",
+        "https://infagro.com.ua/category/zerno/feed/",
+        "https://infagro.com.ua/category/zernovye/feed/",
+        "https://infagro.com.ua/category/grain/feed/",
+        "https://infagro.com.ua/category/rinok-zerna/feed/",
+        "https://infagro.com.ua/tag/зерно/feed/",
+        "https://infagro.com.ua/tag/пшениця/feed/",
+        "https://infagro.com.ua/tag/кукурудза/feed/",
+    ]
     rss = None
-    for url in [
-        "https://infagro.com.ua/rss/",
-        "https://infagro.com.ua/feed/",
-        "https://infagro.com.ua/rss.xml",
-    ]:
-        rss = _fetch(url, timeout=15)
-        if rss and ("<item" in rss or "<entry" in rss):
-            print(f"  [infagro] RSS знайдено: {url}")
+    for url in GRAIN_RSS_URLS:
+        r = _fetch(url, timeout=10)
+        if r and ("<item" in r or "<entry" in r):
+            print(f"  [infagro] зерновий RSS: {url}")
+            rss = r
             break
     if not rss:
-        print("  [infagro] ❌ RSS недоступний")
-        return []
+        print("  [infagro] зерновий RSS не знайдено — парсимо HTML")
+        return _parse_infagro_html()
+
     items = _rss_items(rss)
     now = datetime.now(timezone.utc)
     records = []
-    print(f"  [infagro] RSS items: {len(items)}")
     for item in items[:40]:
-        age_ok = _age_ok(item["pub"], now, unknown_ok=True)
-        agro_ok = _is_agro(item["title"], item["summary"])
-        # DEBUG: показуємо кожен заголовок і причину пропуску
-        status = "✅" if (age_ok and agro_ok) else "⛔"
-        reason = "" if (age_ok and agro_ok) else (
-            " [old]" if not age_ok else " [not_agro]"
-        )
-        print(f"  [infagro] {status}{reason} pub={item['pub']!r} title={item['title'][:80]!r}")
-        if not age_ok:
+        if not _age_ok(item["pub"], now, unknown_ok=True):
             continue
-        if not agro_ok:
+        if not _is_agro(item["title"], item["summary"]):
             continue
         records.append({
             "source": "infagro.com.ua",
@@ -393,6 +396,67 @@ def parse_infagro() -> list[dict]:
         if len(records) >= MAX_PER_SOURCE:
             break
     print(f"  [infagro] ✅ {len(records)} новин")
+    return records
+
+
+def _parse_infagro_html() -> list[dict]:
+    """infagro.com.ua — HTML fallback.
+    Парсимо сторінки зернових категорій.
+    """
+    CATEGORY_URLS = [
+        "https://infagro.com.ua/category/grain-market/",
+        "https://infagro.com.ua/category/zerno/",
+        "https://infagro.com.ua/category/zernovye/",
+        "https://infagro.com.ua/category/rinok-zerna/",
+        "https://infagro.com.ua/category/grain/",
+        "https://infagro.com.ua/novyny/",
+    ]
+    now = datetime.now(timezone.utc)
+    records: list[dict] = []
+    seen: set[str] = set()
+
+    for cat_url in CATEGORY_URLS:
+        html = _fetch(cat_url, timeout=15)
+        if not html:
+            continue
+        # WordPress: посилання на статті /YYYY/MM/DD/slug/ або /category/slug/
+        pattern = r'<a[^>]+href="(https://infagro\.com\.ua/[^"?#]+)"[^>]*>(.*?)</a>'
+        for m in re.finditer(pattern, html, re.DOTALL):
+            url = m.group(1)
+            # Пропускаємо категорії, теги, сторінки
+            if any(x in url for x in ["/category/", "/tag/", "/page/", "/author/"]):
+                continue
+            # Потрібен шлях схожий на статтю (/2026/ або /novyny/ + slug)
+            if not re.search(r"/20\d{2}/|/novyny/[^/]+/$|/[a-z-]{10,}/$", url):
+                continue
+            if url in seen:
+                continue
+            title = re.sub(r'<[^>]+>', ' ', m.group(2))
+            title = re.sub(r'\s+', ' ', title).strip()
+            if len(title) < 10:
+                continue
+            if not _is_agro(title):
+                continue
+            date_str = _find_date_near(html, m.start(), m.end(), window=500, now=now)
+            if not date_str:
+                date_str = _fmt_dt(None)  # unknown date
+            if date_str and _date_too_old(date_str, now, extra_hours=48):
+                continue
+            seen.add(url)
+            records.append({
+                "source": "infagro.com.ua",
+                "title":  title[:200],
+                "url":    url,
+                "date":   date_str,
+                "summary": "",
+            })
+            if len(records) >= MAX_PER_SOURCE:
+                break
+        if records:
+            print(f"  [infagro] HTML cat={cat_url}: {len(records)} новин")
+            break
+
+    print(f"  [infagro] ✅ {len(records)} новин (HTML)")
     return records
 
 
@@ -531,58 +595,73 @@ def parse_graintrade_news() -> list[dict]:
 
 
 def parse_ukragroconsult() -> list[dict]:
-    """ukragroconsult.com — /news/ + /analytikacin/.
-    Виправлено: оновлений date-finder; додано /news/ як основне джерело.
+    """ukragroconsult.com — підкатегорії зерно/олійні + /analytikacin/.
+
+    /news/ показує лише навігаційне меню категорій, не статті.
+    Парсимо підкатегорії: rinok-zernovix-kultur / rinok-olijnih-kultur.
+    Шаблон статті: /news/<subcategory>/<slug>/  або  /analytikacin/<slug>/
     """
     print("  [ukragroconsult] Завантаження...")
     now = datetime.now(timezone.utc)
     records: list[dict] = []
     seen_urls: set[str] = set()
 
-    for page_url, path_prefix in [
-        ("https://ukragroconsult.com/news/", "/news/"),
-        ("https://ukragroconsult.com/analytikacin/", "/analytikacin/"),
-    ]:
+    # (listing_url, article_path_prefix)
+    SOURCES = [
+        ("https://ukragroconsult.com/news/rinok-zernovix-kultur/",    "/news/"),
+        ("https://ukragroconsult.com/news/rinok-olijnih-kultur/",     "/news/"),
+        ("https://ukragroconsult.com/news/eksport/",                  "/news/"),
+        ("https://ukragroconsult.com/analytikacin/",                  "/analytikacin/"),
+        # Запасний варіант — вся /news/ сторінка з ширшим регексом
+        ("https://ukragroconsult.com/news/",                          "/news/"),
+    ]
+
+    for page_url, path_prefix in SOURCES:
+        if len(records) >= MAX_PER_SOURCE:
+            break
         html = _fetch(page_url, timeout=20)
         if not html:
             print(f"  [ukragroconsult] ❌ {page_url} недоступний")
             continue
 
-        pattern = r'<a[^>]+href="(' + re.escape(path_prefix) + r'[^"?#]+)"[^>]*>(.*?)</a>'
-        all_matches = list(re.finditer(pattern, html, re.DOTALL))
-        print(f"  [ukragroconsult] {page_url}: знайдено {len(all_matches)} посилань за шаблоном")
+        # Шукаємо посилання на статті: мінімум 2 сегменти після path_prefix
+        # /news/subcategory/article-slug/  — рівно 3 сегменти (не лише /news/subcat/)
+        pattern = r'href="(https://ukragroconsult\.com' + re.escape(path_prefix) + r'[^/"]+/[^"?#]*)"'
+        all_matches = list(re.finditer(pattern, html))
+        print(f"  [ukragroconsult] {page_url}: знайдено {len(all_matches)} article-href")
+
         for m in all_matches[:60]:
-            url_path = m.group(1)
-            # Витягуємо текст із вкладених тегів (Elementor вкладає <span>, <h3> тощо)
-            title = re.sub(r'<[^>]+>', ' ', m.group(2))
-            title = re.sub(r'\s+', ' ', title).strip()
-            # Дозволяємо коротші заголовки (від 10 симв.) — деякі рос. заголовки стислі
-            if len(title) < 10:
-                print(f"  [ukragroconsult] skip short title={title!r} url={url_path}")
-                continue
-            agro_ok = _is_agro(title)
-            full_url = f"https://ukragroconsult.com{url_path}"
+            full_url = m.group(1).rstrip("/") + "/"
             if full_url in seen_urls:
                 continue
-            # Elementor: дата може бути далеко від <a> → window=700
-            date_str = _find_date_near(html, m.start(), m.end(), window=700, now=now)
-            if not agro_ok:
-                print(f"  [ukragroconsult] not_agro title={title[:60]!r}")
+            # Шукаємо заголовок і дату поруч із посиланням
+            ctx_start = max(0, m.start() - 800)
+            ctx_end = min(len(html), m.end() + 800)
+            context = html[ctx_start:ctx_end]
+            # Заголовок — з тега <h1>/<h2>/<h3>/<h4> або alt="" найближчого img
+            title_m = re.search(r'<h[1-4][^>]*>(.*?)</h[1-4]>', context, re.DOTALL)
+            if not title_m:
+                # Fallback: текст самого тегу <a>
+                a_m = re.search(r'href="' + re.escape(m.group(1)) + r'"[^>]*>(.*?)</a>', html, re.DOTALL)
+                raw = a_m.group(1) if a_m else ""
+            else:
+                raw = title_m.group(1)
+            title = re.sub(r'<[^>]+>', ' ', raw)
+            title = re.sub(r'\s+', ' ', title).strip()
+            if len(title) < 10:
                 continue
+            if not _is_agro(title):
+                continue
+            date_str = _find_date_near(html, m.start(), m.end(), window=700, now=now)
             if not date_str:
-                print(f"  [ukragroconsult] no_date title={title[:60]!r} url={url_path}")
                 continue
             if _date_too_old(date_str, now, extra_hours=36):
-                print(f"  [ukragroconsult] old_date date={date_str!r} title={title[:40]!r}")
                 continue
-            print(f"  [ukragroconsult] ✅ date={date_str!r} title={title[:60]!r}")
             seen_urls.add(full_url)
             records.append({"source": "ukragroconsult.com", "title": title[:200],
                             "url": full_url, "date": date_str, "summary": ""})
             if len(records) >= MAX_PER_SOURCE:
                 break
-        if len(records) >= MAX_PER_SOURCE:
-            break
 
     print(f"  [ukragroconsult] ✅ {len(records)} новин")
     return records
