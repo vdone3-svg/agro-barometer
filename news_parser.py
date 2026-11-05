@@ -99,18 +99,21 @@ _UK_MONTHS = {
 }
 _UK_MONTHS_PATTERN = "|".join(sorted(_UK_MONTHS.keys(), key=len, reverse=True))
 
-def _find_date_near(html: str, start: int, end: int, window: int = 400) -> str | None:
+def _find_date_near(html: str, start: int, end: int, window: int = 400,
+                    now: datetime | None = None) -> str | None:
     """
     Шукає дату у вікні ±window символів навколо позиції.
     Підтримує:
       • 05.11.2026 / 05/11/2026
       • 5 листопада 2026 / 05 листопада 2026 р.
       • 2026-11-05
+      • HH:MM (тільки час) → сьогодні
+      • "вчора" / "yesterday" → вчора
     Повертає рядок у форматі "dd.mm.yyyy" або None.
     """
     snippet = html[max(0, start - window): end + window].lower()
 
-    # 1. Числовий: dd.mm.yyyy
+    # 1. Числовий: dd.mm.yyyy або dd/mm/yyyy
     m = re.search(r'(\d{2})[./](\d{2})[./](\d{4})', snippet)
     if m:
         return f"{m.group(1)}.{m.group(2)}.{m.group(3)}"
@@ -131,6 +134,16 @@ def _find_date_near(html: str, start: int, end: int, window: int = 400) -> str |
         year = int(m.group(3))
         if 1 <= mon <= 12:
             return f"{day:02d}.{mon:02d}.{year}"
+
+    # 4. Відносні дати (latifundist: "17:02", "вчора" тощо)
+    base = now or datetime.now(timezone.utc)
+    today = base.date()
+    if re.search(r'\b\d{1,2}:\d{2}\b', snippet):
+        # Є час → сьогоднішня стаття
+        return today.strftime("%d.%m.%Y")
+    if re.search(r'\bвчора\b|\byesterday\b', snippet):
+        yesterday = today - timedelta(days=1)
+        return yesterday.strftime("%d.%m.%Y")
 
     return None
 
@@ -283,7 +296,7 @@ def parse_latifundist_html() -> list[dict]:
         url = raw_url if raw_url.startswith("http") else f"https://latifundist.com{raw_url}"
         if len(title) < 25 or not _is_agro(title):
             continue
-        date_str = _find_date_near(html, m.start(), m.end())
+        date_str = _find_date_near(html, m.start(), m.end(), now=now)
         if not date_str:
             continue
         if _date_too_old(date_str, now, extra_hours=24):
@@ -387,7 +400,7 @@ def _parse_agroportal_html() -> list[dict]:
         if not _is_agro(title):
             continue
         full_url = f"https://agroportal.ua{path}"
-        date_str = _find_date_near(html, m.start(), m.end())
+        date_str = _find_date_near(html, m.start(), m.end(), now=now)
         if not date_str:
             continue
         records.append({"source": "agroportal.ua", "title": title[:200],
@@ -454,7 +467,7 @@ def parse_graintrade_news() -> list[dict]:
         if len(title) < 15 or not _is_agro(title):
             continue
         full_url = f"https://graintrade.com.ua{path}"
-        date_str = _find_date_near(html, m.start(), m.end())
+        date_str = _find_date_near(html, m.start(), m.end(), now=now)
         if not date_str:
             continue
         if _date_too_old(date_str, now, extra_hours=24):
@@ -497,7 +510,7 @@ def parse_ukragroconsult() -> list[dict]:
             full_url = f"https://ukragroconsult.com{url_path}"
             if full_url in seen_urls:
                 continue
-            date_str = _find_date_near(html, m.start(), m.end())
+            date_str = _find_date_near(html, m.start(), m.end(), now=now)
             if not date_str:
                 continue
             if _date_too_old(date_str, now, extra_hours=36):
