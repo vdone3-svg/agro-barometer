@@ -1,8 +1,9 @@
 """
 AGRO BAROMETER — News Parser
 Збирає агро-новини за останні 24 год
-Джерела: latifundist.com, infagro.com.ua, agroportal.ua, ukrinform.ua,
+Джерела: latifundist.com, agroportal.ua, ukrinform.ua,
          graintrade.com.ua, ukragroconsult.com, telegram_news.json
+Виключено: infagro.com.ua (молочний сайт, зернових новин немає)
 Зберігає: news_data.json
 
 CHANGELOG (патч 05.11.2026):
@@ -360,140 +361,13 @@ def parse_latifundist_html() -> list[dict]:
 
 
 def parse_infagro() -> list[dict]:
-    """infagro.com.ua — зерновий RSS.
-    /rss/ — молочний фід; шукаємо зерновий через category/tag RSS.
-    Fallback: HTML-парсинг сторінки /category/grain-market/.
+    """infagro.com.ua — ВИКЛЮЧЕНО.
+    Сайт орієнтований виключно на молочний ринок
+    (розділи: molochna-dinamika, dairy-market-bulletin).
+    Зернових новин немає. Залишено як заглушка для сумісності.
     """
-    print("  [infagro] Завантаження...")
-    # Пробуємо зернові RSS-каталоги (WordPress patterns)
-    GRAIN_RSS_URLS = [
-        "https://infagro.com.ua/category/grain-market/feed/",
-        "https://infagro.com.ua/category/zerno/feed/",
-        "https://infagro.com.ua/category/zernovye/feed/",
-        "https://infagro.com.ua/category/grain/feed/",
-        "https://infagro.com.ua/category/rinok-zerna/feed/",
-        "https://infagro.com.ua/tag/зерно/feed/",
-        "https://infagro.com.ua/tag/пшениця/feed/",
-        "https://infagro.com.ua/tag/кукурудза/feed/",
-    ]
-    rss = None
-    for url in GRAIN_RSS_URLS:
-        r = _fetch(url, timeout=10)
-        if r and ("<item" in r or "<entry" in r):
-            print(f"  [infagro] зерновий RSS: {url}")
-            rss = r
-            break
-    if not rss:
-        print("  [infagro] зерновий RSS не знайдено — парсимо HTML")
-        return _parse_infagro_html()
-
-    items = _rss_items(rss)
-    now = datetime.now(timezone.utc)
-    records = []
-    for item in items[:40]:
-        if not _age_ok(item["pub"], now, unknown_ok=True):
-            continue
-        if not _is_agro(item["title"], item["summary"]):
-            continue
-        records.append({
-            "source": "infagro.com.ua",
-            "title":  item["title"][:200],
-            "url":    item["url"],
-            "date":   _fmt_dt(item["pub"]),
-            "summary": item["summary"][:250],
-        })
-        if len(records) >= MAX_PER_SOURCE:
-            break
-    print(f"  [infagro] ✅ {len(records)} новин")
-    return records
-
-
-def _parse_infagro_html() -> list[dict]:
-    """infagro.com.ua — HTML fallback через discovery категорій.
-    1) Завантажуємо головну сторінку, знаходимо category-links
-    2) Фільтруємо зернові, пробуємо кожну
-    3) Збираємо статті
-    """
-    now = datetime.now(timezone.utc)
-    records: list[dict] = []
-    seen: set[str] = set()
-
-    # Крок 1: Discovery — знаходимо розділи на головній
-    home = _fetch("https://infagro.com.ua/", timeout=15)
-    cat_urls: list[str] = []
-    if home:
-        # Збираємо всі внутрішні посилання (1-2 сегменти — рівень розділу)
-        section_re = re.compile(
-            r'href="(https://infagro\.com\.ua/[^"?#\s]{3,60})"',
-        )
-        seen_su: set[str] = set()
-        for m in section_re.finditer(home):
-            u = m.group(1).rstrip("/") + "/"
-            if u in seen_su:
-                continue
-            seen_su.add(u)
-            # Тільки 1-2 сегменти (розділ, не стаття)
-            segs = [s for s in u.replace("https://infagro.com.ua/", "").split("/") if s]
-            if 1 <= len(segs) <= 2:
-                cat_urls.append(u)
-        print(f"  [infagro] розділів на головній: {len(cat_urls)}")
-        for cu in cat_urls[:30]:
-            print(f"  [infagro]   sec: {cu}")
-        # Також шукаємо /category/ links
-        for m in re.finditer(r'href="(https://infagro\.com\.ua/category/[^"?#]+)"', home):
-            u = m.group(1).rstrip("/") + "/"
-            if u not in cat_urls:
-                cat_urls.append(u)
-                print(f"  [infagro]   cat: {u}")
-
-    # Крок 2: Пробуємо категорії (зернові пріоритет — за ключовими словами в URL)
-    GRAIN_KWS = ["grain", "zerno", "zehn", "wheat", "psh", "kukurudz", "oliyn",
-                 "sunfl", "soya", "rapak", "zernovyi", "oilseed", "export"]
-    grain_cats = [u for u in cat_urls if any(kw in u.lower() for kw in GRAIN_KWS)]
-    other_cats = [u for u in cat_urls if u not in grain_cats]
-    ordered_cats = grain_cats + other_cats
-
-    if not ordered_cats:
-        # Fallback якщо головна не доступна
-        ordered_cats = ["https://infagro.com.ua/"]
-
-    for cat_url in ordered_cats[:8]:
-        html = _fetch(cat_url, timeout=15) if cat_url != "https://infagro.com.ua/" else home
-        if not html:
-            continue
-        # WordPress article links: не категорія/тег/сторінка, мінімум 1 slug
-        pattern = r'<a[^>]+href="(https://infagro\.com\.ua/(?!category|tag|page|author)[^"?#]{15,})"[^>]*>(.*?)</a>'
-        batch: list[dict] = []
-        for m in re.finditer(pattern, html, re.DOTALL):
-            url = m.group(1)
-            if url in seen:
-                continue
-            title = re.sub(r'<[^>]+>', ' ', m.group(2))
-            title = re.sub(r'\s+', ' ', title).strip()
-            if len(title) < 15:
-                continue
-            if not _is_agro(title):
-                continue
-            date_str = _find_date_near(html, m.start(), m.end(), window=500, now=now)
-            if date_str and _date_too_old(date_str, now, extra_hours=48):
-                continue
-            seen.add(url)
-            batch.append({
-                "source": "infagro.com.ua",
-                "title":  title[:200],
-                "url":    url,
-                "date":   date_str or _fmt_dt(None),
-                "summary": "",
-            })
-            if len(batch) >= MAX_PER_SOURCE:
-                break
-        if batch:
-            print(f"  [infagro] HTML cat={cat_url}: {len(batch)} новин")
-            records.extend(batch)
-            break
-
-    print(f"  [infagro] ✅ {len(records)} новин (HTML)")
-    return records
+    # Не викликається з main() — залишено щоб не ламати import-и у тестах
+    return []
 
 
 def parse_agroportal() -> list[dict]:
@@ -712,7 +586,8 @@ def main():
     for parser_fn in [
         parse_telegram_news,
         parse_latifundist_html,
-        parse_infagro,
+        # infagro.com.ua — виключено: суто молочний сайт (molochna-dinamika,
+        #   dairy-market-bulletin), зернових новин немає
         parse_agroportal,
         parse_ukrinform_agro,
         parse_graintrade_news,
