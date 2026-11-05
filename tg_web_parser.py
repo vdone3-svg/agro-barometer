@@ -241,7 +241,8 @@ def parse_board(text, date_str, channel="GrainTradeUA"):
     url_m = re.search(r"https?://graintrade\.com\.ua/\S+", t)
     return [{
         "source": f"@{channel}", "culture": culture,
-        "quality": _clean_md(product)[:30],
+        # якість = те, що лишилось від назви продукту без самої культури («високоолеїновий», «3 клас»)
+        "quality": (re.sub(r"(?i)\b(соняшник\w*|кукуруд\w*|пшениц\w*|ячм[іе]н\w*|ріпак\w*|со[яїюєв]\w*)\b", "", _clean_md(product)).strip(" ,.-") or None),
         "price_raw": val, "price_uah": float(uah), "currency": cur,
         "basis": (m.group(8) or "невідомо").upper(), "vat": "невідомо",
         "location": "невідомо", "region": "невідомо",
@@ -357,7 +358,9 @@ def parse_generic_msg(text, channel, date_str):
             if 80 <= v <= 900:
                 found.append((v, "USD", float(to_uah(v, "USD"))))
         for raw_val, cur, uah in found:
-            location = re.split(r"[-–—:]|\d", line)[0].strip(" ✅📍•")[:40] or "невідомо"
+            location = re.split(r"[-–—:]|\d", line)[0].strip(" ✅📍•")[:40]
+            if not re.search(r"[А-ЯІЇЄA-Zа-яіїєa-z]{3,}", location):
+                location = "невідомо"   # лише емодзі/символи — пункт не вказано
             records.append({
                 "source": f"@{channel}", "culture": culture, "quality": None,
                 "price_raw": raw_val, "price_uah": uah, "currency": cur,

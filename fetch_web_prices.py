@@ -383,7 +383,7 @@ def _parse_ezerno_bodytext(text: str, company: str, default_region: str, now_str
                 rec = _make_record("e-zerno.com", matched_culture, quality,
                                    price, region, location, date_str, "EXW",
                                    url=buyer_url)
-                rec["buyer"] = company[:50] if company else None
+                rec["buyer"] = company[:50] if company and company.lower() not in ("e-zerno", "e-zerno.com") else None
                 records.append(rec)
         i += 1
 
