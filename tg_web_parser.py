@@ -499,10 +499,10 @@ async def _telethon_fetch_all(cutoff: datetime) -> tuple[list, list]:
                 date_str = m["datetime"].astimezone(KYIV).strftime("%d.%m.%Y %H:%M")
                 text = m["text"]
                 recs = _parse_by_role(channel, role, text, date_str)
-            if msg.get('post'):
-                for r in recs:
-                    if not r.get("url") or r["url"].rstrip("/") == f"https://t.me/{channel}":
-                        r["url"] = f"https://t.me/{msg['post']}"
+                if m.get('post'):
+                    for r in recs:
+                        if not r.get("url") or r["url"].rstrip("/") == f"https://t.me/{channel}":
+                            r["url"] = f"https://t.me/{m['post']}"
                 for r in recs:
                     if not r.get("url") or r["url"].rstrip("/") == f"https://t.me/{channel}":
                         r["url"] = f"https://t.me/{channel}/{m['id']}"
