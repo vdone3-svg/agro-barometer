@@ -87,6 +87,24 @@ jobs:
           SIZE=$(wc -c < index.html | xargs)
           echo "✅ index.html: $SIZE байт"
 
+      - name: Commit price history to main
+        run: |
+          git config user.email "noreply@github.com"
+          git config user.name "github-actions[bot]"
+          if [ -f prices_history.json ]; then
+            git add prices_history.json
+            git diff --cached --quiet || git commit -m "chore: update prices_history.json $(date -u +'%Y-%m-%d')
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01JKVswoG25vpKqka2JAQTQv"
+            git push origin main
+            echo "✅ prices_history.json збережено в main"
+          else
+            echo "⚠️ prices_history.json не знайдено — пропускаємо"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Deploy to GitHub Pages
         run: |
           git config user.email "noreply@github.com"

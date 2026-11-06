@@ -8,9 +8,11 @@ AGRO BAROMETER — збірка index.html
   • Net рахується лише коли відомий регіон покупця і для нього є ставка фрахту — ставку не вигадуємо.
   • Статичні дати шаблону НЕ переписуються на сьогоднішню (раніше старий контент видавався за свіжий).
   • Увесь текст із зовнішніх джерел екранується перед вставкою в HTML.
+  • prices_history.json — персистентний архів знімків «найкращої ціни» по 6 культурах,
+    зберігається в git main, забезпечує дельту тиждень/місяць без зовнішнього сховища.
 """
 import json, os, re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -40,12 +42,83 @@ SELLER_HINT  = re.compile(r"\bпродам\b", re.I)
 NON_CROP     = re.compile(r"олі[яїює]|шрот|макуха|жмих|насінн|тверд", re.I)
 
 
+HISTORY_FILE = Path("prices_history.json")
+HISTORY_KEEP_DAYS = 35  # зберігаємо ~35 днів знімків
+
+
 def load_json(path, default):
     try:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return default
+
+
+# ── Дельта-трекер ────────────────────────────────────────────────────────────
+
+def _snapshot_from_prices(prices: dict, date_str: str) -> dict:
+    """Формує компактний знімок best_price по кожній культурі."""
+    snap = {"date": date_str, "prices": {}}
+    for c, d in prices.items():
+        if d and d.get("best_price"):
+            snap["prices"][c] = {
+                "uah": d["best_price"]["price_uah"],
+                "src": d["best_price"].get("source", ""),
+            }
+    return snap
+
+
+def load_history() -> list:
+    """Завантажує список знімків із prices_history.json (або порожній список)."""
+    if HISTORY_FILE.exists():
+        try:
+            data = json.loads(HISTORY_FILE.read_text(encoding="utf-8"))
+            return data.get("snapshots", [])
+        except Exception as e:
+            print(f"  ⚠️ prices_history.json пошкоджено: {e} — починаємо заново")
+    return []
+
+
+def save_history(snapshots: list) -> None:
+    """Зберігає знімки у prices_history.json, видаляє старіші за HISTORY_KEEP_DAYS."""
+    cutoff = (datetime.now(KYIV) - timedelta(days=HISTORY_KEEP_DAYS)).strftime("%d.%m.%Y")
+    fresh = [s for s in snapshots if s.get("date", "") >= cutoff]
+    HISTORY_FILE.write_text(
+        json.dumps({"snapshots": fresh}, ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )
+    print(f"  📦 prices_history.json: {len(fresh)} знімків збережено")
+
+
+def compute_deltas(prices: dict, snapshots: list, today_str: str) -> dict:
+    """
+    Повертає dict {культура: {delta_7: int|None, delta_30: int|None}}
+    delta > 0 → ціна зросла, < 0 → впала, None → нема даних для порівняння.
+    """
+    def find_snap(days_ago: int) -> dict | None:
+        target = (datetime.now(KYIV) - timedelta(days=days_ago)).strftime("%d.%m.%Y")
+        # шукаємо найближчий знімок у вікні ±2 дні від цільової дати
+        candidates = []
+        for s in snapshots:
+            d = s.get("date", "")
+            if d < target:
+                candidates.append(s)
+        return candidates[-1] if candidates else None
+
+    snap7  = find_snap(7)
+    snap30 = find_snap(30)
+
+    deltas = {}
+    for c, d in prices.items():
+        if not d or not d.get("best_price"):
+            deltas[c] = {"delta_7": None, "delta_30": None}
+            continue
+        cur = d["best_price"]["price_uah"]
+        d7  = cur - snap7["prices"][c]["uah"]  if snap7  and c in snap7.get("prices", {})  else None
+        d30 = cur - snap30["prices"][c]["uah"] if snap30 and c in snap30.get("prices", {}) else None
+        deltas[c] = {"delta_7": round(d7) if d7 is not None else None,
+                     "delta_30": round(d30) if d30 is not None else None}
+    return deltas
 
 
 def normalize_region(raw):
@@ -223,8 +296,12 @@ INJECTION_JS = r"""
       const nk=farm==='Копані'?'net_kopani':'net_dolynske';
       const place=r=>{const l=r.location&&r.location!=='невідомо'?r.location:'';const bu=r.buyer&&r.buyer!==l?r.buyer:'';return (bu&&l?bu+' · '+l:(bu||l||'пункт не вказано'));};
       const rows=d.top.map(r=>`<tr${ra(r.url)}><td>${go(r.url)}${esc(place(r).substring(0,40))}<div style="font-size:10px;color:var(--fg3)">${esc(r.source)} · ${esc((r.date||'').substring(0,5))}${r.quality?' · '+esc(String(r.quality).substring(0,18)):''}</div></td><td class="num">${link(r.url,fmt(r.price_uah))}${r.currency!=='UAH'?`<div style="font-size:10px;color:var(--fg3);font-weight:400">${fmt(r.price_raw)} ${esc(r.currency)}</div>`:''}</td><td class="num" style="color:var(--green)">${r[nk]!=null?fmt(r[nk]):'<span style="color:var(--fg3);font-weight:400">—</span>'}</td></tr>`).join('');
+      const dl=D.deltas&&D.deltas[c]?D.deltas[c]:{};
+      const fmtDelta=(v,label)=>{if(v==null)return'';const cls=v>0?'delta-up':v<0?'delta-down':'delta-flat';const ar=v>0?'▲':v<0?'▼':'—';return `<span class="price-delta ${cls}" title="${label}">${ar} ${fmt(Math.abs(v))} ₴/т</span>`;};
+      const deltaRow=(dl.delta_7!=null||dl.delta_30!=null)?`<div class="price-row" style="gap:6px;flex-wrap:wrap"><span class="price-label" style="font-size:10px">Зміна:</span>${fmtDelta(dl.delta_7,'За тиждень')}${dl.delta_30!=null?`<span style="font-size:9px;color:var(--fg3)">місяць: ${fmtDelta(dl.delta_30,'За місяць')}</span>`:''}</div>`:'';
       return `<div class="crop-card">${head}<div class="crop-body">
         <div class="price-row"><span class="price-label">Найвища закупівельна</span><span class="price-val best">${link(b.url,fmt(b.price_uah)+' ₴/т')}</span></div>
+        ${deltaRow}
         <div class="price-row"><span class="price-label">${esc(place(b).substring(0,40))}</span><span class="price-label" style="font-size:10px;color:var(--fg3)">${esc(b.source)} · ${esc(b.basis||'базис?')} ${ageFlag(b.ts)}</span></div>
         ${openBtn(b.url,'Відкрити найвищу пропозицію')}
         <div class="divider"></div>
@@ -297,6 +374,26 @@ def main():
     prices = best_prices(records)
     excluded = [r for r in records if not r["eligible"]]
     print(f"   Цін: {len(records)} (після дедупу) · порівнюваних {len(records)-len(excluded)} · відсіяно {len(excluded)}")
+
+    # ── Дельта-трекер ────────────────────────────────────────────────────────
+    today_str = now_kyiv.strftime("%d.%m.%Y")
+    snapshots = load_history()
+    deltas = compute_deltas(prices, snapshots, today_str)
+
+    # Додаємо/замінюємо знімок поточного дня
+    new_snap = _snapshot_from_prices(prices, today_str)
+    snapshots = [s for s in snapshots if s.get("date") != today_str]
+    snapshots.append(new_snap)
+    save_history(snapshots)
+
+    # Лог дельт
+    for c in CULTURES:
+        d7  = deltas.get(c, {}).get("delta_7")
+        d30 = deltas.get(c, {}).get("delta_30")
+        s7  = (f"{'▲' if d7>0 else '▼'}{abs(d7):,} ₴/т" if d7 else "—") if d7 is not None else "н/д"
+        s30 = (f"{'▲' if d30>0 else '▼'}{abs(d30):,} ₴/т" if d30 else "—") if d30 is not None else "н/д"
+        if d7 is not None or d30 is not None:
+            print(f"   Δ {c}: тиждень {s7} · місяць {s30}")
     for r in sorted(excluded, key=lambda x: -x["price_uah"])[:12]:
         print(f"     ✂ {r['culture']} {r['price_uah']:,.0f} {r.get('source')} — {r['excluded_reason']}")
 
@@ -316,6 +413,8 @@ def main():
         "land": prepare_land(land), "tg_records": tg_rows,
         "news": news_items, "news_generated_kyiv": ngen_k,
         "counts": {"prices": len(records), "eligible": len(records)-len(excluded), "news": len(news_items)},
+        "deltas": deltas,
+        "history_days": len(snapshots),
     }
 
     # Шапка: дата збірки і курс — це чесно поточні значення
