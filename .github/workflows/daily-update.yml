@@ -85,20 +85,27 @@ jobs:
           SIZE=$(wc -c < index.html | xargs)
           echo "✅ index.html: $SIZE байт"
 
-      - name: Prepare dist
+      - name: Deploy to GitHub Pages
         run: |
-          mkdir -p dist
-          cp index.html dist/
-
-      - name: Deploy to Netlify
+          git config user.email "noreply@github.com"
+          git config user.name "github-actions[bot]"
+          # Копіюємо index.html перед зміною гілки
+          cp index.html /tmp/index.html
+          # Перемикаємось на gh-pages (або створюємо порожню сирітську гілку)
+          git fetch origin gh-pages 2>/dev/null || true
+          if git rev-parse --verify origin/gh-pages >/dev/null 2>&1; then
+            git checkout gh-pages
+            git reset --hard origin/gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
+          cp /tmp/index.html index.html
+          git add index.html
+          git commit -m "deploy: $(date -u +'%Y-%m-%d %H:%M UTC')" || echo "no changes"
+          git push origin gh-pages
         env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID:    ${{ secrets.NETLIFY_SITE_ID }}
-        run: |
-          npx --yes netlify-cli@17 deploy \
-            --prod \
-            --dir=dist \
-            --message "auto: $(date -u +'%Y-%m-%d %H:%M UTC')"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload data snapshot
         if: always()
