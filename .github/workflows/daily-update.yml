@@ -105,7 +105,8 @@ jobs:
             git rm -rf . >/dev/null 2>&1 || true
           fi
           cp /tmp/index.html index.html
-          git add index.html
+          touch .nojekyll
+          git add index.html .nojekyll
           git commit -m "deploy: $(date -u +'%Y-%m-%d %H:%M UTC')" || echo "no changes"
           git push origin gh-pages
         env:
