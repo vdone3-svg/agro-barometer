@@ -93,6 +93,8 @@ jobs:
           git config user.name "github-actions[bot]"
           # Копіюємо index.html перед зміною гілки
           cp index.html /tmp/index.html
+          # Прибираємо незакомічені зміни — index.html вже скопійовано в /tmp
+          git checkout -- . 2>/dev/null || true
           # Перемикаємось на gh-pages (або створюємо порожню сирітську гілку)
           git fetch origin gh-pages 2>/dev/null || true
           if git rev-parse --verify origin/gh-pages >/dev/null 2>&1; then
