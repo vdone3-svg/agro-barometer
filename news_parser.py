@@ -410,8 +410,16 @@ def parse_agroportal() -> list[dict]:
 
 def _parse_agroportal_html() -> list[dict]:
     html = _fetch("https://agroportal.ua/news/", timeout=25)
-    if not html:
-        return []
+    if html:
+        records = _parse_agroportal_from_html(html)
+        if records:
+            return records
+    # Cloudflare блокує прямий запит — fallback на Playwright
+    print("  [agroportal] HTTP заблоковано — спроба через Playwright...")
+    return _parse_agroportal_playwright()
+
+
+def _parse_agroportal_from_html(html: str) -> list[dict]:
     records = []
     now = datetime.now(timezone.utc)
     for m in re.finditer(
@@ -431,6 +439,39 @@ def _parse_agroportal_html() -> list[dict]:
         if len(records) >= MAX_PER_SOURCE:
             break
     print(f"  [agroportal HTML] ✅ {len(records)} новин")
+    return records
+
+
+def _parse_agroportal_playwright() -> list[dict]:
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("  [agroportal PW] playwright не встановлено")
+        return []
+    records = []
+    now = datetime.now(timezone.utc)
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True)
+            ctx = browser.new_context(
+                user_agent=(
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+                locale="uk-UA",
+                viewport={"width": 1280, "height": 800},
+            )
+            page = ctx.new_page()
+            page.goto("https://agroportal.ua/news/", timeout=40_000,
+                      wait_until="domcontentloaded")
+            page.wait_for_timeout(3000)
+            html = page.content()
+            browser.close()
+        records = _parse_agroportal_from_html(html)
+        print(f"  [agroportal PW] ✅ {len(records)} новин")
+    except Exception as e:
+        print(f"  [agroportal PW] ❌ {e}")
     return records
 
 
