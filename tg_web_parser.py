@@ -29,6 +29,10 @@ CHANNELS = [
     ("apkinform",            "prices"),   # АПК-Інформ ціни
     ("spike_brokers",        "context"),  # тижневий огляд
     ("latifundistmedia",     "news"),
+    ("YaKurkul",             "news"),    # Я-Куркуль — великий агропортал новин
+    ("agroportalua",         "news"),    # AgroPortal.ua — доповнення до RSS-парсера
+    ("elevatorist",          "news"),    # Elevatorist.com — зернова логістика і ринок
+    ("agropolit_com",        "news"),    # AgroPolit.com — агрополітика та ринок
 ]
 
 # API credentials для Telethon
