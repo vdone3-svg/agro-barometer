@@ -516,9 +516,15 @@ def parse_graintrade_news() -> list[dict]:
     """graintrade.com.ua — /novosti HTML. Часто 403 на CI."""
     print("  [graintrade] Завантаження новин...")
     html = _fetch("https://graintrade.com.ua/novosti", timeout=25)
-    if not html:
-        print("  [graintrade] ❌ недоступний (можливо 403 CI)")
-        return []
+    if html:
+        records = _parse_graintrade_from_html(html)
+        if records:
+            return records
+    print("  [graintrade] HTTP заблоковано — спроба через Playwright...")
+    return _parse_graintrade_playwright()
+
+
+def _parse_graintrade_from_html(html: str) -> list[dict]:
     now = datetime.now(timezone.utc)
     records = []
     for m in re.finditer(
@@ -541,7 +547,39 @@ def parse_graintrade_news() -> list[dict]:
                             "url": full_url, "date": date_str, "summary": ""})
         if len(records) >= MAX_PER_SOURCE:
             break
-    print(f"  [graintrade] ✅ {len(records)} новин")
+    print(f"  [graintrade HTML] ✅ {len(records)} новин")
+    return records
+
+
+def _parse_graintrade_playwright() -> list[dict]:
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("  [graintrade PW] playwright не встановлено")
+        return []
+    records = []
+    try:
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(headless=True)
+            ctx = browser.new_context(
+                user_agent=(
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+                locale="uk-UA",
+                viewport={"width": 1280, "height": 800},
+            )
+            page = ctx.new_page()
+            page.goto("https://graintrade.com.ua/novosti", timeout=40_000,
+                      wait_until="domcontentloaded")
+            page.wait_for_timeout(3000)
+            html = page.content()
+            browser.close()
+        records = _parse_graintrade_from_html(html)
+        print(f"  [graintrade PW] ✅ {len(records)} новин")
+    except Exception as e:
+        print(f"  [graintrade PW] ❌ {e}")
     return records
 
 
