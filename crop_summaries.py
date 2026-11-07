@@ -171,12 +171,36 @@ def fallback(culture, d):
     return {"verdict": "none", "label": label, "paragraphs": p, "todo": "", "model": None, "auto": False}
 
 
+def discover_models(token):
+    """Список доступних моделей від Google → Flash (не lite) новіші першими, далі Flash-Lite."""
+    import requests
+    try:
+        r = requests.get(ENDPOINT.rsplit("/chat/", 1)[0] + "/models", timeout=30,
+                         headers={"Authorization": f"Bearer {token}"})
+        ids = [m["id"].split("/")[-1] for m in r.json().get("data", [])]
+    except Exception as e:
+        print(f"  ⚠️ список моделей недоступний: {e}")
+        return []
+    flash = [i for i in ids if "flash" in i and not re.search(r"image|tts|live|audio|embed|thinking|exp|preview", i)]
+    def ver(i):
+        m = re.search(r"(\d+(?:\.\d+)?)", i); return float(m.group(1)) if m else 0
+    full = sorted([i for i in flash if "lite" not in i], key=ver, reverse=True)
+    lite = sorted([i for i in flash if "lite" in i], key=ver, reverse=True)
+    print(f"  ℹ️ доступні Flash-моделі: {full[:4] + lite[:3]}")
+    return full[:2] + lite[:1]
+
+
 def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None):
     token = os.environ.get("GEMINI_API_KEY") or os.environ.get("SUMMARY_API_KEY")
     out = {}
     if not token or os.environ.get("SUMMARIES_DISABLED") == "1":
         print("  ⚠️ висновки: немає GEMINI_API_KEY у secrets — показуємо лише факти, без порад")
         return {c: fallback(c, prices.get(c)) for c in cultures}
+    global MODELS
+    if not os.environ.get("SUMMARY_MODELS"):
+        found = discover_models(token)
+        if found:
+            MODELS = found
     for i, c in enumerate(cultures):
         ctx, allowed = build_context(c, prices.get(c), (deltas or {}).get(c), news_items, usd_uah, date_str)
         user = "Дані на сьогодні (JSON):\n" + json.dumps(ctx, ensure_ascii=False)
@@ -199,7 +223,7 @@ def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None
                     result = s
                     break
                 except urllib.error.HTTPError as e:
-                    print(f"  ⚠️ {c} [{model}]: HTTP {e.code} {str(e.msg)[:200]}")
+                    print(f"  ⚠️ {c} [{model}]: HTTP {e.code} {' '.join(str(e.msg).split())[:220]}")
                     break  # 401/403/429 — до наступної моделі
                 except Exception as e:
                     print(f"  ⚠️ {c} [{model}]: {type(e).__name__}: {e}")
