@@ -12,6 +12,7 @@ AGRO BAROMETER — збірка index.html
     зберігається в git main, забезпечує дельту тиждень/місяць без зовнішнього сховища.
 """
 import json, os, re
+import crop_summaries
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -25,14 +26,18 @@ TEMPLATE = Path(os.environ.get("TEMPLATE_PATH", "barometer_template.html"))
 CULTURES = ["ріпак", "соняшник", "соя", "кукурудза", "ячмінь", "пшениця"]
 CULTURE_EMOJI = {"ріпак":"💛","соняшник":"🌻","соя":"🫘","кукурудза":"🌽","ячмінь":"🌾","пшениця":"🌱"}
 
-# Ставки найманого зерновоза 25 т, грн/т з ПДВ.
-# Джерело: Укрвантаж АГРО (Latifundist, квіт.–трав. 2026) + ~8% коригування на паливо (жовт. 2026).
-# Підтвердити у перевізника перед заявкою. Оновлено: листопад 2026.
+# Ставки найманого зерновоза 25 т, грн/т з ПДВ — ОЦІНКА, НЕ ОФЕРТА ПЕРЕВІЗНИКА.
+# База: Укрвантаж АГРО (Latifundist, квіт.–трав. 2026) + ~8% на паливо. Дизель із квітня зріс ~16%
+# (90,3 → 104,5 ₴/л на 30.10.2026), а ставки на 500+ км у жовтні сягали 3 000–3 700 ₴/т, тож
+# далекі маршрути, ймовірно, занижені. Замінити на підтверджені ставки перевізників (FREIGHT_CONFIRMED).
+# Ізмаїл/Рені (~600 км) винесені в «Дунай» без ставки: net для них не рахується, доки немає реальної ціни.
 FREIGHT = {
     "Долинське":{"Одеська":1620,"Черкаська":570,"Миколаївська":1130,"Кіровоградська":300,"Вінницька":755,"Хмельницька":970,"Полтавська":650},
     "Копані":   {"Одеська":1510,"Черкаська":405,"Миколаївська":1055,"Кіровоградська":115,"Вінницька":650,"Хмельницька":810,"Полтавська":490},
 }
-REGION_MAP = {"одес":"Одеська","черкас":"Черкаська","миколаїв":"Миколаївська","кіровоград":"Кіровоградська",
+FREIGHT_STATUS = "оцінка"   # "оцінка" | "підтверджено ДД.ММ.РРРР"
+REGION_MAP = {"ізмаїл":"Дунай","измаил":"Дунай","рені":"Дунай","рени":"Дунай","орлівк":"Дунай","кілія":"Дунай","бессараб":"Дунай",
+              "одес":"Одеська","черкас":"Черкаська","миколаїв":"Миколаївська","кіровоград":"Кіровоградська",
               "вінниц":"Вінницька","хмельниц":"Хмельницька","полтав":"Полтавська","дніпро":"Дніпропетровська",
               "київськ":"Київська","житомир":"Житомирська","запоріз":"Запорізька","харків":"Харківська"}
 
@@ -294,7 +299,7 @@ INJECTION_JS = r"""
         if(!r)return `<div class="net-row"><span class="net-farm">📍 ${f}</span><span class="net-farm" style="color:var(--fg3)">фрахт до покупців невідомий</span></div>`;
         const fr=f==='Копані'?r.freight_kopani:r.freight_dolynske;const net=f==='Копані'?r.net_kopani:r.net_dolynske;
         return `<div class="net-row"><span class="net-farm" style="${f===farm?'font-weight:700':''}">📍 ${f}</span><div><span class="net-val">${fmt(net)} ₴/т</span><span class="net-trip">${trip(net)}</span></div></div>
-          <div style="font-size:10px;color:var(--fg3);text-align:right;margin-top:-2px">${link(r.url,esc(r.location)+(safeUrl(r.url)?' ↗':''))} (${esc(r.region_norm)}) ${fmt(r.price_uah)} − фрахт ${fmt(fr)} · ${esc(r.source)}</div>`;};
+          <div style="font-size:10px;color:var(--fg3);text-align:right;margin-top:-2px">${link(r.url,esc(r.location)+(safeUrl(r.url)?' ↗':''))} (${esc(r.region_norm)}) ${fmt(r.price_uah)} − фрахт ${fmt(fr)}${D.freight_status==='оцінка'?' <span title="орієнтовна ставка, не оферта перевізника">(оцінка)</span>':''} · ${esc(r.source)}</div>`;};
       const nk=farm==='Копані'?'net_kopani':'net_dolynske';
       const place=r=>{const l=r.location&&r.location!=='невідомо'?r.location:'';const bu=r.buyer&&r.buyer!==l?r.buyer:'';return (bu&&l?bu+' · '+l:(bu||l||'пункт не вказано'));};
       const rows=d.top.map(r=>`<tr${ra(r.url)}><td>${go(r.url)}${esc(place(r).substring(0,40))}<div style="font-size:10px;color:var(--fg3)">${esc(r.source)} · ${esc((r.date||'').substring(0,5))}${r.quality?' · '+esc(String(r.quality).substring(0,18)):''}</div></td><td class="num">${link(r.url,fmt(r.price_uah))}${r.currency!=='UAH'?`<div style="font-size:10px;color:var(--fg3);font-weight:400">${fmt(r.price_raw)} ${esc(r.currency)}</div>`:''}</td><td class="num" style="color:var(--green)">${r[nk]!=null?fmt(r[nk]):'<span style="color:var(--fg3);font-weight:400">—</span>'}</td></tr>`).join('');
@@ -314,6 +319,22 @@ INJECTION_JS = r"""
     }).join('');
   }
   renderCrops();
+  // ── Висновки барометра по культурах (щоденні) ──
+  (function(){
+    const S=D.summaries;const grid=document.getElementById('cropsGrid');if(!S||!grid)return;
+    const md=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    const cls={sell:'v-sell',split:'v-split',hold:'v-hold',none:'v-split'};
+    const auto=D.cultures.some(c=>S[c]&&S[c].auto);
+    const cards=D.cultures.map(c=>{const s=S[c];if(!s)return'';const d=D.prices[c];const title=c.charAt(0).toUpperCase()+c.slice(1);
+      return `<div class="sum-card"><div class="sum-top"><span class="sum-name">${d?d.emoji:'🌾'} ${esc(title)}</span><span class="sum-verdict ${cls[s.verdict]||'v-split'}">${esc(s.label)}</span></div>
+        ${(s.paragraphs||[]).map(p=>`<p>${md(p)}</p>`).join('')}
+        ${s.todo?`<div class="sum-do">${md(s.todo)}</div>`:''}</div>`;}).join('');
+    const sec=document.createElement('div');sec.className='sum-section';sec.id='summaryLive';
+    sec.innerHTML=`<div class="sec-head"><div class="sec-title">🧑‍🌾 Висновок барометра по культурах — на ${esc(D.generated_at_kyiv)}</div>
+      <div class="sec-sub">${auto?'Пишеться щоранку автоматично з сьогоднішніх цін і новин; цифри звірені з даними барометра.':'Сьогодні автоматичний висновок не сформувався — показано лише факти.'} Ціни — опубліковані пропозиції, не угоди${D.freight_status==='оцінка'?'; фрахт — орієнтовна оцінка':''}. Це аналітична думка, остаточне рішення — за вами.</div></div>
+      <div class="sum-grid">${cards}</div>`;
+    const host=grid.parentNode;host.parentNode.insertBefore(sec,host);
+  })();
   window.setFarm=function(f,btn){farm=f==='kopani'?'Копані':'Долинське';document.querySelectorAll('.farm-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');renderCrops();};
 
   // ── Telegram-оферти ──
@@ -406,6 +427,9 @@ def main():
     except Exception:
         ngen_k = ""
 
+    print("\n=== Висновки по культурах ===")
+    summaries = crop_summaries.generate(CULTURES, prices, deltas, news_items, USD_UAH, today_str)
+
     tg_rows = sorted([_slim(r) for r in records if str(r.get("source","")).startswith("@")],
                      key=lambda x: x.get("ts",""), reverse=True)[:80]
     data = {
@@ -416,6 +440,7 @@ def main():
         "news": news_items, "news_generated_kyiv": ngen_k,
         "counts": {"prices": len(records), "eligible": len(records)-len(excluded), "news": len(news_items)},
         "deltas": deltas,
+        "summaries": summaries, "freight_status": FREIGHT_STATUS,
         "history_days": len(snapshots),
     }
 

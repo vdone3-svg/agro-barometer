@@ -17,6 +17,7 @@ jobs:
     timeout-minutes: 25
     permissions:
       contents: write
+      models: read
 
     steps:
       - name: Checkout
@@ -79,9 +80,10 @@ jobs:
           COUNT=$(python3 -c "import json; d=json.load(open('news_data.json')); print(d.get('total',0))" 2>/dev/null || echo "?")
           echo "✅ News: $COUNT статей"
 
-      - name: Build HTML
+      - name: Build HTML (+ висновки через GitHub Models, безкоштовно)
         env:
           USD_UAH_RATE: ${{ secrets.USD_UAH_RATE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python3 build_barometer.py
           SIZE=$(wc -c < index.html | xargs)
@@ -93,10 +95,7 @@ jobs:
           git config user.name "github-actions[bot]"
           if [ -f prices_history.json ]; then
             git add prices_history.json
-            git diff --cached --quiet || git commit -m "chore: update prices_history.json $(date -u +'%Y-%m-%d')
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01JKVswoG25vpKqka2JAQTQv"
+            git diff --cached --quiet || git commit -m "chore: update prices_history.json $(date -u +'%Y-%m-%d') [skip ci]"
             git push origin main
             echo "✅ prices_history.json збережено в main"
           else
