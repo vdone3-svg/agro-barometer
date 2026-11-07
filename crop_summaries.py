@@ -102,9 +102,9 @@ def build_context(culture, d, delta, news_items, usd_uah, date_str):
     gen_news = [n for n in news_items if n not in crop_news and re.search(GENERAL_NEWS_KW, n.get("title", ""), re.I)][:3]
     ctx["новини_по_культурі"] = [f"{n.get('source','')}: {n.get('title','')} — {(n.get('summary') or '')[:180]}" for n in crop_news] or "немає"
     ctx["загальні_новини_ринку"] = [f"{n.get('source','')}: {n.get('title','')}" for n in gen_news] or "немає"
-    for n in crop_news + gen_news:  # числа з новин теж дозволені
-        for m in re.findall(r"\d[\d\s ]{2,}\d|\d{4,}", f"{n.get('title','')} {n.get('summary','')}"):
-            keep(int(re.sub(r"\D", "", m)))
+    for n in crop_news + gen_news:  # числа з новин теж дозволені (включно з «2,4 млн т»)
+        for v in _numbers_in(f"{n.get('title','')} {n.get('summary','')}"):
+            keep(v)
     keep(usd_uah, TRIP_T)
     return ctx, allowed
 
@@ -226,6 +226,10 @@ def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None
                     result = s
                     break
                 except urllib.error.HTTPError as e:
+                    if e.code == 503 and attempt == 0:
+                        print(f"  ⏳ {c} [{model}]: 503 перевантажено — чекаю 25 с і пробую ще раз")
+                        time.sleep(25)
+                        continue
                     print(f"  ⚠️ {c} [{model}]: HTTP {e.code} {' '.join(str(e.msg).split())[:220]}")
                     break  # 401/403/429 — до наступної моделі
                 except Exception as e:
