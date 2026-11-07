@@ -133,7 +133,14 @@ def _call(model, messages, token):
         "Authorization": f"Bearer {token}", "Content-Type": "application/json",
         "Accept": "application/json", "X-GitHub-Api-Version": "2022-11-28"})
     with urllib.request.urlopen(req, timeout=90) as resp:
-        return json.load(resp)["choices"][0]["message"]["content"]
+        body = resp.read().decode("utf-8", "replace")
+    try:
+        content = json.loads(body)["choices"][0]["message"]["content"] or ""
+    except Exception:
+        raise ValueError(f"не-JSON відповідь API: {body[:300]!r}")
+    if "{" not in content:
+        raise ValueError(f"у відповіді моделі немає JSON: {content[:300]!r} | body: {body[:200]!r}")
+    return content
 
 
 def _parse(raw):
