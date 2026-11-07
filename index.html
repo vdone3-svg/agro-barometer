@@ -670,6 +670,14 @@ body::before {
 .news-text a { color: var(--accent); text-decoration: none; }
 .news-text a:hover { text-decoration: underline; }
 .news-meta { font-size: 10px; color: var(--fg3); margin-top: 2px; }
+/* ── Dynamic news grid ── */
+.news-grid-dynamic { display: grid; grid-template-columns: repeat(auto-fill,minmax(260px,1fr)); gap: 10px; margin-top: 10px; }
+.news-card { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: var(--fg); transition: border-color 0.15s; }
+.news-card:hover { border-color: var(--accent); }
+.news-src { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.news-title { font-size: 13px; line-height: 1.4; color: var(--fg); font-weight: 500; }
+.news-summary { font-size: 11px; color: var(--fg3); line-height: 1.4; }
+.news-date { font-size: 10px; color: var(--fg3); margin-top: auto; padding-top: 4px; }
 
 /* ── Clickable price links ── */
 a.price-val {
@@ -881,6 +889,9 @@ a.price-val.best:hover {
 .tg-table{width:100%;border-collapse:collapse;font-size:12px;min-width:680px}
 .tg-table th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg3);padding:6px 8px;border-bottom:1px solid var(--border);font-weight:600}
 .tg-table td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--fg)}
+.crop-table{min-width:0!important;table-layout:fixed}
+.crop-table td,.crop-table th{padding:5px 4px}
+.crop-table td:first-child{overflow:hidden;text-overflow:ellipsis}
 .tg-table td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}
 .tg-table tr.old td{color:var(--fg3)}
 .tg-table tr.old td.num{font-weight:400}
@@ -931,6 +942,15 @@ a.price-val.best:hover {
 .sum-card p{margin:0;font-size:13px;line-height:1.55;color:var(--fg2)}
 .sum-card p strong{color:var(--fg)}
 .sum-do{font-size:12px;line-height:1.5;color:var(--fg);background:var(--surface);border-left:3px solid var(--accent);padding:7px 10px;border-radius:6px}
+.archive-box{background:var(--surface);border:1px dashed var(--border);border-radius:12px;padding:10px 14px}
+.archive-box[open]{padding-bottom:16px}
+.archive-sum{cursor:pointer;font-weight:700;font-size:14px;color:var(--fg2);list-style-position:inside}
+.archive-hint{display:block;font-weight:400;font-size:11px;color:var(--fg3);margin-top:3px}
+.archive-warn{margin:10px 0;font-size:12px;color:var(--amber);background:var(--amber-bg);border-radius:6px;padding:7px 10px}
+.archive-box>div{margin-top:12px}
+.live-note{font-size:11px;color:var(--fg3);margin:-6px 0 10px;padding:0 2px;line-height:1.5}
+.flag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:999px;background:var(--surface2);color:var(--fg3);border:1px solid var(--border);margin-left:4px}
+.flag-warn{color:var(--amber);border-color:var(--amber)}
 </style>
 
 <!-- ─────────────────────── PAGE ─────────────────────── -->
@@ -944,9 +964,9 @@ a.price-val.best:hover {
     <div class="header-meta">
       <span class="meta-item">
         <span class="meta-dot live"></span>
-        04.11.2026
+        07.11.2026
       </span>
-      <span class="meta-item">НБУ: <strong>45,60 ₴/$</strong></span>
+      <span class="meta-item" title="курс із налаштувань, не з НБУ">$: <strong>45,47 ₴/$</strong></span>
       <div class="farm-toggle">
         <button class="farm-btn active" onclick="setFarm('dolynske',this)">Долинське</button>
         <button class="farm-btn" onclick="setFarm('kopani',this)">Копані</button>
@@ -959,102 +979,16 @@ a.price-val.best:hover {
 
   <div class="warning-banner">
     <span class="warning-icon">⚠</span>
-    <span>Статус цін: <strong>published_unconfirmed</strong> — опублікована оферта, не підтверджена виконувана угода. Джерела: tripoli.land 29.10, graintrade.com.ua 28.10, ukragroconsult.com 26.10, e-zerno, Grossdorf 16.10 + 8 Telegram-каналів (окремий блок, неверифіковані).</span>
-  </div>
-
-  <!-- ══ ЩО ВІДБУЛОСЯ ЗА ТИЖДЕНЬ ══ -->
-  <div class="week-summary">
-    <div class="week-title">📅 Що відбулося за тиждень (22–04.11.2026)</div>
-    <div class="week-rows">
-      <div class="week-row"><span class="week-icon">🔴</span><span><strong>УЗ підвищила тариф на зерновози з 01.11:</strong> 632 → 850 ₴/добу (+34,8%). Перевезення залізницею дорожчає — тиск на CPT ціни вниз.</span></div>
-      <div class="week-row"><span class="week-icon">🟡</span><span><strong>Соняшник Голованівськ (AGRO HUB):</strong> ціна знизилась з 12 600 до 12 200 ₴/т за тиждень (−3,2%). Місцевий ринок Кіровоградщини під тиском збирання.</span></div>
-      <div class="week-row"><span class="week-icon">🟢</span><span><strong>Єгипет купив 480 тис. т пшениці:</strong> CPT $235, тендер 28.10. Підтримує попит на чорноморську пшеницю та ціни 8 600–8 800 ₴/т.</span></div>
-      <div class="week-row"><span class="week-icon">🔴</span><span><strong>Добрива дорожчають:</strong> OSTCHEM підвищив аміачну селітру на 900 ₴/т (+12%) у жовтні. Селітра: 27 500–28 000 ₴/т.</span></div>
-      <div class="week-row"><span class="week-icon">⏳</span><span><strong>Наступна ключова подія — WASDE 04.11.2026</strong> (12:00 ET). Баланси пшениці, кукурудзи, сої можуть змінити орієнтири ринку.</span></div>
-    </div>
-  </div>
-
-  <!-- ══ SELL/WAIT BAROMETER ══ -->
-  <div class="barometer-section" id="barometerSection">
-    <div class="baro-header">
-      <div class="baro-title">📊 Барометр продати / чекати</div>
-      <div class="baro-hz-tabs">
-        <button class="baro-hz-btn active" onclick="setBaroHz('1m',this)">1 міс.</button>
-        <button class="baro-hz-btn" onclick="setBaroHz('3m',this)">3 міс.</button>
-        <button class="baro-hz-btn" onclick="setBaroHz('6m',this)">6 міс.</button>
-      </div>
-    </div>
-    <div class="baro-cards" id="baroCards"></div>
-    <div class="baro-legend">
-      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#c0392b"></div>0–25 🔴 ЧЕКАЙ</div>
-      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#e67e22"></div>26–45 🟠 Обережно</div>
-      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#f39c12"></div>46–60 🟡 Нейтрально</div>
-      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#27ae60"></div>61–75 🟢 Продавай</div>
-      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#e6a817"></div>76–100 ⚡ ПРОДАВАЙ ЗАРАЗ</div>
-    </div>
-    <div class="baro-disclaimer">⚠️ Барометр — аналітичний орієнтир на основі публічних даних (<strong>published_unconfirmed</strong>). Не є рекомендацією до угоди. Перевіряй ціни напряму з покупцем перед укладенням договору. Клікни на карточку культури — побачиш 3 причини оцінки.</div>
-  </div>
-
-  <!-- ── РЕЗЮМЕ ПО КУЛЬТУРАХ ── -->
-  <div class="sum-section" id="summarySection">
-    <div class="sec-head">
-      <div class="sec-title">🧑‍🌾 Резюме по культурах — по-простому</div>
-      <div class="sec-sub">Станом на 04.11.2026 · ціни — опубліковані пропозиції, не підписані угоди · net — з Долинського, рейс 25 т</div>
-    </div>
-    <div class="sum-grid">
-
-      <div class="sum-card">
-        <div class="sum-top"><span class="sum-name">💛 Ріпак</span><span class="sum-verdict v-sell">Продавати до кінця грудня</span></div>
-        <p>Ріпак зараз — найдорожча культура в розрахунку на тонну. Порт в Одесі дає <strong>21 200 ₴/т</strong>, після фрахту з Долинського (1 500 ₴/т) лишається <strong>~19 700 ₴/т</strong>, це близько 490 тис. ₴ за машину. Біржа в Парижі стоїть на місці, ціна тримається рівно — ні вниз, ні вгору не тягне.</p>
-        <p>А от далі краще не буде: з весни на ринок заходить новий ріпак з Європи і тисне ціну. І є важливий момент: ГрадОлія в Кропивницькому сама переробляє ріпак, а везти туди в 5 разів дешевше, ніж в Одесу. Якщо вони дадуть від <strong>19 975 ₴/т</strong> з доставкою на завод — це вже вигідніше за Одесу, і гроші ближче.</p>
-        <div class="sum-do">Що робити: першим ділом подзвонити в ГрадОлію по ріпаку. Продавати в листопаді–грудні, весни не чекати.</div>
-      </div>
-
-      <div class="sum-card">
-        <div class="sum-top"><span class="sum-name">🌻 Соняшник</span><span class="sum-verdict v-split">Частину зараз, решту — зимою</span></div>
-        <p>Зараз пік збирання, соняшника на ринку повно, і заводи цим користуються. Найближчі до нас платять мало: Kernel ~<strong>15 000</strong>, Власівка 14 000, Голованівськ за тиждень зрізав з 12 600 до <strong>12 200</strong> (і то без ПДВ). Водночас на заході й у Вінниці за високоолеїновий дають 18 500–20 000 — тобто заводи на олії заробляють добре (олія в порту ~$1 010/т), а ціну на насіння тиснуть.</p>
-        <p>Історично з грудня по березень пропозиції меншає, і переробники піднімають ціну — бувало на 8–12% вище жовтневої. Барометр зараз «обережно» на місяць і нейтральний на 3–6 місяців. Продавати весь урожай по 14–15 тис. — означає віддати заводу свою маржу.</p>
-        <div class="sum-do">Що робити: продати стільки, скільки треба на поточні гроші. Решту тримати на своєму складі до грудня–лютого. Взяти ціни в ГрадОлії й Kernel і торгуватись за олійність.</div>
-      </div>
-
-      <div class="sum-card">
-        <div class="sum-top"><span class="sum-name">🫘 Соя</span><span class="sum-verdict v-split">Частину зараз, решту — до лютого</span></div>
-        <p>Реальна ціна сої зараз <strong>18 600–19 000 ₴/т</strong> (Глобине, Ізмаїл). Ізмаїл в одному місці показував 20 500, але це значно вище ринку — поки не подзвониш і не почуєш це від живої людини, на цю цифру не розраховувати. З Ізмаїлом проблема — далеко, фрахт 1 400–1 500 ₴/т з'їдає перевагу; Власівка поруч, але дає 17 200.</p>
-        <p>Найкраще вікно для сої — грудень–лютий: свій урожай уже розібрали, а Бразилія й Аргентина ще не зібрали. З березня їхня нова соя давить світову ціну вниз. Біржа в Чикаго зараз без руху, тому різких стрибків найближчим часом не чекаю.</p>
-        <div class="sum-do">Що робити: подзвонити в «В АГРО» і перевірити 20 500. Частину продати зараз, решту — до кінця лютого, весни не чекати.</div>
-      </div>
-
-      <div class="sum-card">
-        <div class="sum-top"><span class="sum-name">🌽 Кукурудза</span><span class="sum-verdict v-hold">Не поспішати, сушити й тримати</span></div>
-        <p>Найгірша ситуація з усіх культур. Кукурудзи всюди повно, порти забиті, покупці вибирають. Дунай дає $155–160 (~7 000–7 200 ₴/т), найкраща пропозиція <strong>7 500</strong>, а після фрахту на Одесу лишається <strong>~6 000 ₴/т</strong>. Америка має великий урожай, Чикаго падає, Бразилія вже посіяла більше половини. Плюс дощі: сушіння коштує ще $10–20 на тонні, подекуди до $30.</p>
-        <p>Барометр кукурудзи найнижчий — 32 з 100 на місяць. Продавати зараз — означає віддавати по дну сезону. Зазвичай кукурудза дорожчає в березні–травні, коли запаси закінчуються. Свій склад тут — головний козир. Ще одне: зараз багато покупців платять 86% одразу, а 14% — лише коли держава поверне ПДВ, тобто з рейсу ~26 тис. ₴ «зависають».</p>
-        <div class="sum-do">Що робити: досушити й закласти на свій склад. Продавати лише якщо горять гроші або склад потрібен. Основну масу — березень–травень. Умову 86/14 враховувати в кожній угоді.</div>
-      </div>
-
-      <div class="sum-card">
-        <div class="sum-top"><span class="sum-name">🌾 Ячмінь</span><span class="sum-verdict v-sell">Продавати, коли зручно, до весни</span></div>
-        <p>Ячмінь — тиха культура. Ціна останні два тижні стоїть на <strong>7 000–7 300 ₴/т</strong> в портах, три різні джерела показують одне й те саме. Після фрахту з Долинського лишається <strong>~5 800 ₴/т</strong>. Покупців небагато, біржового руху майже немає.</p>
-        <p>Чекати тут нема чого: зимою особливого попиту не буде, а навесні новий урожай почне тиснути старий. Барометр нейтральний на всі горизонти, на 6 місяців — трохи гірше. Тримати ячмінь на складі — це займати місце, яке краще віддати під кукурудзу.</p>
-        <div class="sum-do">Що робити: продати в листопаді–грудні, коли буде зручна машина чи попутний рейс. Звільнити склад під кукурудзу.</div>
-      </div>
-
-      <div class="sum-card">
-        <div class="sum-top"><span class="sum-name">🌱 Пшениця</span><span class="sum-verdict v-sell">Продавати поступово до грудня</span></div>
-        <p>По пшениці зараз найкраща картина. Рені й Ізмаїл дають <strong>8 600–8 900 ₴/т</strong> за 2–3 клас, після фрахту <strong>~7 300 ₴/т</strong> (~183 тис. ₴ за машину). Є сильний зовнішній попит: Єгипет щойно закупив 480 тис. т. Барометр — найвищий з усіх культур, 58 на місяць.</p>
-        <p>Але ціни на Дунаї потроху сповзають, бо покупці закривають потреби, а Америка дешевшає через сильний долар. До весни ціна старого врожаю зазвичай падає. 10 листопада — звіт USDA (WASDE), він може смикнути ринок у будь-який бік, тому все одним махом до нього продавати не варто.</p>
-        <div class="sum-do">Що робити: продавати партіями з листопада до кінця грудня — частину до 10.11, частину після звіту. Весни не чекати.</div>
-      </div>
-
-    </div>
+    <span id="statusBanner">Статус цін: <strong>published_unconfirmed</strong> — опублікована оферта, не підтверджена виконувана угода. Перед угодою підтверджуйте ціну, базис, ПДВ і якість напряму з покупцем.</span>
   </div>
 
   <!-- ── CROPS ── -->
   <div>
     <div class="section-label">Культури — закупівельні ціни та чиста виручка</div>
-    <div style="font-size:11px;color:var(--fg3);margin:-6px 0 10px;padding:0 2px;">
-      Найкраща знайдена ціна по кожній культурі (опублікована оферта, не підтверджена угода) + net після фрахту наймано-авто до покупця, рейс 25 т.
-      Перемикай <strong>Долинське / Копані</strong> вгорі — чиста виручка перерахується.
-      <strong>Поріг</strong> — мінімальна net-ціна по договору з ГрадОлією; 🟢 — вище порогу, ⚪ — нижче.
+    <div class="live-note" id="cropsNote">
+      Найвища опублікована закупівельна ціна по культурі (Telegram — 3 дні, сайти — не старші 7 днів) (оферта, не підтверджена угода).
+      Net = ціна − орієнтовний фрахт найманим зерновозом 25 т; рахується <strong>лише</strong> коли відомий регіон покупця.
+      Не беруться в «найкращу»: ціни продавців, олія/шрот/насіння, експортні DAP/DAF/FOB на кордоні, явні викиди.
     </div>
     <div class="crops-grid" id="cropsGrid"></div>
   </div>
@@ -1063,7 +997,7 @@ a.price-val.best:hover {
   <div class="tg-section" id="tgSection">
     <div class="sec-head">
       <div class="sec-title">📡 Telegram-оферти трейдерів</div>
-      <div class="sec-sub">Тимчасовий знімок зі скриншотів 19–29.10. Після запуску щоденного автооновлення (9:00) тут будуть живі пости каналів</div>
+      <div class="sec-sub">Живі пости каналів за 3 дні</div>
     </div>
     <div class="tg-filters" id="tgFilters"></div>
     <div class="tg-table-wrap">
@@ -1081,7 +1015,7 @@ a.price-val.best:hover {
   <!-- ── FUEL + FERT ── -->
   <div class="panels-row">
     <div class="panel">
-      <div class="panel-title"><span class="panel-title-icon">⛽</span> Паливо (04.11.2026)</div>
+      <div class="panel-title"><span class="panel-title-icon">⛽</span> Паливо (29.10.2026)</div>
       <div class="fuel-row">
         <span class="fuel-name">Дизель (ДП) АЗС сер.</span>
         <div class="fuel-price-wrap">
@@ -1108,7 +1042,7 @@ a.price-val.best:hover {
         </div>
       </div>
       <div class="fuel-trigger">
-        Джерело: <a href="https://index.minfin.com.ua/ua/markets/fuel/dt/" target="_blank" rel="noopener">minfin.com.ua (А-95 консалтинг)</a> — середня по АЗС України, 04.11.2026.<br>
+        Джерело: <a href="https://index.minfin.com.ua/ua/markets/fuel/dt/" target="_blank" rel="noopener">minfin.com.ua (А-95 консалтинг)</a> — середня по АЗС України, 28.10.2026.<br>
         Тригер закупки ДП: <span class="trigger-watch">≥ 107–110 ₴/л</span> — форвардна закупка.<br>
         Прогноз зима: <strong>115–120 ₴/л</strong> (Prime Group).
       </div>
@@ -1175,13 +1109,17 @@ a.price-val.best:hover {
   </div>
 
   <!-- ── NEWS / ANALYTICS ── -->
-  <div class="news-panel">
-    <div class="panel-title"><span class="panel-title-icon">📰</span> Новини та аналітика (04.11.2026)</div>
-    <div class="news-list">
+  <div class="news-panel" id="newsSection">
+    <div class="panel-title"><span class="panel-title-icon">📰</span> Новини та аналітика</div>
+    <div class="sec-sub" style="font-size:11px;color:var(--fg3);margin-bottom:10px">Завантаження новин...</div>
+    <!-- Динамічна сітка новин (заповнюється JS-ін'єкцією) -->
+    <div id="newsGrid" class="news-grid-dynamic"></div>
+    <!-- Статичні новини як fallback, показуємо тільки якщо newsGrid порожній -->
+    <div class="news-list" id="newsListStatic">
       <div class="news-item hot">
         <span class="news-badge src-gt">GrainTrade</span>
         <div>
-          <div class="news-text">УЗ підвищує тариф на зерновози з 04.11.2026: 632 → 850 грн/добу (+34,8%). Вплив на CPT/CIF ціни.</div>
+          <div class="news-text">УЗ підвищує тариф на зерновози з 01.11.2026: 632 → 850 грн/добу (+34,8%). Вплив на CPT/CIF ціни.</div>
           <div class="news-meta"><a href="https://graintrade.com.ua/novosti/zakupivelni-tcini-na-zerno-v-ukraini-na-28-zhovtnya-2026-roku.html" target="_blank" rel="noopener">graintrade.com.ua 28.10 ↗</a></div>
         </div>
       </div>
@@ -1195,7 +1133,7 @@ a.price-val.best:hover {
       <div class="news-item">
         <span class="news-badge src-lf">Latifundist</span>
         <div>
-          <div class="news-text">Наступний USDA WASDE — 04.11.2026, 12:00 ET. Баланси пшениці, кукурудзи, сої — головний ціновий каталізатор листопада.</div>
+          <div class="news-text">Наступний USDA WASDE — 10.11.2026, 12:00 ET. Баланси пшениці, кукурудзи, сої — головний ціновий каталізатор листопада.</div>
           <div class="news-meta"><a href="https://usda.gov/oce/commodity/wasde" target="_blank" rel="noopener">usda.gov WASDE ↗</a></div>
         </div>
       </div>
@@ -1223,10 +1161,104 @@ a.price-val.best:hover {
     </div>
   </div>
 
+  <!-- ══ АРХІВ: статичний аналітичний знімок 29.10.2026 ══ -->
+  <details class="archive-box" id="archiveBox">
+    <summary class="archive-sum">📦 Архів аналітики від 29.10.2026 — статичний знімок, автоматично <u>не оновлюється</u>
+      <span class="archive-hint">тижневий огляд · барометр · резюме по культурах · ціни в них — станом на 29.10</span></summary>
+    <div class="archive-warn">⚠️ Цей блок написаний вручну 29.10.2026. Ціни, оцінки й поради в ньому застаріли й не перераховуються з живих даних. Актуальні оферти — у блоках «Культури» та «Telegram-оферти» вище.</div>
+  <!-- ══ ЩО ВІДБУЛОСЯ ЗА ТИЖДЕНЬ ══ -->
+  <div class="week-summary">
+    <div class="week-title">📅 Що відбулося за тиждень (22–29.10.2026)</div>
+    <div class="week-rows">
+      <div class="week-row"><span class="week-icon">🔴</span><span><strong>УЗ підвищила тариф на зерновози з 01.11:</strong> 632 → 850 ₴/добу (+34,8%). Перевезення залізницею дорожчає — тиск на CPT ціни вниз.</span></div>
+      <div class="week-row"><span class="week-icon">🟡</span><span><strong>Соняшник Голованівськ (AGRO HUB):</strong> ціна знизилась з 12 600 до 12 200 ₴/т за тиждень (−3,2%). Місцевий ринок Кіровоградщини під тиском збирання.</span></div>
+      <div class="week-row"><span class="week-icon">🟢</span><span><strong>Єгипет купив 480 тис. т пшениці:</strong> CPT $235, тендер 28.10. Підтримує попит на чорноморську пшеницю та ціни 8 600–8 800 ₴/т.</span></div>
+      <div class="week-row"><span class="week-icon">🔴</span><span><strong>Добрива дорожчають:</strong> OSTCHEM підвищив аміачну селітру на 900 ₴/т (+12%) у жовтні. Селітра: 27 500–28 000 ₴/т.</span></div>
+      <div class="week-row"><span class="week-icon">⏳</span><span><strong>Наступна ключова подія — WASDE 10.11.2026</strong> (12:00 ET). Баланси пшениці, кукурудзи, сої можуть змінити орієнтири ринку.</span></div>
+    </div>
+  </div>
+
+  <!-- ══ SELL/WAIT BAROMETER ══ -->
+  <div class="barometer-section" id="barometerSection">
+    <div class="baro-header">
+      <div class="baro-title">📊 Барометр продати / чекати</div>
+      <div class="baro-hz-tabs">
+        <button class="baro-hz-btn active" onclick="setBaroHz('1m',this)">1 міс.</button>
+        <button class="baro-hz-btn" onclick="setBaroHz('3m',this)">3 міс.</button>
+        <button class="baro-hz-btn" onclick="setBaroHz('6m',this)">6 міс.</button>
+      </div>
+    </div>
+    <div class="baro-cards" id="baroCards"></div>
+    <div class="baro-legend">
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#c0392b"></div>0–25 🔴 ЧЕКАЙ</div>
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#e67e22"></div>26–45 🟠 Обережно</div>
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#f39c12"></div>46–60 🟡 Нейтрально</div>
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#27ae60"></div>61–75 🟢 Продавай</div>
+      <div class="baro-leg-item"><div class="baro-leg-dot" style="background:#e6a817"></div>76–100 ⚡ ПРОДАВАЙ ЗАРАЗ</div>
+    </div>
+    <div class="baro-disclaimer">⚠️ Барометр — аналітичний орієнтир на основі публічних даних (<strong>published_unconfirmed</strong>). Не є рекомендацією до угоди. Перевіряй ціни напряму з покупцем перед укладенням договору. Клікни на карточку культури — побачиш 3 причини оцінки.</div>
+  </div>
+
+  <!-- ── РЕЗЮМЕ ПО КУЛЬТУРАХ ── -->
+  <div class="sum-section" id="summarySection">
+    <div class="sec-head">
+      <div class="sec-title">🧑‍🌾 Резюме по культурах — по-простому</div>
+      <div class="sec-sub">Станом на 29.10.2026 · ціни — опубліковані пропозиції, не підписані угоди · net — з Долинського, рейс 25 т</div>
+    </div>
+    <div class="sum-grid">
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">💛 Ріпак</span><span class="sum-verdict v-sell">Продавати до кінця грудня</span></div>
+        <p>Ріпак зараз — найдорожча культура в розрахунку на тонну. Порт в Одесі дає <strong>21 200 ₴/т</strong>, після фрахту з Долинського (1 500 ₴/т) лишається <strong>~19 700 ₴/т</strong>, це близько 490 тис. ₴ за машину. Біржа в Парижі стоїть на місці, ціна тримається рівно — ні вниз, ні вгору не тягне.</p>
+        <p>А от далі краще не буде: з весни на ринок заходить новий ріпак з Європи і тисне ціну. І є важливий момент: ГрадОлія в Кропивницькому сама переробляє ріпак, а везти туди в 5 разів дешевше, ніж в Одесу. Якщо вони дадуть від <strong>19 975 ₴/т</strong> з доставкою на завод — це вже вигідніше за Одесу, і гроші ближче.</p>
+        <div class="sum-do">Що робити: першим ділом подзвонити в ГрадОлію по ріпаку. Продавати в листопаді–грудні, весни не чекати.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🌻 Соняшник</span><span class="sum-verdict v-split">Частину зараз, решту — зимою</span></div>
+        <p>Зараз пік збирання, соняшника на ринку повно, і заводи цим користуються. Найближчі до нас платять мало: Kernel ~<strong>15 000</strong>, Власівка 14 000, Голованівськ за тиждень зрізав з 12 600 до <strong>12 200</strong> (і то без ПДВ). Водночас на заході й у Вінниці за високоолеїновий дають 18 500–20 000 — тобто заводи на олії заробляють добре (олія в порту ~$1 010/т), а ціну на насіння тиснуть.</p>
+        <p>Історично з грудня по березень пропозиції меншає, і переробники піднімають ціну — бувало на 8–12% вище жовтневої. Барометр зараз «обережно» на місяць і нейтральний на 3–6 місяців. Продавати весь урожай по 14–15 тис. — означає віддати заводу свою маржу.</p>
+        <div class="sum-do">Що робити: продати стільки, скільки треба на поточні гроші. Решту тримати на своєму складі до грудня–лютого. Взяти ціни в ГрадОлії й Kernel і торгуватись за олійність.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🫘 Соя</span><span class="sum-verdict v-split">Частину зараз, решту — до лютого</span></div>
+        <p>Реальна ціна сої зараз <strong>18 600–19 000 ₴/т</strong> (Глобине, Ізмаїл). Ізмаїл в одному місці показував 20 500, але це значно вище ринку — поки не подзвониш і не почуєш це від живої людини, на цю цифру не розраховувати. З Ізмаїлом проблема — далеко, фрахт 1 400–1 500 ₴/т з'їдає перевагу; Власівка поруч, але дає 17 200.</p>
+        <p>Найкраще вікно для сої — грудень–лютий: свій урожай уже розібрали, а Бразилія й Аргентина ще не зібрали. З березня їхня нова соя давить світову ціну вниз. Біржа в Чикаго зараз без руху, тому різких стрибків найближчим часом не чекаю.</p>
+        <div class="sum-do">Що робити: подзвонити в «В АГРО» і перевірити 20 500. Частину продати зараз, решту — до кінця лютого, весни не чекати.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🌽 Кукурудза</span><span class="sum-verdict v-hold">Не поспішати, сушити й тримати</span></div>
+        <p>Найгірша ситуація з усіх культур. Кукурудзи всюди повно, порти забиті, покупці вибирають. Дунай дає $155–160 (~7 000–7 200 ₴/т), найкраща пропозиція <strong>7 500</strong>, а після фрахту на Одесу лишається <strong>~6 000 ₴/т</strong>. Америка має великий урожай, Чикаго падає, Бразилія вже посіяла більше половини. Плюс дощі: сушіння коштує ще $10–20 на тонні, подекуди до $30.</p>
+        <p>Барометр кукурудзи найнижчий — 32 з 100 на місяць. Продавати зараз — означає віддавати по дну сезону. Зазвичай кукурудза дорожчає в березні–травні, коли запаси закінчуються. Свій склад тут — головний козир. Ще одне: зараз багато покупців платять 86% одразу, а 14% — лише коли держава поверне ПДВ, тобто з рейсу ~26 тис. ₴ «зависають».</p>
+        <div class="sum-do">Що робити: досушити й закласти на свій склад. Продавати лише якщо горять гроші або склад потрібен. Основну масу — березень–травень. Умову 86/14 враховувати в кожній угоді.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🌾 Ячмінь</span><span class="sum-verdict v-sell">Продавати, коли зручно, до весни</span></div>
+        <p>Ячмінь — тиха культура. Ціна останні два тижні стоїть на <strong>7 000–7 300 ₴/т</strong> в портах, три різні джерела показують одне й те саме. Після фрахту з Долинського лишається <strong>~5 800 ₴/т</strong>. Покупців небагато, біржового руху майже немає.</p>
+        <p>Чекати тут нема чого: зимою особливого попиту не буде, а навесні новий урожай почне тиснути старий. Барометр нейтральний на всі горизонти, на 6 місяців — трохи гірше. Тримати ячмінь на складі — це займати місце, яке краще віддати під кукурудзу.</p>
+        <div class="sum-do">Що робити: продати в листопаді–грудні, коли буде зручна машина чи попутний рейс. Звільнити склад під кукурудзу.</div>
+      </div>
+
+      <div class="sum-card">
+        <div class="sum-top"><span class="sum-name">🌱 Пшениця</span><span class="sum-verdict v-sell">Продавати поступово до грудня</span></div>
+        <p>По пшениці зараз найкраща картина. Рені й Ізмаїл дають <strong>8 600–8 900 ₴/т</strong> за 2–3 клас, після фрахту <strong>~7 300 ₴/т</strong> (~183 тис. ₴ за машину). Є сильний зовнішній попит: Єгипет щойно закупив 480 тис. т. Барометр — найвищий з усіх культур, 58 на місяць.</p>
+        <p>Але ціни на Дунаї потроху сповзають, бо покупці закривають потреби, а Америка дешевшає через сильний долар. До весни ціна старого врожаю зазвичай падає. 10 листопада — звіт USDA (WASDE), він може смикнути ринок у будь-який бік, тому все одним махом до нього продавати не варто.</p>
+        <div class="sum-do">Що робити: продавати партіями з листопада до кінця грудня — частину до 10.11, частину після звіту. Весни не чекати.</div>
+      </div>
+
+    </div>
+  </div>
+
+  </details>
+
   <!-- ── NBU RATE ── -->
+  <!-- newsListStatic closed above -->
   <div class="rate-row">
-    <span>Курс НБУ 04.11.2026:</span>
-    <span class="rate-val">1 USD = 45,60 ₴</span>
+    <span>Курс (з налаштувань (не НБУ)):</span>
+    <span class="rate-val">1 USD = 45,47 ₴</span>
     <span>·</span>
     <span>Авто зерновоз 25 т</span>
     <span>·</span>
@@ -1864,7 +1896,7 @@ renderTg();
   if (!parent) return;
   const meta = document.createElement('div');
   meta.style.cssText = 'font-size:10px;color:var(--fg3,#8a8fa8);text-align:right;margin-top:6px;padding:0 4px 2px;';
-  meta.innerHTML = 'Оновлено: 04.11.2026 &nbsp;·&nbsp; Наступний перегляд: WASDE <strong>04.11.2026</strong>';
+  meta.innerHTML = 'Оновлено: 29.10.2026 &nbsp;·&nbsp; Наступний перегляд: WASDE <strong>10.11.2026</strong>';
   parent.appendChild(meta);
 })();
 
@@ -1924,7 +1956,7 @@ renderTg();
   const deltaEl = document.createElement('div');
   deltaEl.className = 'delta-section';
   deltaEl.innerHTML = `
-    <div class="charts-title">📊 Щоденний трекер дельти — 04.11.2026</div>
+    <div class="charts-title">📊 Трекер дельти — архів 29.10.2026 (не оновлюється)</div>
     <div class="charts-note">Зміна за тиждень (22–29.10) по культурах, паливу та добривах. ↑ зростання · ↓ падіння · → без змін. Дані: <strong>published_unconfirmed</strong>.</div>
     <div class="delta-grid-inner" id="deltaGridInner"></div>
     <div style="font-size:10px;color:var(--amber);margin-top:10px;padding:7px 10px;background:var(--amber-bg);border-radius:6px">⚠ Дельти: культури — bestPrice 22–29.10 · добрива — OSTCHEM жовт. vs вер. · паливо — minfin.com.ua</div>`;
@@ -1945,7 +1977,7 @@ renderTg();
       <div class="chart-tt" id="mainPriceTT"></div>
     </div>
     <div class="chart-leg" id="mainChartLeg"></div>
-    <div style="margin-top:16px;font-size:12px;font-weight:700;color:var(--fg2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">₴ Поточні ціни 04.11.2026 (₴/т)</div>
+    <div style="margin-top:16px;font-size:12px;font-weight:700;color:var(--fg2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">₴ Ціни станом на 29.10.2026 (архів, ₴/т)</div>
     <div class="chart-wrap-uah">
       <canvas class="price-canvas" id="mainUahCanvas"></canvas>
       <div class="chart-tt" id="mainUahTT"></div>
@@ -2192,75 +2224,128 @@ window.addEventListener('resize', () => {
 
 
 <script>
-window.__AGRO_DATA__ = {"generated_at": "04.11.2026 13:46 UTC", "usd_uah": 45.6, "cultures": ["ріпак", "соняшник", "соя", "кукурудза", "ячмінь", "пшениця"], "prices": {"ріпак": null, "соняшник": null, "соя": null, "кукурудза": null, "ячмінь": null, "пшениця": null}, "freight": {"Долинське": {"Одеська": 1500, "Черкаська": 525, "Миколаївська": 1050, "Кіровоградська": 275, "Вінницька": 700, "Хмельницька": 900, "Полтавська": 600, "невідомо": 800}, "Копані": {"Одеська": 1400, "Черкаська": 375, "Миколаївська": 975, "Кіровоградська": 105, "Вінницька": 600, "Хмельницька": 750, "Полтавська": 450, "невідомо": 700}}, "sell_threshold": {"ріпак": 18000, "соняшник": 14000, "соя": 16000, "кукурудза": 6500, "ячмінь": 6000, "пшениця": 7000}, "land": {"records": [], "stats": {}}, "tg_records": []};
+window.__AGRO_DATA__ = {"generated_at_kyiv": "07.11.2026 18:45 (Київ)", "usd_uah": 45.47, "rate_src": "з налаштувань (не НБУ)", "cultures": ["ріпак", "соняшник", "соя", "кукурудза", "ячмінь", "пшениця"], "prices": {"ріпак": null, "соняшник": null, "соя": null, "кукурудза": null, "ячмінь": null, "пшениця": null}, "freight": {"Долинське": {"Одеська": 1620, "Черкаська": 570, "Миколаївська": 1130, "Кіровоградська": 300, "Вінницька": 755, "Хмельницька": 970, "Полтавська": 650}, "Копані": {"Одеська": 1510, "Черкаська": 405, "Миколаївська": 1055, "Кіровоградська": 115, "Вінницька": 650, "Хмельницька": 810, "Полтавська": 490}}, "land": {"records": [], "stats": {}, "generated_at": ""}, "tg_records": [], "news": [], "news_generated_kyiv": "", "counts": {"prices": 0, "eligible": 0, "news": 0}, "deltas": {"ріпак": {"delta_7": null, "delta_30": null}, "соняшник": {"delta_7": null, "delta_30": null}, "соя": {"delta_7": null, "delta_30": null}, "кукурудза": {"delta_7": null, "delta_30": null}, "ячмінь": {"delta_7": null, "delta_30": null}, "пшениця": {"delta_7": null, "delta_30": null}}, "summaries": {"ріпак": {"verdict": "split", "label": "Частину зараз", "paragraphs": ["Даних немає.", "Другий абзац без чисел."], "todo": "Що робити: продати частину", "model": "openai/gpt-4.1", "auto": true}, "соняшник": {"verdict": "split", "label": "Частину зараз", "paragraphs": ["Даних немає.", "Другий абзац без чисел."], "todo": "Що робити: продати частину", "model": "openai/gpt-4.1", "auto": true}, "соя": {"verdict": "split", "label": "Частину зараз", "paragraphs": ["Даних немає.", "Другий абзац без чисел."], "todo": "Що робити: продати частину", "model": "openai/gpt-4.1", "auto": true}, "кукурудза": {"verdict": "split", "label": "Частину зараз", "paragraphs": ["Даних немає.", "Другий абзац без чисел."], "todo": "Що робити: продати частину", "model": "openai/gpt-4.1", "auto": true}, "ячмінь": {"verdict": "none", "label": "Даних замало для висновку", "paragraphs": ["Сьогодні по цій культурі немає жодної порівнюваної закупівельної ціни, тож чесного висновку дати не можна.", "Автоматичний висновок сьогодні не сформувався (модель недоступна або відповідь не пройшла перевірку цифр), тому порад продавати чи тримати тут немає. Дивіться таблицю цін нижче."], "todo": "", "model": null, "auto": false}, "пшениця": {"verdict": "split", "label": "Частину зараз", "paragraphs": ["Даних немає.", "Другий абзац без чисел."], "todo": "Що робити: продати частину", "model": "openai/gpt-4.1", "auto": true}}, "freight_status": "оцінка", "history_days": 1};
+
 (function(){
   const D=window.__AGRO_DATA__;
-  const USD_UAH=D.usd_uah;
-  function fmt(n,d=0){if(n==null||isNaN(n))return'—';return new Intl.NumberFormat('uk-UA',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n);}
-  function fmtTrip(net,t=25){if(!net||isNaN(net))return'—';return fmt(Math.round(net*t/1000))+' тис.₴';}
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const safeUrl=u=>/^https?:\/\//i.test(u||'')?esc(u):'';
+  const fmt=(n,d=0)=>(n==null||isNaN(n))?'—':new Intl.NumberFormat('uk-UA',{minimumFractionDigits:d,maximumFractionDigits:d}).format(n);
+  const trip=(net,t=25)=>(net==null||isNaN(net))?'':' → '+fmt(Math.round(net*t/1000))+' тис.₴';
+  const ageDays=ts=>{if(!ts)return null;return Math.floor((Date.now()-new Date(ts).getTime())/864e5);};
+  const ageFlag=ts=>{const a=ageDays(ts);if(a==null)return'<span class="flag flag-warn">дата?</span>';if(a>=2)return`<span class="flag flag-warn">${a} дн. тому</span>`;return'';};
+  const ra=u=>{const s=safeUrl(u);return s?` class="row-link" data-url="${s}" title="Відкрити пропозицію"`:'';};
+  const go=u=>{const s=safeUrl(u);return s?`<a class="go" href="${s}" target="_blank" rel="noopener" title="Відкрити">↗</a>`:'';};
+  const srcLabel=u=>/t\.me\//.test(u||'')?'пост у Telegram':/graintrade\.com\.ua\/birzha/.test(u||'')?'лот на біржі GrainTrade':/nibulon/.test(u||'')?'прайс Нібулону':/e-zerno/.test(u||'')?'сторінка цін e-zerno':'джерело';
+  const openBtn=(u,label)=>{const s=safeUrl(u);return s?`<a class="open-btn" href="${s}" target="_blank" rel="noopener">${label||'Відкрити'}: ${srcLabel(u)} ↗</a>`:'<span class="open-btn off">посилання на джерело відсутнє</span>';};
+  // рядок-посилання: клік по всьому рядку відкриває пропозицію
+  document.addEventListener('click',e=>{const tr=e.target.closest('tr.row-link');if(!tr||e.target.closest('a'))return;window.open(tr.dataset.url,'_blank','noopener');});
+  if(!document.getElementById('rowLinkCss')){const st=document.createElement('style');st.id='rowLinkCss';st.textContent=`
+    tr.row-link{cursor:pointer}
+    tr.row-link:hover td{background:var(--surface2)}
+    .go{display:inline-block;color:var(--accent)!important;font-weight:700;margin-right:5px;text-decoration:none;padding:0 2px}
+    .open-btn{display:block;margin:6px 0 2px;padding:7px 10px;border-radius:8px;background:var(--accent);color:#fff!important;font-size:12px;font-weight:600;text-align:center;text-decoration:none}
+    .open-btn:hover{filter:brightness(1.1)}
+    .open-btn.off{background:var(--surface2);color:var(--fg3)!important;font-weight:400}`;document.head.appendChild(st);}
+  const link=(u,txt)=>{const s=safeUrl(u);return s?`<a href="${s}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline dotted">${txt}</a>`:txt;};
+  let farm='Долинське';
 
-  const cropsGrid=document.getElementById('cropsGrid');
-  if(cropsGrid){
-    cropsGrid.innerHTML='';
-    D.cultures.forEach((culture,idx)=>{
-      const d=D.prices[culture];
-      const emoji=d?d.emoji:'🌾';
-      const rank=idx+1;
-      if(!d){cropsGrid.innerHTML+=`<div class="crop-card"><div class="crop-header"><div class="crop-icon-name"><span class="crop-emoji">${emoji}</span><span class="crop-name">${culture}</span></div><span class="crop-rank">#${rank}</span></div><div class="crop-body" style="color:var(--fg3);padding:12px;font-size:12px">Немає даних</div></div>`;return;}
-      const netK=d.best_net_kopani;const netD=d.best_net_dolynske;
-      const thresh=d.sell_threshold||10000;
-      const above=netK>=thresh;
-      const sigLabel=above?'🟢 Продавати':(netK>=thresh*0.9?'🟡 Частково':'⚪ Чекати');
-      const top3=(d.top_records||[]).slice(0,3);
-      const rows=top3.map(r=>`<tr><td>${(r.location||'?').substring(0,22)}</td><td class="num">${fmt(r.price_uah)} ₴</td><td class="num" style="color:var(--green)">${fmt(r.net_kopani)} ₴</td><td style="color:var(--fg3);font-size:10px">${r.source||''}</td></tr>`).join('');
-      cropsGrid.innerHTML+=`<div class="crop-card"><div class="crop-header"><div class="crop-icon-name"><span class="crop-emoji">${emoji}</span><span class="crop-name">${culture.charAt(0).toUpperCase()+culture.slice(1)}</span></div><span class="crop-rank ${rank<=2?'top':''}">#${rank}</span></div><div class="crop-body"><div class="price-row"><span class="price-label">Найкраща ціна</span><span class="price-val best">${fmt(d.best_price_uah)} ₴/т</span></div><div class="price-row"><span class="price-label">${(d.best_price_loc||'').substring(0,28)}</span><span class="price-label" style="font-size:10px;color:var(--fg3)">${d.best_price_src||''}</span></div><div class="divider"></div><div class="net-block"><div class="net-label">Чиста виручка (рейс 25 т)</div><div class="net-row"><span class="net-farm">📍 Копані</span><div><span class="net-val">${fmt(netK)} ₴/т</span><span class="net-trip"> → ${fmtTrip(netK)}</span></div></div><div class="net-divider"></div><div class="net-row"><span class="net-farm">📍 Долинське</span><div><span class="net-val" style="color:var(--accent2)">${fmt(netD)} ₴/т</span><span class="net-trip"> → ${fmtTrip(netD)}</span></div></div><div class="net-threshold ${above?'above':'below'}">Поріг: ${fmt(thresh)} ₴/т | ${sigLabel}</div></div>${rows?`<div style="margin-top:8px;overflow-x:auto"><table class="tg-table" style="font-size:11px"><thead><tr><th>Пункт</th><th>Ціна</th><th>Net Копані</th><th>Джерело</th></tr></thead><tbody>${rows}</tbody></table></div>`:''} <div style="font-size:10px;color:var(--fg3);margin-top:6px;text-align:right">${d.records_count} записів · ${fmt(d.price_min)}–${fmt(d.price_max)} ₴/т</div></div></div>`;
-    });
+  // ── Шапка: дата збірки + курс ──
+  const banner=document.getElementById('statusBanner');
+  if(banner)banner.insertAdjacentHTML('beforeend',` <br><span style="opacity:.85">Дані зібрано: <strong>${esc(D.generated_at_kyiv)}</strong> · записів цін: ${D.counts.prices} (порівнюваних ${D.counts.eligible}) · новин: ${D.counts.news} · курс $: ${fmt(D.usd_uah,2)} (${esc(D.rate_src)})</span>`);
+
+  // ── Культури ──
+  function renderCrops(){
+    const g=document.getElementById('cropsGrid');if(!g)return;
+    g.innerHTML=D.cultures.map((c,idx)=>{
+      const d=D.prices[c];const title=c.charAt(0).toUpperCase()+c.slice(1);
+      const head=`<div class="crop-header"><div class="crop-icon-name"><span class="crop-emoji">${d?d.emoji:'🌾'}</span><span class="crop-name">${esc(title)}</span></div></div>`;
+      if(!d||!d.best_price){
+        const why=d?`${d.records_count} знайдених записів, але жоден не пройшов перевірку порівнюваності`:'За 3 дні жодної закупівельної ціни не знайдено';
+        return `<div class="crop-card">${head}<div class="crop-body" style="color:var(--fg3);font-size:12px;padding:6px 0">Немає порівнюваних даних.<br>${esc(why)}.</div></div>`;
+      }
+      const b=d.best_price;
+      const netRow=(f)=>{const r=d.best_net[f];
+        if(!r)return `<div class="net-row"><span class="net-farm">📍 ${f}</span><span class="net-farm" style="color:var(--fg3)">фрахт до покупців невідомий</span></div>`;
+        const fr=f==='Копані'?r.freight_kopani:r.freight_dolynske;const net=f==='Копані'?r.net_kopani:r.net_dolynske;
+        return `<div class="net-row"><span class="net-farm" style="${f===farm?'font-weight:700':''}">📍 ${f}</span><div><span class="net-val">${fmt(net)} ₴/т</span><span class="net-trip">${trip(net)}</span></div></div>
+          <div style="font-size:10px;color:var(--fg3);text-align:right;margin-top:-2px">${link(r.url,esc(r.location)+(safeUrl(r.url)?' ↗':''))} (${esc(r.region_norm)}) ${fmt(r.price_uah)} − фрахт ${fmt(fr)}${D.freight_status==='оцінка'?' <span title="орієнтовна ставка, не оферта перевізника">(оцінка)</span>':''} · ${esc(r.source)}</div>`;};
+      const nk=farm==='Копані'?'net_kopani':'net_dolynske';
+      const place=r=>{const l=r.location&&r.location!=='невідомо'?r.location:'';const bu=r.buyer&&r.buyer!==l?r.buyer:'';return (bu&&l?bu+' · '+l:(bu||l||'пункт не вказано'));};
+      const rows=d.top.map(r=>`<tr${ra(r.url)}><td>${go(r.url)}${esc(place(r).substring(0,40))}<div style="font-size:10px;color:var(--fg3)">${esc(r.source)} · ${esc((r.date||'').substring(0,5))}${r.quality?' · '+esc(String(r.quality).substring(0,18)):''}</div></td><td class="num">${link(r.url,fmt(r.price_uah))}${r.currency!=='UAH'?`<div style="font-size:10px;color:var(--fg3);font-weight:400">${fmt(r.price_raw)} ${esc(r.currency)}</div>`:''}</td><td class="num" style="color:var(--green)">${r[nk]!=null?fmt(r[nk]):'<span style="color:var(--fg3);font-weight:400">—</span>'}</td></tr>`).join('');
+      const dl=D.deltas&&D.deltas[c]?D.deltas[c]:{};
+      const fmtDelta=(v,label)=>{if(v==null)return'';const cls=v>0?'delta-up':v<0?'delta-down':'delta-flat';const ar=v>0?'▲':v<0?'▼':'—';return `<span class="price-delta ${cls}" title="${label}">${ar} ${fmt(Math.abs(v))} ₴/т</span>`;};
+      const deltaRow=(dl.delta_7!=null||dl.delta_30!=null)?`<div class="price-row" style="gap:6px;flex-wrap:wrap"><span class="price-label" style="font-size:10px">Зміна:</span>${fmtDelta(dl.delta_7,'За тиждень')}${dl.delta_30!=null?`<span style="font-size:9px;color:var(--fg3)">місяць: ${fmtDelta(dl.delta_30,'За місяць')}</span>`:''}</div>`:'';
+      return `<div class="crop-card">${head}<div class="crop-body">
+        <div class="price-row"><span class="price-label">Найвища закупівельна</span><span class="price-val best">${link(b.url,fmt(b.price_uah)+' ₴/т')}</span></div>
+        ${deltaRow}
+        <div class="price-row"><span class="price-label">${esc(place(b).substring(0,40))}</span><span class="price-label" style="font-size:10px;color:var(--fg3)">${esc(b.source)} · ${esc(b.basis||'базис?')} ${ageFlag(b.ts)}</span></div>
+        ${openBtn(b.url,'Відкрити найвищу пропозицію')}
+        <div class="divider"></div>
+        <div class="net-block"><div class="net-label">Найкраща чиста виручка (рейс 25 т)</div>${netRow('Долинське')}<div class="net-divider"></div>${netRow('Копані')}</div>
+        <div style="margin-top:8px"><table class="tg-table crop-table" style="font-size:11px"><colgroup><col style="width:56%"><col style="width:22%"><col style="width:22%"></colgroup><thead><tr><th>Пункт / покупець</th><th style="text-align:right">Ціна ₴/т</th><th style="text-align:right">Net ${farm==='Копані'?'Коп.':'Дол.'}</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <div style="font-size:10px;color:var(--fg3);margin-top:6px;text-align:right">${d.eligible_count} порівнюваних із ${d.records_count} · ${fmt(d.price_min)}–${fmt(d.price_max)} ₴/т${d.excluded?` · відсіяно ${d.excluded}`:''}</div>
+      </div></div>`;
+    }).join('');
   }
+  renderCrops();
+  // ── Висновки барометра по культурах (щоденні) ──
+  (function(){
+    const S=D.summaries;const grid=document.getElementById('cropsGrid');if(!S||!grid)return;
+    const md=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+    const cls={sell:'v-sell',split:'v-split',hold:'v-hold',none:'v-split'};
+    const auto=D.cultures.some(c=>S[c]&&S[c].auto);
+    const cards=D.cultures.map(c=>{const s=S[c];if(!s)return'';const d=D.prices[c];const title=c.charAt(0).toUpperCase()+c.slice(1);
+      return `<div class="sum-card"><div class="sum-top"><span class="sum-name">${d?d.emoji:'🌾'} ${esc(title)}</span><span class="sum-verdict ${cls[s.verdict]||'v-split'}">${esc(s.label)}</span></div>
+        ${(s.paragraphs||[]).map(p=>`<p>${md(p)}</p>`).join('')}
+        ${s.todo?`<div class="sum-do">${md(s.todo)}</div>`:''}</div>`;}).join('');
+    const sec=document.createElement('div');sec.className='sum-section';sec.id='summaryLive';
+    sec.innerHTML=`<div class="sec-head"><div class="sec-title">🧑‍🌾 Висновок барометра по культурах — на ${esc(D.generated_at_kyiv)}</div>
+      <div class="sec-sub">${auto?'Пишеться щоранку автоматично з сьогоднішніх цін і новин; цифри звірені з даними барометра.':'Сьогодні автоматичний висновок не сформувався — показано лише факти.'} Ціни — опубліковані пропозиції, не угоди${D.freight_status==='оцінка'?'; фрахт — орієнтовна оцінка':''}. Це аналітична думка, остаточне рішення — за вами.</div></div>
+      <div class="sum-grid">${cards}</div>`;
+    const host=grid.parentNode;host.parentNode.insertBefore(sec,host);
+  })();
+  window.setFarm=function(f,btn){farm=f==='kopani'?'Копані':'Долинське';document.querySelectorAll('.farm-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');renderCrops();};
 
-  const tgBody=document.getElementById('tgBody');
-  const tgFilters=document.getElementById('tgFilters');
-  const tgInsights=document.getElementById('tgInsights');
-  const tgSub=document.querySelector('#tgSection .sec-sub');
-  if(tgBody&&D.tg_records&&D.tg_records.length>0){
-    if(tgSub)tgSub.textContent='Автооновлення щодня о 07:00 · '+D.generated_at;
-    const culturesInData=[...new Set(D.tg_records.map(r=>r.culture).filter(Boolean))];
-    if(tgFilters)tgFilters.innerHTML='<button class="tg-chip active" onclick="tgFilter(null,this)">Всі</button>'+culturesInData.map(c=>`<button class="tg-chip" onclick="tgFilter('${c}',this)">${c}</button>`).join('');
-    window.renderTgRows=function(fc){
-      const rows=fc?D.tg_records.filter(r=>r.culture===fc):D.tg_records;
-      tgBody.innerHTML=rows.map(r=>`<tr><td style="color:var(--accent);white-space:nowrap">${r.source||'?'}</td><td>${r.culture||'?'}</td><td class="num">${r.price_uah?fmt(r.price_uah)+' ₴':r.price_usd?r.price_usd+'$':'—'}</td><td style="font-size:11px">✅ з ПДВ</td><td>${(r.location||'?').substring(0,30)}</td><td style="color:var(--fg3)">${(r.date||'?').substring(0,10)}</td><td style="font-size:11px;color:var(--fg3)">${r.basis||''} ${r.region_norm&&r.region_norm!=='невідомо'?'· '+r.region_norm:''}</td></tr>`).join('');
-    }
-    window.renderTgRows(null);
-    window.tgFilter=function(c,btn){document.querySelectorAll('.tg-chip').forEach(b=>b.classList.remove('active'));btn.classList.add('active');window.renderTgRows(c);};
-    if(tgInsights)tgInsights.innerHTML=D.cultures.map(c=>{const d=D.prices[c];if(!d)return'';return`<div class="tg-insight"><strong>${d.emoji} ${c.charAt(0).toUpperCase()+c.slice(1)}:</strong> ${fmt(d.best_price_uah)} ₴/т · net Копані <strong>${fmt(d.best_net_kopani)} ₴/т</strong> (${fmtTrip(d.best_net_kopani)} за рейс)</div>`;} ).filter(Boolean).join('');
-  }else if(tgBody){tgBody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--fg3);padding:20px">Запусти telegram_parser.py для завантаження цін</td></tr>';}
+  // ── Telegram-оферти ──
+  const tgBody=document.getElementById('tgBody'),tgFilters=document.getElementById('tgFilters'),tgInsights=document.getElementById('tgInsights');
+  const live=(D.tg_records||[]);
+  if(tgBody&&live.length){
+    const sub=document.querySelector('#tgSection .sec-sub');if(sub)sub.textContent='Живі пости каналів за 3 дні · зібрано '+D.generated_at_kyiv+' · сірим — не порівнюються (експорт, викид тощо)';
+    const cs=[...new Set(live.map(r=>r.culture))].filter(Boolean);
+    if(tgFilters)tgFilters.innerHTML='<button class="tg-chip active" data-c="">Всі</button>'+cs.map(c=>`<button class="tg-chip" data-c="${esc(c)}">${esc(c)}</button>`).join('');
+    const render=fc=>{tgBody.innerHTML=live.filter(r=>!fc||r.culture===fc).map(r=>`<tr${ra(r.url)} style="${r.eligible?'':'opacity:.5'}" title="${esc(r.excluded_reason||'')}"><td style="color:var(--accent);white-space:nowrap">${link(r.url,esc(r.source))}</td><td>${esc(r.culture)}${r.quality?`<div style="font-size:10px;color:var(--fg3)">${esc(String(r.quality).substring(0,22))}</div>`:''}</td><td class="num">${fmt(r.price_uah)} ₴${r.currency!=='UAH'?`<div style="font-size:10px;color:var(--fg3)">${fmt(r.price_raw)} ${esc(r.currency)}</div>`:''}</td><td style="font-size:11px">${esc(r.vat&&r.vat!=='невідомо'?r.vat:(/ПДВ/.test(r.basis||'')?'з ПДВ':'невідомо'))}</td><td>${esc((r.location&&r.location!=='невідомо'?r.location:(r.buyer||'?')).substring(0,30))}</td><td style="color:var(--fg3);white-space:nowrap">${esc(r.date||'?')}</td><td style="font-size:11px;color:var(--fg3)">${esc(r.basis||'')}${r.region_norm&&r.region_norm!=='невідомо'?' · '+esc(r.region_norm):''}${r.excluded_reason?' · '+esc(r.excluded_reason):''}</td></tr>`).join('');};
+    render('');
+    if(tgFilters)tgFilters.onclick=e=>{const b=e.target.closest('.tg-chip');if(!b)return;tgFilters.querySelectorAll('.tg-chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');render(b.dataset.c);};
+  }
+  if(tgInsights)tgInsights.innerHTML=D.cultures.map(c=>{const d=D.prices[c];if(!d||!d.best_price)return'';const n=d.best_net[farm]||d.best_net['Долинське']||d.best_net['Копані'];
+    return `<div class="tg-insight"><strong>${d.emoji} ${esc(c)}:</strong> найвища ${fmt(d.best_price.price_uah)} ₴/т (${esc(d.best_price.source)})${n?` · найкраща net ${fmt(n.net_dolynske??n.net_kopani)} ₴/т з Долинського — ${esc(n.location)}`:' · net: фрахт невідомий'}</div>`;}).join('');
 
+  // ── Земля ──
   const land=D.land;
-  if(land&&land.records&&land.records.length>0){
-    const stats=land.stats;
-    const rows=land.records.slice(0,10).map(r=>`<tr><td>${r.type==='продаж'?'💰':'📋'} ${r.district||'?'}</td><td>${r.size_ha?r.size_ha.toFixed(2)+' га':'?'}</td><td class="num">${r.price_per_ha?fmt(r.price_per_ha)+' ₴/га':'—'}</td><td class="num">${r.rent_per_lot?fmt(r.rent_per_lot)+' ₴':'—'}</td><td class="num">${r.yield_pct?r.yield_pct.toFixed(1)+'%':'—'}</td><td style="color:var(--fg3);font-size:10px">${r.source||'?'}</td></tr>`).join('');
+  if(land&&land.records&&land.records.length){
+    const st=land.stats;
+    const rows=land.records.slice(0,12).map(r=>`<tr${ra(r.url)}><td>${go(r.url)}${r.type==='продаж'?'💰':'📋'} ${esc(r.district||'?')}</td><td>${r.size_ha?Number(r.size_ha).toFixed(2)+' га':'?'}</td><td class="num">${r.price_per_ha?fmt(r.price_per_ha)+' ₴/га':'—'}</td><td class="num">${r.rent_per_lot?fmt(r.rent_per_lot)+' ₴':'—'}</td><td class="num">${r.yield_pct?Number(r.yield_pct).toFixed(1)+'%':'—'}</td><td style="color:var(--fg3);font-size:10px">${esc(r.source||'?')}</td></tr>`).join('');
     const sec=document.createElement('div');sec.className='tg-section';
-    sec.innerHTML=`<div class="sec-head"><div class="sec-title">🏡 Земельний ринок — Кіровоградська обл.</div><div class="sec-sub">Моніторинг паїв · ${D.generated_at}</div></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px"><div class="signal-card"><div class="signal-name">Лотів</div><div class="signal-val">${stats.total_lots}</div><div class="signal-sub">${stats.sale_lots} продаж · ${stats.rent_lots} оренда</div></div><div class="signal-card"><div class="signal-name">Ціна паю</div><div class="signal-val">${fmt(stats.avg_price_ha)} ₴/га</div><div class="signal-sub">≈ ${fmt(Math.round(stats.avg_price_ha/USD_UAH))} $/га</div></div><div class="signal-card"><div class="signal-name">Дохідність</div><div class="signal-val" style="color:var(--green)">${stats.max_yield?stats.max_yield.toFixed(1)+'%':'—'}</div><div class="signal-sub">макс.</div></div></div><div class="tg-table-wrap"><table class="tg-table" style="min-width:500px"><thead><tr><th>Тип/Район</th><th>Площа</th><th>Ціна/га</th><th>Оренда/пай</th><th>Дохідність</th><th>Джерело</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-    const calc=document.getElementById('calcSection');
-    if(calc)calc.parentNode.insertBefore(sec,calc);else{const m=document.querySelector('.main');if(m)m.appendChild(sec);}
+    sec.innerHTML=`<div class="sec-head"><div class="sec-title">🏡 Земельний ринок — Кіровоградська обл.</div><div class="sec-sub">Telegram-лоти за 3 дні · оголошення, не угоди · натисніть рядок, щоб відкрити лот</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px">
+      <div class="signal-card"><div class="signal-name">Лотів</div><div class="signal-val">${st.total_lots}</div><div class="signal-sub">${st.sale_lots} продаж · ${st.rent_lots} оренда</div></div>
+      <div class="signal-card"><div class="signal-name">Ціна паю (сер.)</div><div class="signal-val">${st.avg_price_ha?fmt(st.avg_price_ha)+' ₴/га':'—'}</div><div class="signal-sub">${st.avg_price_ha?'≈ '+fmt(Math.round(st.avg_price_ha/D.usd_uah))+' $/га · n='+st.n_price:'недостатньо даних'}</div></div>
+      <div class="signal-card"><div class="signal-name">Дохідність (макс.)</div><div class="signal-val" style="color:var(--green)">${st.max_yield?Number(st.max_yield).toFixed(1)+'%':'—'}</div><div class="signal-sub">заявлена в лоті</div></div></div>
+      <div class="tg-table-wrap"><table class="tg-table" style="min-width:500px"><thead><tr><th>Тип/Район</th><th>Площа</th><th>Ціна/га</th><th>Оренда/пай</th><th>Дохідність</th><th>Джерело</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    const anchor=document.querySelector('.panels-row');if(anchor)anchor.parentNode.insertBefore(sec,anchor);
   }
 
-  window.__PRICES__=D.prices;window.__FREIGHT__=D.freight;window.__USD_UAH__=D.usd_uah;
-  window.runCalc=function(){
-    const crop=document.getElementById('calcCrop')?.value;
-    const farm=document.getElementById('calcFarm')?.value;
-    const dir=document.getElementById('calcDir')?.value;
-    const tons=parseFloat(document.getElementById('calcTons')?.value||25);
-    let price=parseFloat(document.getElementById('calcPrice')?.value);
-    const dirMap={kernel:'Кіровоградська',cherkasy:'Черкаська',mykolaiv:'Миколаївська',odesa:'Одеська'};
-    const cropMap={rapeseed:'ріпак',sunflower:'соняшник',soy:'соя',corn:'кукурудза',barley:'ячмінь',wheat:'пшениця'};
-    const cn=cropMap[crop]||crop;const rn=dirMap[dir]||'невідомо';const fn=farm==='dolynske'?'Долинське':'Копані';
-    if(isNaN(price)){const pd=D.prices[cn];price=pd?pd.best_price_uah:0;}
-    const freight=(D.freight[fn]||{})[rn]||800;
-    const net_t=price-freight;const net_tot=net_t*tons;
-    const el=document.getElementById('calcResult');if(!el)return;
-    el.style.display='block';
-    el.innerHTML=`<div class="calc-res-grid"><div class="calc-res-item"><div class="calc-res-label">Ціна закупки</div><div class="calc-res-val">${fmt(price)} ₴/т</div><div class="calc-res-sub">${cn}</div></div><div class="calc-res-item"><div class="calc-res-label">Фрахт (${fn} → ${rn})</div><div class="calc-res-val" style="color:var(--red)">− ${fmt(freight)} ₴/т</div><div class="calc-res-sub">${tons} т</div></div><div class="calc-res-item"><div class="calc-res-label">Net за тонну</div><div class="calc-res-val" style="color:var(--green)">${fmt(net_t)} ₴/т</div></div><div class="calc-res-item"><div class="calc-res-label">Рейс ${tons} т</div><div class="calc-res-val">${fmt(net_tot)} ₴</div></div></div><div class="calc-warn">⚠️ Орієнтовний розрахунок — перевір ціну напряму з покупцем.</div>`;
-  };
+  // ── Новини ──
+  const ng=document.getElementById('newsGrid'),nst=document.getElementById('newsListStatic');
+  const nsub=document.querySelector('#newsSection .sec-sub');
+  if(ng&&D.news&&D.news.length){
+    if(nst)nst.style.display='none';
+    if(nsub)nsub.textContent=`Оновлено: ${D.news_generated_kyiv||D.generated_at_kyiv} · ${D.news.length} матеріалів за добу · тільки 6 культур і зерновий ринок`;
+    ng.innerHTML=D.news.map(n=>{const u=safeUrl(n.url);const tag=u?'a':'div';
+      return `<${tag} class="news-card" ${u?`href="${u}" target="_blank" rel="noopener"`:''}><div class="news-src" style="color:${String(n.source).startsWith('@')?'var(--accent)':'var(--green)'}">${esc(n.source)}</div><div class="news-title">${esc(n.title)}</div>${n.summary?`<div class="news-summary">${esc(n.summary)}</div>`:''}<div class="news-date">${esc(n.date||'')}</div></${tag}>`;}).join('');
+  }else if(nsub){nsub.textContent='Свіжих новин за добу не знайдено — нижче статичний список джерел';}
 })();
+
 </script>
 </body></html>

@@ -127,20 +127,29 @@ def invented_numbers(summary, allowed):
     return bad
 
 
+ENDPOINTS = [ENDPOINT, "https://models.inference.ai.azure.com/chat/completions"]  # другий — старий шлях (модель без префікса)
+
+
 def _call(model, messages, token):
-    body = json.dumps({"model": model, "messages": messages, "temperature": 0.3, "max_tokens": 1200}).encode()
-    req = urllib.request.Request(ENDPOINT, data=body, method="POST", headers={
-        "Authorization": f"Bearer {token}", "Content-Type": "application/json",
-        "Accept": "application/json", "X-GitHub-Api-Version": "2022-11-28"})
-    with urllib.request.urlopen(req, timeout=90) as resp:
-        body = resp.read().decode("utf-8", "replace")
-    try:
-        content = json.loads(body)["choices"][0]["message"]["content"] or ""
-    except Exception:
-        raise ValueError(f"не-JSON відповідь API: {body[:300]!r}")
-    if "{" not in content:
-        raise ValueError(f"у відповіді моделі немає JSON: {content[:300]!r} | body: {body[:200]!r}")
-    return content
+    import requests
+    last = None
+    for ep in ENDPOINTS:
+        m = model if "models.github.ai" in ep else model.split("/", 1)[-1]
+        r = requests.post(ep, timeout=90, json={"model": m, "messages": messages, "temperature": 0.3, "max_tokens": 1200},
+                          headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json",
+                                   "Accept": "application/json", "User-Agent": "agro-barometer/1.0"})
+        if r.status_code in (401, 403, 429):
+            raise urllib.error.HTTPError(ep, r.status_code, r.text[:200], {}, None)
+        try:
+            content = r.json()["choices"][0]["message"]["content"] or ""
+        except Exception:
+            last = f"{ep} → HTTP {r.status_code} {r.headers.get('content-type')} {r.text[:200]!r}"
+            print(f"    ↪ {last}")
+            continue
+        if "{" not in content:
+            raise ValueError(f"у відповіді моделі немає JSON: {content[:300]!r}")
+        return content
+    raise ValueError(f"API не дав JSON: {last}")
 
 
 def _parse(raw):
