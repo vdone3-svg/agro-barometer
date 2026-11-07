@@ -37,7 +37,7 @@ FREIGHT = {
 }
 FREIGHT_STATUS = "оцінка"   # "оцінка" | "підтверджено ДД.ММ.РРРР"
 REGION_MAP = {"ізмаїл":"Дунай","измаил":"Дунай","рені":"Дунай","рени":"Дунай","орлівк":"Дунай","кілія":"Дунай","бессараб":"Дунай",
-              "одес":"Одеська","черкас":"Черкаська","миколаїв":"Миколаївська","кіровоград":"Кіровоградська",
+              "одес":"Одеська","черкас":"Черкаська","миколаїв":"Миколаївська","кіровоград":"Кіровоградська","кропивниц":"Кіровоградська","олександрі":"Кіровоградська","знам.янк":"Кіровоградська",
               "вінниц":"Вінницька","хмельниц":"Хмельницька","полтав":"Полтавська","дніпро":"Дніпропетровська",
               "київськ":"Київська","житомир":"Житомирська","запоріз":"Запорізька","харків":"Харківська"}
 
@@ -86,10 +86,18 @@ def load_history() -> list:
     return []
 
 
+def _snap_date(s):
+    try:
+        return datetime.strptime(s.get("date", ""), "%d.%m.%Y").date()
+    except ValueError:
+        return None
+
+
 def save_history(snapshots: list) -> None:
     """Зберігає знімки у prices_history.json, видаляє старіші за HISTORY_KEEP_DAYS."""
-    cutoff = (datetime.now(KYIV) - timedelta(days=HISTORY_KEEP_DAYS)).strftime("%d.%m.%Y")
-    fresh = [s for s in snapshots if s.get("date", "") >= cutoff]
+    cutoff = (datetime.now(KYIV) - timedelta(days=HISTORY_KEEP_DAYS)).date()
+    fresh = [s for s in snapshots if (_d := _snap_date(s)) and _d >= cutoff]
+    fresh.sort(key=_snap_date)
     HISTORY_FILE.write_text(
         json.dumps({"snapshots": fresh}, ensure_ascii=False, indent=2),
         encoding="utf-8"
@@ -103,14 +111,10 @@ def compute_deltas(prices: dict, snapshots: list, today_str: str) -> dict:
     delta > 0 → ціна зросла, < 0 → впала, None → нема даних для порівняння.
     """
     def find_snap(days_ago: int) -> dict | None:
-        target = (datetime.now(KYIV) - timedelta(days=days_ago)).strftime("%d.%m.%Y")
-        # шукаємо найближчий знімок у вікні ±2 дні від цільової дати
-        candidates = []
-        for s in snapshots:
-            d = s.get("date", "")
-            if d < target:
-                candidates.append(s)
-        return candidates[-1] if candidates else None
+        # найсвіжіший знімок, якому щонайменше days_ago днів, але не старший за days_ago+3
+        today = datetime.now(KYIV).date()
+        cands = [s for s in snapshots if (d := _snap_date(s)) and days_ago <= (today - d).days <= days_ago + 3]
+        return max(cands, key=_snap_date) if cands else None
 
     snap7  = find_snap(7)
     snap30 = find_snap(30)
@@ -179,7 +183,7 @@ def enrich(records):
     out, seen = [], {}
     for r in records:
         r = dict(r)
-        region = normalize_region(r.get("region") or r.get("location"))
+        region = normalize_region(f'{r.get("location") or ""} {r.get("region") or ""}')
         r["region_norm"] = region
         fk, fd = FREIGHT["Копані"].get(region), FREIGHT["Долинське"].get(region)
         r["freight_kopani"], r["freight_dolynske"] = fk, fd

@@ -35,7 +35,10 @@ CROP_NEWS_KW = {
 GENERAL_NEWS_KW = r"порт|логіст|експорт|USDA|WASDE|дунай|ізмаїл|рені|залізниц|фрахт|коридор|біржа|CBOT|Euronext"
 
 SYSTEM = """Ти — досвідчений аналітик зернового ринку України, пишеш для фермера з Кіровоградщини (господарство біля Олександрії, точки відвантаження Долинське і Копані, найманий зерновоз 25 т).
-Пиши українською, простою людською мовою, як досвідчений сусід-агроном: коротко, конкретно, без канцеляриту і без загальних фраз.
+Пиши українською, простою людською мовою досвідченого агронома: коротко, конкретно, без канцеляриту і загальних фраз.
+СТИЛЬ: без привітань і звертань («привіт», «сусіде», «друже»), не згадуй дату і місто господарства. Кожен абзац — до 60 слів.
+Не перелічуй усі числа: 2–4 ключові на абзац. Net наводь для однієї точки (кращої), іншу — лише якщо різниця суттєва.
+Числа пиши з пробілами між тисячами: **18 990 ₴/т**, за рейс — округлено: **≈475 тис. ₴**. Якщо зміна ціни 0 або даних про зміну немає — не згадуй її.
 
 ЖОРСТКІ ПРАВИЛА:
 1. Використовуй ЛИШЕ числа з наданих даних. Не вигадуй цін, ставок, прогнозів, відсотків чи дат. Якщо потрібного числа немає — пиши словами («даних немає»).
@@ -130,8 +133,8 @@ def invented_numbers(summary, allowed):
 
 def _call(model, messages, token):
     import requests
-    r = requests.post(ENDPOINT, timeout=120, json={"model": model, "messages": messages, "temperature": 0.3,
-                                                   "max_tokens": 2000, "response_format": {"type": "json_object"}},
+    r = requests.post(ENDPOINT, timeout=75, json={"model": model, "messages": messages, "temperature": 0.3,
+                                                   "max_tokens": 2500, "reasoning_effort": "low", "response_format": {"type": "json_object"}},
                       headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
     if r.status_code >= 400:
         raise urllib.error.HTTPError(ENDPOINT, r.status_code, r.text[:300], {}, None)
@@ -187,7 +190,7 @@ def discover_models(token):
     full = sorted([i for i in flash if "lite" not in i], key=ver, reverse=True)
     lite = sorted([i for i in flash if "lite" in i], key=ver, reverse=True)
     print(f"  ℹ️ доступні Flash-моделі: {full[:4] + lite[:3]}")
-    return full[:2] + lite[:1]
+    return full[:1] + lite[:1] + full[1:2]  # найновіша Flash → Flash-Lite (стабільна) → попередня Flash
 
 
 def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None):
@@ -226,7 +229,8 @@ def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None
                     print(f"  ⚠️ {c} [{model}]: HTTP {e.code} {' '.join(str(e.msg).split())[:220]}")
                     break  # 401/403/429 — до наступної моделі
                 except Exception as e:
-                    print(f"  ⚠️ {c} [{model}]: {type(e).__name__}: {e}")
+                    print(f"  ⚠️ {c} [{model}]: {type(e).__name__}: {str(e)[:160]}")
+                    break  # таймаут/порожньо — одразу до наступної моделі
             if result:
                 break
             messages = messages[:2]
