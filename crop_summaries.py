@@ -1,8 +1,9 @@
 """
 AGRO BAROMETER — щоденні висновки по культурах («Резюме по-простому»).
 
-Генерує через GitHub Models (безкоштовно, вбудований GITHUB_TOKEN з правом models:read).
-Кожна культура — окремий запит (ліміт безкоштовного рівня ~8k токенів на вхід).
+Генерує через Google Gemini API, безкоштовний рівень (ключ з aistudio.google.com, без картки) —
+секрет GEMINI_API_KEY у GitHub. 6 запитів на день — далеко в межах безкоштовних лімітів.
+(GitHub Models, який планувався спочатку, GitHub закрив 30.07.2026.)
 
 Запобіжники:
   • модель отримує ЛИШЕ зібрані сьогодні цифри й заголовки новин;
@@ -11,8 +12,8 @@ AGRO BAROMETER — щоденні висновки по культурах («Р
 """
 import json, os, re, time, urllib.request, urllib.error
 
-ENDPOINT = os.environ.get("GH_MODELS_ENDPOINT", "https://models.github.ai/inference/chat/completions")
-MODELS = [m.strip() for m in os.environ.get("SUMMARY_MODELS", "openai/gpt-4.1,openai/gpt-4o,openai/gpt-4.1-mini").split(",") if m.strip()]
+ENDPOINT = os.environ.get("SUMMARY_ENDPOINT", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions")
+MODELS = [m.strip() for m in os.environ.get("SUMMARY_MODELS", "gemini-2.5-flash,gemini-2.5-flash-lite").split(",") if m.strip()]
 TRIP_T = 25
 PAUSE_S = float(os.environ.get("SUMMARY_PAUSE_S", "7"))  # безкоштовний рівень: ~10 запитів/хв
 
@@ -127,29 +128,20 @@ def invented_numbers(summary, allowed):
     return bad
 
 
-ENDPOINTS = [ENDPOINT, "https://models.inference.ai.azure.com/chat/completions"]  # другий — старий шлях (модель без префікса)
-
-
 def _call(model, messages, token):
     import requests
-    last = None
-    for ep in ENDPOINTS:
-        m = model if "models.github.ai" in ep else model.split("/", 1)[-1]
-        r = requests.post(ep, timeout=90, json={"model": m, "messages": messages, "temperature": 0.3, "max_tokens": 1200},
-                          headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json",
-                                   "Accept": "application/json", "User-Agent": "agro-barometer/1.0"})
-        if r.status_code in (401, 403, 429):
-            raise urllib.error.HTTPError(ep, r.status_code, r.text[:200], {}, None)
-        try:
-            content = r.json()["choices"][0]["message"]["content"] or ""
-        except Exception:
-            last = f"{ep} → HTTP {r.status_code} {r.headers.get('content-type')} {r.text[:200]!r}"
-            print(f"    ↪ {last}")
-            continue
-        if "{" not in content:
-            raise ValueError(f"у відповіді моделі немає JSON: {content[:300]!r}")
-        return content
-    raise ValueError(f"API не дав JSON: {last}")
+    r = requests.post(ENDPOINT, timeout=120, json={"model": model, "messages": messages, "temperature": 0.3,
+                                                   "max_tokens": 2000, "response_format": {"type": "json_object"}},
+                      headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    if r.status_code >= 400:
+        raise urllib.error.HTTPError(ENDPOINT, r.status_code, r.text[:300], {}, None)
+    try:
+        content = r.json()["choices"][0]["message"]["content"] or ""
+    except Exception:
+        raise ValueError(f"API не дав JSON: HTTP {r.status_code} {r.text[:200]!r}")
+    if "{" not in content:
+        raise ValueError(f"у відповіді моделі немає JSON: {content[:300]!r}")
+    return content
 
 
 def _parse(raw):
@@ -175,14 +167,15 @@ def fallback(culture, d):
         p = [f"Найвища опублікована закупівельна ціна — **{round(b['price_uah']):,} ₴/т** ({b.get('location') or 'пункт не вказано'}, {b.get('source')}). "
              f"Усього порівнюваних пропозицій: {d.get('eligible_count')}.".replace(",", " ")]
     p.append("Автоматичний висновок сьогодні не сформувався (модель недоступна або відповідь не пройшла перевірку цифр), тому порад продавати чи тримати тут немає. Дивіться таблицю цін нижче.")
-    return {"verdict": "none", "label": VERDICTS["none"][0], "paragraphs": p, "todo": "", "model": None, "auto": False}
+    label = VERDICTS["none"][0] if not d or not d.get("best_price") else "Висновок сьогодні не сформовано"
+    return {"verdict": "none", "label": label, "paragraphs": p, "todo": "", "model": None, "auto": False}
 
 
 def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None):
-    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_MODELS_TOKEN")
+    token = os.environ.get("GEMINI_API_KEY") or os.environ.get("SUMMARY_API_KEY")
     out = {}
     if not token or os.environ.get("SUMMARIES_DISABLED") == "1":
-        print("  ⚠️ висновки: немає GITHUB_TOKEN — фолбек без порад")
+        print("  ⚠️ висновки: немає GEMINI_API_KEY у secrets — показуємо лише факти, без порад")
         return {c: fallback(c, prices.get(c)) for c in cultures}
     for i, c in enumerate(cultures):
         ctx, allowed = build_context(c, prices.get(c), (deltas or {}).get(c), news_items, usd_uah, date_str)
@@ -206,7 +199,7 @@ def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None
                     result = s
                     break
                 except urllib.error.HTTPError as e:
-                    print(f"  ⚠️ {c} [{model}]: HTTP {e.code} {e.read()[:200]!r}")
+                    print(f"  ⚠️ {c} [{model}]: HTTP {e.code} {str(e.msg)[:200]}")
                     break  # 401/403/429 — до наступної моделі
                 except Exception as e:
                     print(f"  ⚠️ {c} [{model}]: {type(e).__name__}: {e}")

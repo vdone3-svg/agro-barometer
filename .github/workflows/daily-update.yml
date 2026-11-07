@@ -17,7 +17,6 @@ jobs:
     timeout-minutes: 25
     permissions:
       contents: write
-      models: read
 
     steps:
       - name: Checkout
@@ -80,10 +79,10 @@ jobs:
           COUNT=$(python3 -c "import json; d=json.load(open('news_data.json')); print(d.get('total',0))" 2>/dev/null || echo "?")
           echo "✅ News: $COUNT статей"
 
-      - name: Build HTML (+ висновки через GitHub Models, безкоштовно)
+      - name: Build HTML (+ висновки через Gemini, безкоштовний рівень)
         env:
           USD_UAH_RATE: ${{ secrets.USD_UAH_RATE }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python3 build_barometer.py
           SIZE=$(wc -c < index.html | xargs)
