@@ -278,7 +278,8 @@ INJECTION_JS = r"""
     .open-btn:hover{filter:brightness(1.1)}
     .open-btn.off{background:var(--surface2);color:var(--fg3)!important;font-weight:400}`;document.head.appendChild(st);}
   const link=(u,txt)=>{const s=safeUrl(u);return s?`<a href="${s}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline dotted">${txt}</a>`:txt;};
-  let farm='Долинське';
+  let farm='Долинське';const cropFarm={};
+  try{Object.assign(cropFarm,JSON.parse(localStorage.getItem('agroCropFarm')||'{}'));}catch(e){}
 
   // ── Шапка: дата збірки + курс ──
   const banner=document.getElementById('statusBanner');
@@ -288,8 +289,10 @@ INJECTION_JS = r"""
   function renderCrops(){
     const g=document.getElementById('cropsGrid');if(!g)return;
     g.innerHTML=D.cultures.map((c,idx)=>{
+      const farm=cropFarm[c]||'Долинське';
       const d=D.prices[c];const title=c.charAt(0).toUpperCase()+c.slice(1);
-      const head=`<div class="crop-header"><div class="crop-icon-name"><span class="crop-emoji">${d?d.emoji:'🌾'}</span><span class="crop-name">${esc(title)}</span></div></div>`;
+      const tg=`<div class="farm-toggle crop-farm">${['Долинське','Копані'].map(f=>`<button class="farm-btn${f===farm?' active':''}" data-crop="${esc(c)}" data-farm="${f}">${f}</button>`).join('')}</div>`;
+      const head=`<div class="crop-header"><div class="crop-icon-name"><span class="crop-emoji">${d?d.emoji:'🌾'}</span><span class="crop-name">${esc(title)}</span></div>${tg}</div>`;
       if(!d||!d.best_price){
         const why=d?`${d.records_count} знайдених записів, але жоден не пройшов перевірку порівнюваності`:'За 3 дні жодної закупівельної ціни не знайдено';
         return `<div class="crop-card">${head}<div class="crop-body" style="color:var(--fg3);font-size:12px;padding:6px 0">Немає порівнюваних даних.<br>${esc(why)}.</div></div>`;
@@ -298,7 +301,7 @@ INJECTION_JS = r"""
       const netRow=(f)=>{const r=d.best_net[f];
         if(!r)return `<div class="net-row"><span class="net-farm">📍 ${f}</span><span class="net-farm" style="color:var(--fg3)">фрахт до покупців невідомий</span></div>`;
         const fr=f==='Копані'?r.freight_kopani:r.freight_dolynske;const net=f==='Копані'?r.net_kopani:r.net_dolynske;
-        return `<div class="net-row"><span class="net-farm" style="${f===farm?'font-weight:700':''}">📍 ${f}</span><div><span class="net-val">${fmt(net)} ₴/т</span><span class="net-trip">${trip(net)}</span></div></div>
+        return `<div class="net-row"><span class="net-farm" style="font-weight:700">📍 ${f}</span><div><span class="net-val">${fmt(net)} ₴/т</span><span class="net-trip">${trip(net)}</span></div></div>
           <div style="font-size:10px;color:var(--fg3);text-align:right;margin-top:-2px">${link(r.url,esc(r.location)+(safeUrl(r.url)?' ↗':''))} (${esc(r.region_norm)}) ${fmt(r.price_uah)} − фрахт ${fmt(fr)}${D.freight_status==='оцінка'?' <span title="орієнтовна ставка, не оферта перевізника">(оцінка)</span>':''} · ${esc(r.source)}</div>`;};
       const nk=farm==='Копані'?'net_kopani':'net_dolynske';
       const place=r=>{const l=r.location&&r.location!=='невідомо'?r.location:'';const bu=r.buyer&&r.buyer!==l?r.buyer:'';return (bu&&l?bu+' · '+l:(bu||l||'пункт не вказано'));};
@@ -312,13 +315,22 @@ INJECTION_JS = r"""
         <div class="price-row"><span class="price-label">${esc(place(b).substring(0,40))}</span><span class="price-label" style="font-size:10px;color:var(--fg3)">${esc(b.source)} · ${esc(b.basis||'базис?')} ${ageFlag(b.ts)}</span></div>
         ${openBtn(b.url,'Відкрити найвищу пропозицію')}
         <div class="divider"></div>
-        <div class="net-block"><div class="net-label">Найкраща чиста виручка (рейс 25 т)</div>${netRow('Долинське')}<div class="net-divider"></div>${netRow('Копані')}</div>
+        <div class="net-block"><div class="net-label">Найкраща чиста виручка з ${farm==='Копані'?'Копанів':'Долинського'} (рейс 25 т)</div>${netRow(farm)}</div>
         <div style="margin-top:8px"><table class="tg-table crop-table" style="font-size:11px"><colgroup><col style="width:56%"><col style="width:22%"><col style="width:22%"></colgroup><thead><tr><th>Пункт / покупець</th><th style="text-align:right">Ціна ₴/т</th><th style="text-align:right">Net ${farm==='Копані'?'Коп.':'Дол.'}</th></tr></thead><tbody>${rows}</tbody></table></div>
         <div style="font-size:10px;color:var(--fg3);margin-top:6px;text-align:right">${d.eligible_count} порівнюваних із ${d.records_count} · ${fmt(d.price_min)}–${fmt(d.price_max)} ₴/т${d.excluded?` · відсіяно ${d.excluded}`:''}</div>
       </div></div>`;
     }).join('');
   }
   renderCrops();
+  document.addEventListener('click',e=>{const b=e.target.closest('.crop-farm .farm-btn');if(!b)return;
+    cropFarm[b.dataset.crop]=b.dataset.farm;try{localStorage.setItem('agroCropFarm',JSON.stringify(cropFarm));}catch(_){}
+    const y=b.getBoundingClientRect().top;renderCrops();
+    const nb=document.querySelector(`.crop-farm .farm-btn[data-crop="${CSS.escape(b.dataset.crop)}"][data-farm="${CSS.escape(b.dataset.farm)}"]`);
+    if(nb)window.scrollBy(0,nb.getBoundingClientRect().top-y);});
+  if(!document.getElementById('cropFarmCss')){const st=document.createElement('style');st.id='cropFarmCss';st.textContent=`
+    .crop-header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+    .crop-farm{display:inline-flex}.crop-farm .farm-btn{padding:7px 11px;font-size:12px;min-height:34px}
+    @media(max-width:480px){.sum-grid{grid-template-columns:1fr}.sum-card p{font-size:14px}.crops-grid{grid-template-columns:1fr!important}}`;document.head.appendChild(st);}
   // ── Висновки барометра по культурах (щоденні) ──
   (function(){
     const S=D.summaries;const grid=document.getElementById('cropsGrid');if(!S||!grid)return;
@@ -333,9 +345,9 @@ INJECTION_JS = r"""
     sec.innerHTML=`<div class="sec-head"><div class="sec-title">🧑‍🌾 Висновок барометра по культурах — на ${esc(D.generated_at_kyiv)}</div>
       <div class="sec-sub">${auto?'Пишеться щоранку автоматично з сьогоднішніх цін і новин; цифри звірені з даними барометра.':'Сьогодні автоматичний висновок не сформувався — показано лише факти.'} Ціни — опубліковані пропозиції, не угоди${D.freight_status==='оцінка'?'; фрахт — орієнтовна оцінка':''}. Це аналітична думка, остаточне рішення — за вами.</div></div>
       <div class="sum-grid">${cards}</div>`;
-    const host=grid.parentNode;host.parentNode.insertBefore(sec,host);
+    const main=document.querySelector('.main');if(main)main.insertBefore(sec,main.firstChild);else{const host=grid.parentNode;host.parentNode.insertBefore(sec,host);}
   })();
-  window.setFarm=function(f,btn){farm=f==='kopani'?'Копані':'Долинське';document.querySelectorAll('.farm-btn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');renderCrops();};
+
 
   // ── Telegram-оферти ──
   const tgBody=document.getElementById('tgBody'),tgFilters=document.getElementById('tgFilters'),tgInsights=document.getElementById('tgInsights');
