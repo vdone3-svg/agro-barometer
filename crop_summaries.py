@@ -133,7 +133,7 @@ def invented_numbers(summary, allowed):
 
 def _call(model, messages, token):
     import requests
-    r = requests.post(ENDPOINT, timeout=75, json={"model": model, "messages": messages, "temperature": 0.3,
+    r = requests.post(ENDPOINT, timeout=60, json={"model": model, "messages": messages, "temperature": 0.3,
                                                    "max_tokens": 2500, "reasoning_effort": "low", "response_format": {"type": "json_object"}},
                       headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
     if r.status_code >= 400:
@@ -198,8 +198,9 @@ def discover_models(token):
     full = sorted([i for i in flash if "lite" not in i], key=ver, reverse=True)
     lite = sorted([i for i in flash if "lite" in i], key=ver, reverse=True)
     print(f"  ℹ️ доступні Flash-моделі: {full[:4] + lite[:3]}")
-    # Flash-Lite першою: безкоштовна квота ~500 запитів/добу (у повної Flash — ~20, вичерпується)
-    return lite[:1] + full[:1] + lite[1:2]
+    # Повна Flash першою (якісніший текст; 6 запитів/день вкладаються в ~20 безкоштовних),
+    # при 429/503/таймауті — одразу Flash-Lite (~500/день)
+    return full[:1] + lite[:2]
 
 
 def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None):
