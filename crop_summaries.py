@@ -151,7 +151,15 @@ def _parse(raw):
     raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
     s = json.loads(raw[raw.find("{"): raw.rfind("}") + 1])
     v = s.get("verdict") if s.get("verdict") in VERDICTS else "none"
-    paras = [str(p).strip() for p in (s.get("paragraphs") or []) if str(p).strip()][:3]
+    raw_p = s.get("paragraphs") or []
+    if isinstance(raw_p, str):
+        raw_p = re.split(r"\n\s*\n|\n", raw_p)
+    paras = [str(p).strip() for p in raw_p if str(p).strip()][:3]
+    if len(paras) == 1:  # один довгий абзац → ділимо по реченнях навпіл
+        sents = re.split(r"(?<=[.!?])\s+", paras[0])
+        if len(sents) >= 3:
+            k = len(sents) // 2
+            paras = [" ".join(sents[:k]), " ".join(sents[k:])]
     if len(paras) < 2:
         raise ValueError("менше двох абзаців")
     todo = str(s.get("todo") or "").strip()
@@ -190,7 +198,8 @@ def discover_models(token):
     full = sorted([i for i in flash if "lite" not in i], key=ver, reverse=True)
     lite = sorted([i for i in flash if "lite" in i], key=ver, reverse=True)
     print(f"  ℹ️ доступні Flash-моделі: {full[:4] + lite[:3]}")
-    return full[:1] + lite[:1] + full[1:2]  # найновіша Flash → Flash-Lite (стабільна) → попередня Flash
+    # Flash-Lite першою: безкоштовна квота ~500 запитів/добу (у повної Flash — ~20, вичерпується)
+    return lite[:1] + full[:1] + lite[1:2]
 
 
 def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None):
