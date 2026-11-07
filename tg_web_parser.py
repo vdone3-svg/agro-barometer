@@ -35,9 +35,14 @@ CHANNELS = [
     ("agropolit_com",        "news"),    # AgroPolit.com — агрополітика та ринок
 ]
 
-# API credentials для Telethon
-TG_API_ID   = int(os.environ.get("TG_API_ID",   "") or "30430309")
-TG_API_HASH = os.environ.get("TG_API_HASH", "") or "4360b5aa9c5cf78aff7f3ba2d9c661fc"
+# API credentials для Telethon (з GitHub Secrets)
+_tg_api_id = os.environ.get("TG_API_ID", "")
+if not _tg_api_id:
+    raise SystemExit("❌ TG_API_ID не задано у GitHub Secrets")
+TG_API_ID   = int(_tg_api_id)
+TG_API_HASH = os.environ.get("TG_API_HASH", "")
+if not TG_API_HASH:
+    raise SystemExit("❌ TG_API_HASH не задано у GitHub Secrets")
 TG_SESSION  = os.environ.get("TG_SESSION",  "")
 
 # ─── МАПИ ─────────────────────────────────────────────────────────────────────

@@ -12,8 +12,12 @@ from telethon.sessions import StringSession
 
 # Ті самі секрети, що й tg_web_parser.py (TG_*); старі назви TELEGRAM_* — як запасні
 SESSION  = os.environ.get("TG_SESSION") or os.environ.get("TELEGRAM_SESSION") or ""
-API_ID   = int(os.environ.get("TG_API_ID") or os.environ.get("TELEGRAM_API_ID") or "30430309")
-API_HASH = os.environ.get("TG_API_HASH") or os.environ.get("TELEGRAM_API_HASH") or "4360b5aa9c5cf78aff7f3ba2d9c661fc"
+_api_id  = os.environ.get("TG_API_ID") or os.environ.get("TELEGRAM_API_ID") or ""
+_api_hash = os.environ.get("TG_API_HASH") or os.environ.get("TELEGRAM_API_HASH") or ""
+if not _api_id or not _api_hash:
+    raise SystemExit("❌ TG_API_ID або TG_API_HASH не задано у GitHub Secrets")
+API_ID   = int(_api_id)
+API_HASH = _api_hash
 
 LAND_CHANNELS = ["landinvestua", "dobrozem_offers", "kupipai"]
 
