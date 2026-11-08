@@ -29,34 +29,40 @@
       "date": "08.11.2026",
       "prices": {
         "ріпак": {
-          "uah": 20500.0,
-          "src": "e-zerno.com",
-          "med": 20168.0,
-          "n": 5
+          "uah": 21800.0,
+          "src": "agrotender.com.ua",
+          "med": 20234.0,
+          "n": 8
         },
         "соняшник": {
-          "uah": 16000.0,
-          "src": "e-zerno.com",
-          "med": 15000.0,
-          "n": 5
+          "uah": 17700.0,
+          "src": "agrotender.com.ua",
+          "med": 14200.0,
+          "n": 35
         },
         "соя": {
           "uah": 20500.0,
           "src": "e-zerno.com",
-          "med": 18600.0,
-          "n": 7
+          "med": 17700.0,
+          "n": 38
         },
         "кукурудза": {
-          "uah": 7200.0,
-          "src": "nibulon.com",
-          "med": 4350.0,
-          "n": 16
+          "uah": 7500.0,
+          "src": "agrotender.com.ua",
+          "med": 4500.0,
+          "n": 34
+        },
+        "ячмінь": {
+          "uah": 5400.0,
+          "src": "agrotender.com.ua",
+          "med": 4900.0,
+          "n": 14
         },
         "пшениця": {
-          "uah": 8000.0,
-          "src": "nibulon.com",
-          "med": 4650.0,
-          "n": 51
+          "uah": 8200.0,
+          "src": "agrotender.com.ua",
+          "med": 4750.0,
+          "n": 119
         }
       },
       "fuel": {
