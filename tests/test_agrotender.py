@@ -14,7 +14,14 @@ URL = "https://agrotender.com.ua/traders/region_ukraine/yachmen"
 
 
 def _recs(today=datetime(2026, 11, 8)):
-    return fw.parse_agrotender_table(HTML, "ячмінь", None, URL, today=today)
+    return [r for r in fw.parse_agrotender_table(HTML, "ячмінь", None, URL, today=today, usd_uah=45.0)
+            if r["currency"] == "UAH"]
+
+
+def test_usd_row_converted_not_read_as_uah():
+    usd = [r for r in fw.parse_agrotender_table(HTML, "ячмінь", None, URL, today=datetime(2026, 11, 8), usd_uah=45.0)
+           if r["currency"] == "USD"]
+    assert len(usd) == 1 and usd[0]["price_raw"] == 148 and usd[0]["price_uah"] == 6660
 
 
 def test_fresh_only_and_bn_skipped():

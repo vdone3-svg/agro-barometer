@@ -718,11 +718,12 @@ def parse_agrotender_table(html: str, culture: str, quality, url: str, today: da
         if re.search(r"(?i)\bбн\b|без\s*пдв", place):
             continue
         price, cur, raw = None, "UAH", None
-        uah = re.sub(r"[^\d]", "", tds[1].get("data-order") or tds[1].get_text())
+        # data-order у гривневій колонці містить суму в $, якщо ціна доларова — читаємо лише видимий текст
+        uah = re.sub(r"[^\d]", "", tds[1].get_text(" ", strip=True))
         if uah:
             price = raw = float(uah)
         else:
-            usd = re.sub(r"[^\d.]", "", tds[2].get("data-order") or tds[2].get_text())
+            usd = re.sub(r"[^\d.]", "", tds[2].get_text(" ", strip=True).replace(",", "."))
             if usd and usd_uah:
                 raw, cur = float(usd), "USD"
                 price = round(raw * usd_uah)
