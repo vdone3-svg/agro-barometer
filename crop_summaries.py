@@ -212,7 +212,9 @@ def _call_claude(model, messages, _token=None):
         f.write(system); sp = f.name
     cmd = ["claude", "-p", "--model", model, "--output-format", "json", "--system-prompt-file", sp,
            "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--setting-sources", ""]
-    r = subprocess.run(cmd, input=convo, capture_output=True, text=True, timeout=240, cwd=tempfile.gettempdir())
+    env = dict(os.environ)
+    env["CLAUDE_CODE_OAUTH_TOKEN"] = re.sub(r"\s+", "", env.get("CLAUDE_CODE_OAUTH_TOKEN", ""))  # токен, скопійований з Термінала, буває з переносом рядка
+    r = subprocess.run(cmd, input=convo, capture_output=True, text=True, timeout=240, cwd=tempfile.gettempdir(), env=env)
     try:
         out = json.loads(r.stdout)
     except Exception:
