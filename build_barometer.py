@@ -160,6 +160,8 @@ def classify(r):
     dt = parse_date(r.get("date"))
     if dt and (datetime.now(KYIV) - dt).days > MAX_OFFER_AGE_DAYS:
         return False, f"застаріла ({dt.strftime('%d.%m')})"
+    if r.get("ref_kind") == "national_avg":
+        return False, "середня по Україні — орієнтир, не оферта"
     c = r.get("culture")
     p = r.get("price_uah")
     if c not in SANITY or not isinstance(p, (int, float)):
@@ -207,8 +209,17 @@ def enrich(records):
 def _slim(r):
     keys = ("source","culture","quality","price_raw","price_uah","currency","basis","vat","location",
             "region_norm","date","ts","url","buyer","volume_t","net_kopani","net_dolynske",
-            "freight_kopani","freight_dolynske","eligible","excluded_reason")
+            "freight_kopani","freight_dolynske","eligible","excluded_reason","ref_kind")
     return {k: r.get(k) for k in keys}
+
+
+def reference_prices(recs):
+    """Середні по Україні (GrainTrade) — окремо від оферт; лише продукт культури, не «вис.ол.» тощо."""
+    refs = [r for r in recs if r.get("ref_kind") == "national_avg"
+            and SANITY[r["culture"]][0] <= r["price_uah"] <= SANITY[r["culture"]][1]
+            and not (r["culture"] == "соняшник" and re.search(r"високоолеїн|вис\.?\s*ол", str(r.get("quality") or ""), re.I))]
+    refs.sort(key=lambda x: -x["price_uah"])
+    return [_slim(r) for r in refs[:6]]
 
 
 def best_prices(records):
@@ -216,9 +227,10 @@ def best_prices(records):
     for c in CULTURES:
         recs = [r for r in records if r.get("culture") == c]
         elig = [r for r in recs if r["eligible"]]
+        refs = reference_prices(recs)
         if not elig:
             result[c] = {"emoji": CULTURE_EMOJI[c], "records_count": len(recs), "eligible_count": 0,
-                         "excluded": len(recs), "top": [], "best_price": None,
+                         "excluded": len(recs), "top": [], "best_price": None, "reference": refs,
                          "best_net": {"Копані": None, "Долинське": None}} if recs else None
             continue
         by_price = sorted(elig, key=lambda x: x["ts"], reverse=True)      # за рівної ціни — свіжіша
@@ -236,6 +248,7 @@ def best_prices(records):
             "records_count": len(recs), "eligible_count": len(elig), "excluded": len(recs) - len(elig),
             "sources": sorted({r.get("source","?") for r in elig}),
             "top": [_slim(r) for r in by_price[:6]],
+            "reference": refs,
         }
     return result
 
@@ -297,9 +310,13 @@ INJECTION_JS = r"""
       const d=D.prices[c];const title=c.charAt(0).toUpperCase()+c.slice(1);
       const tg=`<div class="farm-toggle crop-farm">${['Долинське','Копані'].map(f=>`<button class="farm-btn${f===farm?' active':''}" data-crop="${esc(c)}" data-farm="${f}">${f}</button>`).join('')}</div>`;
       const head=`<div class="crop-header"><div class="crop-icon-name"><span class="crop-emoji">${d?d.emoji:'🌾'}</span><span class="crop-name">${esc(title)}</span></div>${tg}</div>`;
+      const refBlock=(d&&d.reference&&d.reference.length)?`<div class="crop-ref" style="margin-top:8px;padding:6px 8px;border:1px dashed var(--fg3);border-radius:6px;font-size:11px">
+          <div style="color:var(--fg3);margin-bottom:3px" title="Середні закупівельні ціни по Україні за базисом. Не пропозиція конкретного покупця; пункт і фрахт невідомі — net не рахується.">Орієнтир: середні по Україні (GrainTrade, ${esc((d.reference[0].date||'').substring(0,5))}) — не оферта, net не рахується</div>
+          ${d.reference.map(r=>`<div style="display:flex;justify-content:space-between;gap:8px"><span>${link(r.url,esc(r.basis||'')+(r.quality?' · '+esc(String(r.quality).substring(0,22)):''))}</span><span class="num">${fmt(r.price_uah)} ₴/т</span></div>`).join('')}
+        </div>`:'';
       if(!d||!d.best_price){
-        const why=d?`${d.records_count} знайдених записів, але жоден не пройшов перевірку порівнюваності`:'За 3 дні жодної закупівельної ціни не знайдено';
-        return `<div class="crop-card">${head}<div class="crop-body" style="color:var(--fg3);font-size:12px;padding:6px 0">Немає порівнюваних даних.<br>${esc(why)}.</div></div>`;
+        const why=d?(d.reference&&d.reference.length&&d.reference.length===d.records_count?'Є лише середні ціни по Україні, пропозицій конкретних покупців немає':`${d.records_count} знайдених записів, але жоден не пройшов перевірку порівнюваності`):'За 3 дні жодної закупівельної ціни не знайдено';
+        return `<div class="crop-card">${head}<div class="crop-body" style="color:var(--fg3);font-size:12px;padding:6px 0">Немає порівнюваних пропозицій покупців.<br>${esc(why)}.</div>${refBlock}</div>`;
       }
       const b=d.best_price;
       const netRow=(f)=>{const r=d.best_net[f];
@@ -322,6 +339,7 @@ INJECTION_JS = r"""
         <div class="net-block"><div class="net-label">Найкраща чиста виручка з ${farm==='Копані'?'Копанів':'Долинського'} (рейс 25 т)</div>${netRow(farm)}</div>
         <div style="margin-top:8px"><table class="tg-table crop-table" style="font-size:11px"><colgroup><col style="width:56%"><col style="width:22%"><col style="width:22%"></colgroup><thead><tr><th>Пункт / покупець</th><th style="text-align:right">Ціна ₴/т</th><th style="text-align:right">Net ${farm==='Копані'?'Коп.':'Дол.'}</th></tr></thead><tbody>${rows}</tbody></table></div>
         <div style="font-size:10px;color:var(--fg3);margin-top:6px;text-align:right">${d.eligible_count} порівнюваних із ${d.records_count} · ${fmt(d.price_min)}–${fmt(d.price_max)} ₴/т${d.excluded?` · відсіяно ${d.excluded}`:''}</div>
+        ${refBlock}
       </div></div>`;
     }).join('');
   }

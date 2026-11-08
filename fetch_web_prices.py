@@ -475,136 +475,193 @@ async def _parse_ezerno(pw, target_cultures=None) -> list:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# GRAINTRADE.COM.UA — щоденна таблиця EXW/CPT (ячмінь + інші культури)
+# GRAINTRADE.COM.UA — щоденна стаття «Закупівельні ціни на зерно в Україні на …»
+# Таблиця-матриця: рядок = продукт, стовпці = базиси (CPT термінал, EXW елеватори,
+# CPT переробник, FCA — у грн; FCA/CPT/DAF/CIF — у $). Значення — СЕРЕДНІ по Україні,
+# без пункту приймання → це орієнтир (ref_kind="national_avg"), а не оферта: net не рахуємо.
+# Виправлено 08.11.2026: (1) URL статті тепер «na-6-listopada» (день без нуля, інша
+# транслітерація) — беремо посилання зі стрічки новин; (2) раніше парсер читав
+# «стовпець 1 = базис, стовпець 2 = ціна» → ячмінь (лише CPT термінал) не потрапляв.
 # ─────────────────────────────────────────────────────────────────────────────
 
-UA_MONTHS_GEN = {
-    1: 'sichnya', 2: 'lyutoho', 3: 'bereznya', 4: 'kvitnya',
-    5: 'travnya', 6: 'chervnya', 7: 'lypnya', 8: 'serpnya',
-    9: 'veresnya', 10: 'zhovtnya', 11: 'lystopada', 12: 'hrudnya',
+GT_BASE = "https://graintrade.com.ua"
+GT_NEWS_URL = GT_BASE + "/novosti"
+GT_ARTICLE_RE = re.compile(
+    r'href="((?:https://graintrade\.com\.ua)?/novosti/zakupivelni-tcini-na-zerno-v-ukraini-na-(\d{1,2})-([a-z]+)-(\d{4})-roku\.html)"')
+GT_MONTHS = {  # транслітерація graintrade (перевірено: listopada)
+    'sichnya': 1, 'lyutogo': 2, 'lutogo': 2, 'bereznya': 3, 'kvitnya': 4, 'travnya': 5,
+    'chervnya': 6, 'lipnya': 7, 'serpnya': 8, 'veresnya': 9, 'zhovtnya': 10,
+    'listopada': 11, 'grudnya': 12,
 }
-GT_CULTURE_MAP = {
-    'ячмінь': 'ячмінь', 'ячміню': 'ячмінь',
-    'пшениц': 'пшениця',
-    'кукурудз': 'кукурудза',
-    'соняшник': 'соняшник',
-    'соя': 'соя',
-    'ріпак': 'ріпак', 'рапс': 'ріпак',
-}
-GT_BASIS_MAP = {
-    'cpt термінал': 'CPT', 'cpt переробник': 'CPT переробник',
-    'exw елевато': 'EXW', 'exw': 'EXW',
-    'fca': 'FCA', 'daf': 'DAF', 'cif': 'CIF',
-}
+GT_MONTHS_INV = {v: k for k, v in GT_MONTHS.items() if k != 'lutogo'}
+# Порядок важливий: перший збіг виграє
+GT_CULTURES = [('ячмін', 'ячмінь'), ('пшениц', 'пшениця'), ('кукурудз', 'кукурудза'),
+               ('соняшник', 'соняшник'), ('соя', 'соя'), ('ріпак', 'ріпак')]
+GT_NON_CROP = re.compile(r'олі[яї]|шрот|макух|жмих|висівк|лушпин', re.I)
+GT_BASIS = [('cpt термінал', 'CPT термінал'), ('exw елеватор', 'EXW елеватор'),
+            ('cpt переробник', 'CPT переробник'), ('fca', 'FCA')]
+GT_LOCATION = "Середня по Україні (GrainTrade)"
 
 
-def _parse_graintrade() -> list:
-    """Парсить щоденну статтю graintrade.com.ua — EXW/CPT по 6 культурах.
-    Fallback: пробує сьогодні і вчора (стаття виходить ~8:30, pipeline — 07:00).
-    """
+def _gt_fetch(url: str):
+    """urllib → (html, final_url) або (None, None)."""
+    try:
+        with urlopen(Request(url, headers=HEADERS), timeout=25) as resp:
+            if resp.getcode() != 200:
+                print(f"  [graintrade] HTTP {resp.getcode()} {url}")
+                return None, None
+            return resp.read().decode('utf-8', errors='replace'), resp.geturl()
+    except Exception as e:
+        print(f"  [graintrade] urllib: {e} ({url})")
+        return None, None
+
+
+def _gt_article_links(listing_html: str) -> list:
+    """[(url, date), …] статей із цінами, найновіші першими."""
+    out, seen = [], set()
+    for m in GT_ARTICLE_RE.finditer(listing_html or ''):
+        href, day, mon, year = m.groups()
+        mo = GT_MONTHS.get(mon)
+        if not mo:
+            continue
+        try:
+            d = datetime(int(year), mo, int(day))
+        except ValueError:
+            continue
+        url = href if href.startswith('http') else GT_BASE + href
+        if url not in seen:
+            seen.add(url)
+            out.append((url, d))
+    return sorted(out, key=lambda x: x[1], reverse=True)
+
+
+def _gt_guess_urls(today: datetime, days: int = 5) -> list:
     from datetime import timedelta
+    res = []
+    for delta in range(days):
+        d = today - timedelta(days=delta)
+        res.append((f"{GT_BASE}/novosti/zakupivelni-tcini-na-zerno-v-ukraini-na-"
+                    f"{d.day}-{GT_MONTHS_INV[d.month]}-{d.year}-roku.html",
+                    datetime(d.year, d.month, d.day)))
+    return res
+
+
+def _gt_cell_price(text: str):
+    """«8353 ↓ 149» → 8353.0; порожньо/«&nbsp;» → None. Береться лише перше число (до стрілки)."""
+    t = (text or '').replace('\u00a0', ' ').strip()
+    t = re.split(r'[↑↓]', t)[0]
+    m = re.search(r'\d[\d\s]*', t)
+    if not m:
+        return None
+    try:
+        return float(re.sub(r'\s', '', m.group(0)))
+    except ValueError:
+        return None
+
+
+def parse_graintrade_table(html: str, date_str: str, url: str) -> list:
+    """Розбирає таблицю цін зі статті. Чиста функція — тестується на збереженому HTML."""
     try:
         from bs4 import BeautifulSoup
     except ImportError:
         print("  [graintrade] bs4 не встановлено")
         return []
-
-    today = datetime.now()
-    records = []
-
-    for delta in (0, 1):
-        d = today - timedelta(days=delta)
-        month_gen = UA_MONTHS_GEN.get(d.month, 'nevid')
-        url = (
-            f"https://graintrade.com.ua/novosti/"
-            f"zakupivelni-tcini-na-zerno-v-ukraini-"
-            f"na-{d.day:02d}-{month_gen}-{d.year}-roku.html"
-        )
-        now_str = d.strftime("%d.%m.%Y")
-        try:
-            req = Request(url, headers=HEADERS)
-            with urlopen(req, timeout=20) as resp:
-                if resp.getcode() != 200:
-                    continue
-                html = resp.read().decode('utf-8', errors='replace')
-        except Exception as e:
-            print(f"  [graintrade] Не вдалося завантажити ({d.strftime('%d.%m')}): {e}")
+    soup = BeautifulSoup(html or '', 'html.parser')
+    table = soup.find('table', class_='news-table-price')
+    if table is None:   # запасний варіант: перша таблиця з «термінал» у шапці
+        table = next((t for t in soup.find_all('table') if 'термінал' in t.get_text(' ').lower()), None)
+    if table is None:
+        return []
+    rows = table.find_all('tr')
+    if not rows:
+        return []
+    header = [c.get_text(' ', strip=True).lower() for c in rows[0].find_all(['th', 'td'])]
+    cols = {}   # індекс стовпця → базис (лише гривневі)
+    for i, h in enumerate(header):
+        if 'грн' not in h:
             continue
+        hn = re.sub(r'\s+', ' ', h)
+        for key, name in GT_BASIS:
+            if key in hn:
+                cols[i] = name
+                break
+    records = []
+    for row in rows[1:]:
+        cells = row.find_all(['td', 'th'])
+        if not cells:
+            continue
+        name = cells[0].get_text(' ', strip=True)
+        nl = name.lower()
+        if GT_NON_CROP.search(nl):
+            continue
+        culture = next((c for k, c in GT_CULTURES if nl.startswith(k) or f' {k}' in f' {nl}'), None)
+        if not culture:
+            continue
+        quality = re.sub(r'(?i)^(ячмінь|пшениця|кукурудза|соняшник|соя|ріпак)\s*', '', name).strip() or None
+        for i, basis in cols.items():
+            if i >= len(cells):
+                continue
+            price = _gt_cell_price(cells[i].get_text(' ', strip=True))
+            if price is None or not (3000 <= price <= 60000):
+                continue
+            rec = _make_record("graintrade.com.ua", culture, quality, price, "Україна",
+                               f"{GT_LOCATION} · {basis}", date_str, basis, url=url)
+            rec["net_kopani"] = None
+            rec["net_dolynske"] = None
+            rec["ref_kind"] = "national_avg"
+            rec["vat"] = "невідомо"
+            records.append(rec)
+    return records
 
-        soup = BeautifulSoup(html, 'html.parser')
 
-        for table in soup.find_all('table'):
-            rows = table.find_all('tr')
-            for row in rows:
-                cells = row.find_all(['td', 'th'])
-                if len(cells) < 3:
-                    continue
-                c0 = cells[0].get_text(' ', strip=True).lower()
-                c1 = cells[1].get_text(' ', strip=True).lower() if len(cells) > 1 else ''
-                c2 = cells[2].get_text(' ', strip=True) if len(cells) > 2 else ''
+async def _gt_fetch_playwright(pw, url: str):
+    """Запасний шлях, якщо urllib заблоковано (403 з IP GitHub)."""
+    browser, context = await _new_playwright_context(pw)
+    try:
+        page = await context.new_page()
+        await page.goto(url, timeout=45_000, wait_until="domcontentloaded")
+        await page.wait_for_timeout(1500)
+        return await page.content(), page.url
+    except Exception as e:
+        print(f"  [graintrade] playwright: {e} ({url})")
+        return None, None
+    finally:
+        await browser.close()
 
-                # Визначаємо культуру
-                culture = None
-                for key, cname in GT_CULTURE_MAP.items():
-                    if key in c0:
-                        culture = cname
-                        break
-                if not culture:
-                    continue
 
-                # Якість пшениці
-                quality = None
-                if '2 кл' in c0 or '2кл' in c0: quality = '2 кл'
-                elif '3 кл' in c0 or '3кл' in c0: quality = '3 кл'
-                elif '4 кл' in c0 or '4кл' in c0: quality = '4 кл'
-                elif '1 кл' in c0 or '1кл' in c0: quality = '1 кл'
-                elif 'вис' in c0 and 'ол' in c0: quality = 'вис.ол.'
-                elif 'без гмо' in c0 or 'б/гмо' in c0: quality = 'не-ГМО'
+async def _parse_graintrade(pw=None) -> list:
+    """Знаходить найсвіжішу статтю з цінами (до 5 днів — вихідні без статей) і розбирає таблицю."""
+    async def fetch(url):
+        html, final = _gt_fetch(url)
+        if html is None and pw is not None:
+            html, final = await _gt_fetch_playwright(pw, url)
+        return html, final
 
-                # Базис
-                basis = 'невідомо'
-                for key, bname in GT_BASIS_MAP.items():
-                    if key in c1:
-                        basis = bname
-                        break
-
-                # Ціна (прибираємо всі нецифри)
-                price_str = re.sub(r'[^\d]', '', c2)
-                if not price_str:
-                    continue
-                try:
-                    price = float(price_str)
-                except ValueError:
-                    continue
-                if not (3000 <= price <= 60000):
-                    continue
-
-                rec = _make_record(
-                    "graintrade.com.ua", culture, quality, price,
-                    "Україна", f"graintrade/{basis}", now_str, basis,
-                    url=url
-                )
-                # Національна середня — фрахт не рахуємо (немає регіону)
-                rec["net_kopani"]   = None
-                rec["net_dolynske"] = None
-                records.append(rec)
-
-        if records:
-            print(f"  [graintrade] {d.strftime('%d.%m')}: {len(records)} записів | URL: {url}")
-            break  # знайшли — далі не шукаємо
-
-    if not records:
-        print(f"  [graintrade] ⚠️  0 записів (сьогодні + вчора не знайдено)")
-
-    # Дедуплікація
-    seen, unique = set(), []
-    for r in records:
-        key = (r['culture'], r.get('quality'), r['price_uah'])
-        if key not in seen:
-            seen.add(key)
-            unique.append(r)
-
-    return unique
+    listing, _ = await fetch(GT_NEWS_URL)
+    candidates = _gt_article_links(listing)
+    if not candidates:
+        print("  [graintrade] у стрічці новин статей з цінами не знайдено — пробую сконструйовані URL")
+        candidates = _gt_guess_urls(datetime.now())
+    cutoff = datetime.now() - __import__('datetime').timedelta(days=6)
+    for url, d in candidates[:4]:
+        if d < cutoff:
+            break
+        html, final = await fetch(url)
+        if not html:
+            continue
+        if final and final.rstrip('/').endswith('/novosti'):
+            print(f"  [graintrade] {url} → редирект на стрічку (статті немає)")
+            continue
+        recs = parse_graintrade_table(html, d.strftime("%d.%m.%Y"), url)
+        if recs:
+            by_c = {}
+            for r in recs:
+                by_c[r['culture']] = by_c.get(r['culture'], 0) + 1
+            print(f"  [graintrade] {d.strftime('%d.%m')}: {len(recs)} записів {by_c} | {url}")
+            return recs
+        print(f"  [graintrade] {url}: таблицю не розпізнано")
+    print("  [graintrade] ⚠️  0 записів")
+    return []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -641,11 +698,12 @@ async def _run_all() -> list:
         print(f"  Знайдено: {len(recs)} записів e-zerno.com")
         all_records.extend(recs)
 
-    # 4. Graintrade.com.ua — ячмінь + інші культури (EXW/CPT, urllib — не потребує Playwright)
-    print("Завантажую graintrade.com.ua (ячмінь + зведена таблиця) ...")
-    recs = _parse_graintrade()
-    print(f"  Знайдено: {len(recs)} записів graintrade.com.ua")
-    all_records.extend(recs)
+        # 4. Graintrade.com.ua — середні по Україні (орієнтир; єдине стабільне джерело ячменю)
+        print("Завантажую graintrade.com.ua (середні ціни по базисах, вкл. ячмінь) ...")
+        recs = await _parse_graintrade(pw)
+        print(f"  Знайдено: {len(recs)} записів graintrade.com.ua")
+        all_records.extend(recs)
+
 
     return all_records
 
