@@ -681,6 +681,7 @@ AT_SLUGS = [   # slug → (культура, якість)
     ("raps", "ріпак", None),
 ]
 AT_MAX_AGE_DAYS = 2
+AT_FOREIGN = re.compile(r"(?i)варн|констанц|галац|браїл|бреїл|болгар|румун|молдов|польщ|туреч|єгипт|\bfob\b|\bcif\b")
 
 
 def parse_agrotender_table(html: str, culture: str, quality, url: str, today: datetime | None = None,
@@ -729,11 +730,15 @@ def parse_agrotender_table(html: str, culture: str, quality, url: str, today: da
                 price = round(raw * usd_uah)
         if not price:
             continue
+        if AT_FOREIGN.search(f"{loc} {place}"):
+            continue        # 08.11: «Варна» 535 $ стала «найкращою ціною» соняшнику — не українська пропозиція
         pickup = bool(re.search(r"(?i)самови", place))
         port = bool(re.search(r"(?i)\bмп\b|порт", loc))
         region = loc.replace(" обл.", "").strip() if "обл" in loc else ("Одеська" if port else "невідомо")
         location = place if place and not re.fullmatch(r"(?i)самови\w*(,\s*сушка)?", place) else loc
         basis = "EXW самовивіз" if pickup else ("CPT порт" if port else "CPT пункт покупця")
+        if cur == "USD" and region == "невідомо":
+            continue
         rec = _make_record("agrotender.com.ua", culture, quality, price, region,
                            f"{location} · {company}"[:60], d.strftime("%d.%m.%Y"), basis, url=url)
         rec.update({"buyer": company, "currency": cur, "price_raw": raw, "pickup": pickup,

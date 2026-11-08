@@ -44,3 +44,8 @@ def test_build_regions_and_pickup_freight():
     assert by[5100]["net_dolynske"] == 5100 and by[5100]["net_kopani"] == 5100   # самовивіз у нашій області
     assert all(r["eligible"] for r in recs)
     assert bb.best_prices(recs)["ячмінь"]["best_price"]["price_uah"] == 6900
+
+
+def test_foreign_port_skipped():
+    allr = fw.parse_agrotender_table(HTML, "ячмінь", None, URL, today=datetime(2026, 11, 8), usd_uah=45.0)
+    assert not any("Варна" in r["location"] or r.get("buyer") == "GLOBAL GRAIN" for r in allr)
