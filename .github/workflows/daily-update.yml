@@ -2,9 +2,16 @@ name: 🌾 AGRO BAROMETER — Daily Update
 
 on:
   schedule:
-    # 07:00 Kyiv зима (UTC+2) = 05:00 UTC
-    # Влітку змінити на '0 4 * * *'
-    - cron: '0 5 * * *'
+    # GitHub запускає cron «за можливості»: на :00 запуски запізнюються на години або губляться
+    # (05–06.11 — +7,8 год, 08.11 — не відбувся). Тому кілька спроб на «тихих» хвилинах;
+    # перша, що спрацює, будує барометр, решта пропускаються (job guard). Час Київ, зима UTC+2.
+    - cron: '13 4 * * *'   # 06:13
+    - cron: '41 4 * * *'   # 06:41
+    - cron: '17 5 * * *'   # 07:17
+    - cron: '47 5 * * *'   # 07:47
+    - cron: '23 7 * * *'   # 09:23
+    - cron: '53 9 * * *'   # 11:53
+    - cron: '29 12 * * *'  # 14:29 — останній шанс
   workflow_dispatch:
 
 concurrency:
@@ -12,7 +19,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      run: ${{ steps.chk.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          sparse-checkout: prices_history.json
+      - id: chk
+        run: |
+          TODAY=$(TZ=Europe/Kyiv date +%d.%m.%Y)
+          if [ "${{ github.event_name }}" != "schedule" ]; then echo "run=true" >> $GITHUB_OUTPUT; exit 0; fi
+          if grep -q "\"date\": *\"$TODAY\"" prices_history.json 2>/dev/null; then
+            echo "⏭ барометр за $TODAY уже зібрано — пропускаю"; echo "run=false" >> $GITHUB_OUTPUT
+          else
+            echo "▶ за $TODAY ще не зібрано — запускаю"; echo "run=true" >> $GITHUB_OUTPUT
+          fi
+
   update:
+    needs: guard
+    if: needs.guard.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
