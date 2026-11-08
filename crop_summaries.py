@@ -86,7 +86,7 @@ LOCAL_BUYERS = {  # зі слів власника (29.10.2026) + база дж�
 FREIGHT_LOCAL = {"Долинське": 300, "Копані": 115}  # до Кропивницького, ₴/т — оцінка (FREIGHT у build_barometer)
 
 
-def build_context(culture, d, delta, news_items, usd_uah, date_str):
+def build_context(culture, d, delta, news_items, usd_uah, date_str, now=None):
     """Компактний контекст однієї культури + множина дозволених чисел."""
     ctx = {"культура": culture, "дата": date_str, "курс_usd_uah": usd_uah}
     allowed = set()
@@ -154,9 +154,26 @@ def build_context(culture, d, delta, news_items, usd_uah, date_str):
         for r in refs:
             keep(r["price_uah"])
     if delta:
-        ctx["зміна_найвищої_ціни_₴/т"] = {"за_тиждень": delta.get("delta_7"), "за_місяць": delta.get("delta_30"),
+        ctx["зміна_найвищої_ціни_₴/т"] = {"за_день": delta.get("delta_1"), "за_тиждень": delta.get("delta_7"),
+                                          "за_місяць": delta.get("delta_30"),
                                           "примітка": "порівнюється найвища пропозиція дня, а не одного покупця — шумний показник"}
-        keep(delta.get("delta_7"), delta.get("delta_30"))
+        ctx["зміна_медіани_пропозицій_₴/т"] = {"за_день": delta.get("med_delta_1"), "за_тиждень": delta.get("med_delta_7"),
+                                              "за_місяць": delta.get("med_delta_30")}
+        keep(delta.get("delta_1"), delta.get("delta_7"), delta.get("delta_30"),
+             delta.get("med_delta_1"), delta.get("med_delta_7"), delta.get("med_delta_30"))
+    if now:
+        if now.get("score") is not None:
+            ctx["барометр_зараз_0_100"] = {
+                "бал": now["score"], "сигналів": f"{now['n_signals']} з {now.get('of', 3)}",
+                "увага": "Розраховано з даних (не прогноз): вище = вигідніше продавати зараз. Назви бал у тексті.",
+                "сигнали": {k: v.get("note") for k, v in now["signals"].items()}}
+            keep(now["score"])
+            for v in now["signals"].values():
+                for k in ("best", "ref", "lo", "hi", "value_pct", "score"):
+                    if isinstance(v.get(k), (int, float)):
+                        keep(v[k])
+        else:
+            ctx["барометр_зараз_0_100"] = "не розраховано: " + str(now.get("why_none"))
 
     lb = next((v for k, v in LOCAL_BUYERS.items() if culture.startswith(k[:5])), None)
     if lb:
@@ -309,7 +326,7 @@ def discover_models(token):
     return full[:1] + older[:1] + lite[:1]  # найновіша Flash → стабільніша 3.5 Flash → Flash-Lite
 
 
-def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None):
+def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None, now=None):
     token = os.environ.get("GEMINI_API_KEY") or os.environ.get("SUMMARY_API_KEY")
     have_claude = bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"))
     out = {}
@@ -329,7 +346,8 @@ def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None
     for i, c in enumerate(cultures):
         if time.time() - t0 > BUDGET:  # не даємо висновкам «з'їсти» таймаут job → фолбек, деплой не страждає
             print(f"  ⏱ бюджет часу вичерпано — {c}: фолбек"); out[c] = fallback(c, prices.get(c)); continue
-        ctx, allowed = build_context(c, prices.get(c), (deltas or {}).get(c), news_items, usd_uah, date_str)
+        ctx, allowed = build_context(c, prices.get(c), (deltas or {}).get(c), news_items, usd_uah, date_str,
+                                     (now or {}).get(c))
         user = "Дані на сьогодні (JSON):\n" + json.dumps(ctx, ensure_ascii=False)
         messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
         result = None

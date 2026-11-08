@@ -32,7 +32,10 @@ CHANNELS = [
     ("YaKurkul",             "news"),    # Я-Куркуль — великий агропортал новин
     ("agroportalua",         "news"),    # AgroPortal.ua — доповнення до RSS-парсера
     ("elevatorist",          "news"),    # Elevatorist.com — зернова логістика і ринок
-    ("agropolit_com",        "news"),    # AgroPolit.com — агрополітика та ринок
+    # agropolit_com прибрано 08.11.2026: Telegram відповідає «No user has "agropolit_com"»
+    # з бази власника (29.10.2026): веб-версії немає → читаються лише через Telethon, якщо акаунт є учасником
+    ("zakaz_agro",           "prices"),
+    ("Region_Grain",         "prices"),  # Region Grain Company / Кублич Грейн — група; ціни часто картинками
 ]
 
 # API credentials для Telethon (з GitHub Secrets)
@@ -73,6 +76,7 @@ LOCATION_REGION = {
 
 UAH_RE = re.compile(r"(\d[\d\s']{2,6}\d)\s*грн", re.IGNORECASE)
 USD_RE = re.compile(r"(\d{2,4})\s*\$", re.IGNORECASE)
+MULTI_CLASS_RE = re.compile(r"(?<![\d/])([1-6](?:/[1-6])+)\s*[-–—.]?\s*(\d{4,5}(?:/\d{4,5})+)\s*грн", re.IGNORECASE)
 EUR_RE = re.compile(r"(\d{2,4})\s*(?:євро|eur|€)", re.IGNORECASE)
 
 
@@ -291,7 +295,26 @@ def parse_navigate_agro(text, date_str):
         if re.search(r'\bбн\b', clean_lower):
             continue
 
-        clean_line = re.sub(r"^[-–—\s]+", "", clean)
+        clean_line = re.sub(r"^[\W_]+", "", clean)   # «-», «🚢» тощо перед назвою пункту (08.11: «🚢РЕНІ» → невідомо)
+
+        # Кілька класів в одному рядку: «ВІННИЦЯ.2/3- 6000/5300грн» → 2 кл 6000, 3 кл 5300
+        mc = MULTI_CLASS_RE.search(clean_line)
+        if mc:
+            classes = mc.group(1).split("/")
+            vals = [float(v) for v in mc.group(2).split("/")]
+            loc_m = re.match(r"^([А-ЯІЇЄа-яіїєA-Za-z\s/'’]+)", clean_line)
+            loc = (loc_m.group(1).strip().rstrip("-.").strip() if loc_m else "") or "невідомо"
+            if len(classes) == len(vals) and loc != "невідомо":
+                for q, v in zip(classes, vals):
+                    if 3000 <= v <= 60000:
+                        records.append({
+                            "source": "@navigate_agro", "culture": current_culture, "quality": f"{q} кл",
+                            "price_raw": v, "price_uah": v, "currency": "UAH",
+                            "basis": _find_basis(clean_line), "location": loc[:40],
+                            "region": _guess_region(loc), "date": date_str,
+                            "net_kopani": None, "net_dolynske": None,
+                        })
+                continue
 
         # Ціни
         uah_prices, usd_prices, eur_prices = [], [], []
@@ -678,7 +701,7 @@ def _add_net(records):
 # ─── MAIN ─────────────────────────────────────────────────────────────────────
 
 async def _run_all():
-    cutoff = datetime.now(timezone.utc) - timedelta(days=3)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=2)   # власник: не старше 1–2 днів
 
     # ── Режим 1: Telethon ──────────────────────────────────────────────────────
     if TG_SESSION:
