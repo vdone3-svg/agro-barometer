@@ -30,25 +30,42 @@
       "prices": {
         "ріпак": {
           "uah": 20500.0,
-          "src": "e-zerno.com"
+          "src": "e-zerno.com",
+          "med": 20168.0,
+          "n": 5
         },
         "соняшник": {
           "uah": 16000.0,
-          "src": "e-zerno.com"
+          "src": "e-zerno.com",
+          "med": 15000.0,
+          "n": 5
         },
         "соя": {
           "uah": 20500.0,
-          "src": "e-zerno.com"
+          "src": "e-zerno.com",
+          "med": 18600.0,
+          "n": 7
         },
         "кукурудза": {
           "uah": 7200.0,
-          "src": "nibulon.com"
+          "src": "nibulon.com",
+          "med": 4350.0,
+          "n": 16
         },
         "пшениця": {
           "uah": 8000.0,
-          "src": "nibulon.com"
+          "src": "nibulon.com",
+          "med": 4650.0,
+          "n": 51
         }
-      }
+      },
+      "fuel": {
+        "дизель": 104.57,
+        "а95": 89.57,
+        "а95п": 93.37,
+        "газ": 59.93
+      },
+      "fuel_date": "06.11.2026"
     }
   ]
 }
