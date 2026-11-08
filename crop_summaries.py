@@ -1,7 +1,8 @@
 """
 AGRO BAROMETER — щоденні висновки по культурах («Резюме по-простому»).
 
-Генерує через Google Gemini API, безкоштовний рівень (ключ з aistudio.google.com, без картки) —
+Основний автор — Claude через підписку власника (Claude Code CLI, секрет CLAUDE_CODE_OAUTH_TOKEN).
+Запасний — Google Gemini API, безкоштовний рівень (ключ з aistudio.google.com, без картки) —
 секрет GEMINI_API_KEY у GitHub. 6 запитів на день — далеко в межах безкоштовних лімітів.
 (GitHub Models, який планувався спочатку, GitHub закрив 30.07.2026.)
 
@@ -198,6 +199,32 @@ def _call(model, messages, token):
     return content
 
 
+CLAUDE_MODELS = [m.strip() for m in os.environ.get("SUMMARY_CLAUDE_MODELS", "opus,sonnet").split(",") if m.strip()]
+
+
+def _call_claude(model, messages, _token=None):
+    """Claude Code CLI у headless-режимі; автентифікація — CLAUDE_CODE_OAUTH_TOKEN (підписка власника)."""
+    import subprocess, tempfile
+    system = messages[0]["content"]
+    convo = "\n\n".join(("АСИСТЕНТ (попередня відповідь):\n" if m["role"] == "assistant" else "") + m["content"]
+                         for m in messages[1:])
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as f:
+        f.write(system); sp = f.name
+    cmd = ["claude", "-p", "--model", model, "--output-format", "json", "--system-prompt-file", sp,
+           "--tools", "", "--no-session-persistence", "--strict-mcp-config", "--setting-sources", ""]
+    r = subprocess.run(cmd, input=convo, capture_output=True, text=True, timeout=240, cwd=tempfile.gettempdir())
+    try:
+        out = json.loads(r.stdout)
+    except Exception:
+        raise ValueError(f"claude CLI rc={r.returncode}: {(r.stderr or r.stdout)[:300]!r}")
+    if out.get("is_error") or r.returncode:
+        raise ValueError(f"claude CLI помилка: {str(out.get('result') or out)[:300]}")
+    content = out.get("result") or ""
+    if "{" not in content:
+        raise ValueError(f"у відповіді Claude немає JSON: {content[:200]!r}")
+    return content
+
+
 def _parse(raw):
     raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
     body = raw[raw.find("{"): raw.rfind("}") + 1]
@@ -264,15 +291,20 @@ def discover_models(token):
 
 def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None):
     token = os.environ.get("GEMINI_API_KEY") or os.environ.get("SUMMARY_API_KEY")
+    have_claude = bool(os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"))
     out = {}
-    if not token or os.environ.get("SUMMARIES_DISABLED") == "1":
-        print("  ⚠️ висновки: немає GEMINI_API_KEY у secrets — показуємо лише факти, без порад")
+    if (not token and not have_claude) or os.environ.get("SUMMARIES_DISABLED") == "1":
+        print("  ⚠️ висновки: немає ні CLAUDE_CODE_OAUTH_TOKEN, ні GEMINI_API_KEY — лише факти, без порад")
         return {c: fallback(c, prices.get(c)) for c in cultures}
     global MODELS
-    if not os.environ.get("SUMMARY_MODELS"):
-        found = discover_models(token)
-        if found:
-            MODELS = found
+    gem = []
+    if token:
+        gem = MODELS
+        if not os.environ.get("SUMMARY_MODELS"):
+            gem = discover_models(token) or MODELS
+    # ланцюжок: Claude (підписка) → Gemini (безкоштовно) → фолбек
+    MODELS = ([f"claude:{m}" for m in CLAUDE_MODELS] if have_claude else []) + gem
+    print(f"  ℹ️ порядок моделей: {MODELS}")
     t0 = time.time(); BUDGET = float(os.environ.get("SUMMARY_BUDGET_S", "900"))
     for i, c in enumerate(cultures):
         if time.time() - t0 > BUDGET:  # не даємо висновкам «з'їсти» таймаут job → фолбек, деплой не страждає
@@ -281,13 +313,13 @@ def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None
         user = "Дані на сьогодні (JSON):\n" + json.dumps(ctx, ensure_ascii=False)
         messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
         result = None
-        models_c = MODELS if time.time() - t0 < BUDGET * 0.6 else [m for m in MODELS if "lite" in m] or MODELS
+        models_c = MODELS if time.time() - t0 < BUDGET * 0.6 else [m for m in MODELS if "lite" in m or m.startswith("claude:sonnet")] or MODELS
         for model in models_c:
             for attempt in range(2):
                 try:
-                    if i or attempt or model != MODELS[0]:
+                    if (i or attempt or model != MODELS[0]) and not model.startswith("claude:"):
                         time.sleep(PAUSE_S)
-                    raw = _call(model, messages, token)
+                    raw = _call_claude(model.split(":", 1)[1], messages) if model.startswith("claude:") else _call(model, messages, token)
                     s = _parse(raw)
                     bad = invented_numbers(s, allowed)
                     if bad:
@@ -306,7 +338,10 @@ def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None
                     print(f"  ⚠️ {c} [{model}]: HTTP {e.code} {' '.join(str(e.msg).split())[:220]}")
                     break  # 401/403/429 — до наступної моделі
                 except Exception as e:
-                    print(f"  ⚠️ {c} [{model}]: {type(e).__name__}: {str(e)[:160]}")
+                    print(f"  ⚠️ {c} [{model}]: {type(e).__name__}: {str(e)[:200]}")
+                    if model.startswith("claude:") and re.search(r"auth|token|401|login|credit|limit", str(e), re.I):
+                        MODELS[:] = [m for m in MODELS if not m.startswith("claude:")]  # без токена/ліміту — не мучимо Claude далі
+                        print("  ↪ Claude недоступний — далі Gemini")
                     break  # таймаут/порожньо — одразу до наступної моделі
             if result:
                 break
