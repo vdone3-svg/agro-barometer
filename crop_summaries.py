@@ -40,7 +40,8 @@ SYSTEM = """Ти — досвідчений трейдер і аналітик �
 
 ЯК ДУМАТИ (по кожній культурі):
 1. Де зараз найвигідніше: порівняй найкращий net (після фрахту) з альтернативою поруч — місцевими покупцями/переробниками
-   (дані «поріг_місцевого_покупця»). Якщо далекий порт дає net лише трохи більше за місцевий поріг — скажи, що варто торгуватися з місцевими.
+   («розрахунок_мін_ціни_для_торгу_в_Кропивницькому» — це планка для торгу, а НЕ чиясь пропозиція; ніколи не називай її ціною покупця).
+   Якщо місцевих цін у даних немає — порадь дізнатися їх і назви планку, нижче якої місцевим продавати невигідно.
 2. Чому ціна така і куди вона, найімовірніше, піде: спирайся на надані новини (порти, експорт, переробка, світові ринки, урожай у світі)
    і сезонність. Сезонні закономірності — лише словами «зазвичай», без цифр.
 3. Ризики: що може зламати висновок (порти, погода, курс, тиск нового врожаю, переробка).
@@ -50,6 +51,7 @@ SYSTEM = """Ти — досвідчений трейдер і аналітик �
 ЖОРСТКІ ПРАВИЛА:
 - Числа — ЛИШЕ з наданих даних (ціни, net, фрахт, пороги, числа з новин). Не вигадуй цін, прогнозів, відсотків, дат.
   Не обіцяй майбутньої ціни числом.
+- Лапки всередині тексту — лише «ялинки», ніколи не прямі ". Тільки українська, без символів інших алфавітів.
 - Не пиши застережень «ціни — пропозиції, не угоди» чи «фрахт — оцінка»: це вже написано на сайті.
 - Без привітань і звертань. Не повторюй назву культури на початку. Без канцеляриту і загальників
   («ринок нестабільний», «слід уважно стежити»). Простою мовою, але як фахівець.
@@ -118,8 +120,10 @@ def build_context(culture, d, delta, news_items, usd_uah, date_str):
                 v = round(r[key] + FREIGHT_LOCAL[farm])
                 thr[farm] = v; keep(v)
         if thr:
-            ctx["поріг_місцевого_покупця_₴/т"] = {"пояснення": "якщо покупець у Кропивницькому дасть не менше цього (CPT завод), це вигідніше за найкращий net",
-                                                  **thr}
+            ctx["розрахунок_мін_ціни_для_торгу_в_Кропивницькому_₴/т"] = {
+                "увага": "Це НЕ пропозиція покупця і НЕ ціна ринку, а наш розрахунок: скільки має дати покупець у Кропивницькому "
+                         "(з доставкою на завод), щоб продаж йому був не гіршим за найкращий net. Використовуй як планку для торгу.",
+                **thr}
         diff = None
         nd, nk = (d.get("best_net") or {}).get("Долинське"), (d.get("best_net") or {}).get("Копані")
         if nd and nk:
@@ -173,14 +177,14 @@ def invented_numbers(summary, allowed):
     text = " ".join(summary.get("paragraphs", [])) + " " + summary.get("todo", "") + " " + summary.get("label", "")
     bad = []
     for n in _numbers_in(text):
-        if not any(abs(n - a) <= max(0.02 * a, 50) for a in allowed):
+        if not any(abs(n - a) <= max(0.006 * a, 15) for a in allowed):
             bad.append(n)
     return bad
 
 
 def _call(model, messages, token):
     import requests
-    r = requests.post(ENDPOINT, timeout=45 if "lite" in model else 110, json={"model": model, "messages": messages, "temperature": 0.3,
+    r = requests.post(ENDPOINT, timeout=45 if "lite" in model else 120, json={"model": model, "messages": messages, "temperature": 0.3,
                                                    "max_tokens": 2500, "reasoning_effort": "low", "response_format": {"type": "json_object"}},
                       headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
     if r.status_code >= 400:
@@ -196,7 +200,14 @@ def _call(model, messages, token):
 
 def _parse(raw):
     raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
-    s = json.loads(raw[raw.find("{"): raw.rfind("}") + 1])
+    body = raw[raw.find("{"): raw.rfind("}") + 1]
+    try:
+        s = json.loads(body)
+    except json.JSONDecodeError:
+        from json_repair import repair_json
+        s = json.loads(repair_json(body))
+    if re.search(r"[\u0590-\u08FF\u0E00-\u0E7F\u3040-\u9FFF]", json.dumps(s, ensure_ascii=False)):
+        raise ValueError("у тексті символи іншого алфавіту")
     v = s.get("verdict") if s.get("verdict") in VERDICTS else "none"
     raw_p = s.get("paragraphs") or []
     if isinstance(raw_p, str):
@@ -247,7 +258,8 @@ def discover_models(token):
     print(f"  ℹ️ доступні Flash-моделі: {full[:4] + lite[:3]}")
     # Повна Flash першою (якісніший текст; 6 запитів/день вкладаються в ~20 безкоштовних),
     # при 429/503/таймауті — одразу Flash-Lite (~500/день)
-    return full[:1] + lite[:2]
+    older = [m for m in full if m != (full[:1] or [None])[0] and re.search(r"3\.5", m)]
+    return full[:1] + older[:1] + lite[:1]  # найновіша Flash → стабільніша 3.5 Flash → Flash-Lite
 
 
 def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None):
@@ -261,12 +273,16 @@ def generate(cultures, prices, deltas, news_items, usd_uah, date_str, emoji=None
         found = discover_models(token)
         if found:
             MODELS = found
+    t0 = time.time(); BUDGET = float(os.environ.get("SUMMARY_BUDGET_S", "900"))
     for i, c in enumerate(cultures):
+        if time.time() - t0 > BUDGET:  # не даємо висновкам «з'їсти» таймаут job → фолбек, деплой не страждає
+            print(f"  ⏱ бюджет часу вичерпано — {c}: фолбек"); out[c] = fallback(c, prices.get(c)); continue
         ctx, allowed = build_context(c, prices.get(c), (deltas or {}).get(c), news_items, usd_uah, date_str)
         user = "Дані на сьогодні (JSON):\n" + json.dumps(ctx, ensure_ascii=False)
         messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
         result = None
-        for model in MODELS:
+        models_c = MODELS if time.time() - t0 < BUDGET * 0.6 else [m for m in MODELS if "lite" in m] or MODELS
+        for model in models_c:
             for attempt in range(2):
                 try:
                     if i or attempt or model != MODELS[0]:
