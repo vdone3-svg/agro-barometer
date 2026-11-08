@@ -24,6 +24,31 @@
           "src": "nibulon.com"
         }
       }
+    },
+    {
+      "date": "08.11.2026",
+      "prices": {
+        "ріпак": {
+          "uah": 20500.0,
+          "src": "e-zerno.com"
+        },
+        "соняшник": {
+          "uah": 16000.0,
+          "src": "e-zerno.com"
+        },
+        "соя": {
+          "uah": 20500.0,
+          "src": "e-zerno.com"
+        },
+        "кукурудза": {
+          "uah": 7200.0,
+          "src": "nibulon.com"
+        },
+        "пшениця": {
+          "uah": 8000.0,
+          "src": "nibulon.com"
+        }
+      }
     }
   ]
 }
