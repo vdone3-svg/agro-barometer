@@ -268,6 +268,8 @@ def enrich(records):
         region = normalize_region(f'{r.get("location") or ""} {r.get("region") or ""}')
         r["region_norm"] = region
         fk, fd = FREIGHT["Копані"].get(region), FREIGHT["Долинське"].get(region)
+        if r.get("pickup") and region == "Кіровоградська":
+            fk = fd = 0   # самовивіз покупцем у нашій області (Agrotender) — фрахт не платимо
         r["freight_kopani"], r["freight_dolynske"] = fk, fd
         r["net_kopani"]   = r["price_uah"] - fk if fk is not None and r.get("price_uah") else None
         r["net_dolynske"] = r["price_uah"] - fd if fd is not None and r.get("price_uah") else None

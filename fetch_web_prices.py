@@ -665,6 +665,115 @@ async def _parse_graintrade(pw=None) -> list:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# AGROTENDER.COM.UA — ціни трейдерів (компанія · ціна · дата підтвердження · область · пункт)
+# Додано 08.11.2026 як заміна GrainTrade (той блокує IP GitHub). Це конкретні пропозиції
+# покупців, а не середні. «БН» (без ПДВ) у пункті — пропускаємо, як і в Telegram.
+# ─────────────────────────────────────────────────────────────────────────────
+
+AT_BASE = "https://agrotender.com.ua/traders/region_ukraine/"
+AT_SLUGS = [   # slug → (культура, якість)
+    ("yachmen", "ячмінь", None),
+    ("pshenica_2_kl", "пшениця", "2 кл"), ("pshenica_3_kl", "пшениця", "3 кл"),
+    ("pshenica_4_kl", "пшениця", "4 кл"),
+    ("kukuruza", "кукурудза", None),
+    ("podsolnechnik", "соняшник", None),
+    ("soya", "соя", None),
+    ("raps", "ріпак", None),
+]
+AT_MAX_AGE_DAYS = 2
+
+
+def parse_agrotender_table(html: str, culture: str, quality, url: str, today: datetime | None = None,
+                           usd_uah: float | None = None) -> list:
+    """Чиста функція: HTML сторінки культури → записи. Тестується на фікстурі."""
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return []
+    today = today or datetime.now()
+    soup = BeautifulSoup(html or "", "html.parser")
+    body = soup.find("tbody", id="traders_table")
+    if body is None:
+        t = next((t for t in soup.find_all("table") if "Місце закупівлі" in t.get_text(" ")), None)
+        body = t.find("tbody") if t else None
+    if body is None:
+        return []
+    out = []
+    for tr in body.find_all("tr"):
+        tds = tr.find_all("td")
+        if len(tds) < 5:
+            continue
+        company = re.sub(r"\s+", " ", (tds[0].find(class_="title") or tds[0]).get_text(" ", strip=True))
+        m = re.search(r"(\d{8})", tds[3].get("data-date") or tds[3].get("data-sorttable-customkey") or "")
+        if not m:
+            continue
+        try:
+            d = datetime.strptime(m.group(1), "%Y%m%d")
+        except ValueError:
+            continue
+        if (today.date() - d.date()).days > AT_MAX_AGE_DAYS:
+            continue
+        loc = (tds[4].find(class_="location").get_text(" ", strip=True) if tds[4].find(class_="location") else "")
+        place = (tds[4].find(class_="place").get_text(" ", strip=True) if tds[4].find(class_="place") else "")
+        if re.search(r"(?i)\bбн\b|без\s*пдв", place):
+            continue
+        price, cur, raw = None, "UAH", None
+        uah = re.sub(r"[^\d]", "", tds[1].get("data-order") or tds[1].get_text())
+        if uah:
+            price = raw = float(uah)
+        else:
+            usd = re.sub(r"[^\d.]", "", tds[2].get("data-order") or tds[2].get_text())
+            if usd and usd_uah:
+                raw, cur = float(usd), "USD"
+                price = round(raw * usd_uah)
+        if not price:
+            continue
+        pickup = bool(re.search(r"(?i)самови", place))
+        port = bool(re.search(r"(?i)\bмп\b|порт", loc))
+        region = loc.replace(" обл.", "").strip() if "обл" in loc else ("Одеська" if port else "невідомо")
+        location = place if place and not re.fullmatch(r"(?i)самови\w*(,\s*сушка)?", place) else loc
+        basis = "EXW самовивіз" if pickup else ("CPT порт" if port else "CPT пункт покупця")
+        rec = _make_record("agrotender.com.ua", culture, quality, price, region,
+                           f"{location} · {company}"[:60], d.strftime("%d.%m.%Y"), basis, url=url)
+        rec.update({"buyer": company, "currency": cur, "price_raw": raw, "pickup": pickup,
+                    "net_kopani": None, "net_dolynske": None})
+        out.append(rec)
+    return out
+
+
+def _at_fetch_urllib(url):
+    try:
+        with urlopen(Request(url, headers=HEADERS), timeout=25) as resp:
+            return resp.read().decode("utf-8", errors="replace")
+    except Exception as e:
+        print(f"  [agrotender] urllib: {e}")
+        return None
+
+
+async def _parse_agrotender(pw=None, usd_uah=None) -> list:
+    records, page, ctx_browser = [], None, None
+    for slug, culture, quality in AT_SLUGS:
+        url = AT_BASE + slug
+        html = _at_fetch_urllib(url)
+        if (not html or "traders_table" not in html) and pw is not None:
+            try:
+                if page is None:
+                    ctx_browser = await _new_playwright_context(pw)
+                    page = await ctx_browser[1].new_page()
+                await page.goto(url, timeout=45_000, wait_until="domcontentloaded")
+                await page.wait_for_timeout(1200)
+                html = await page.content()
+            except Exception as e:
+                print(f"  [agrotender] playwright {slug}: {e}")
+        recs = parse_agrotender_table(html, culture, quality, url, usd_uah=usd_uah) if html else []
+        print(f"  [agrotender] {slug}: {len(recs)} свіжих записів")
+        records.extend(recs)
+    if ctx_browser:
+        await ctx_browser[0].close()
+    return records
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # MAIN — всі парсери через єдиний Playwright контекст
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -702,6 +811,12 @@ async def _run_all() -> list:
         print("Завантажую graintrade.com.ua (середні ціни по базисах, вкл. ячмінь) ...")
         recs = await _parse_graintrade(pw)
         print(f"  Знайдено: {len(recs)} записів graintrade.com.ua")
+        all_records.extend(recs)
+
+        # 5. Agrotender.com.ua — пропозиції трейдерів по 6 культурах (≤2 дні)
+        print("Завантажую agrotender.com.ua (ціни трейдерів) ...")
+        recs = await _parse_agrotender(pw, USD_UAH)
+        print(f"  Знайдено: {len(recs)} записів agrotender.com.ua")
         all_records.extend(recs)
 
 
