@@ -238,7 +238,7 @@ MAX_OFFER_AGE_DAYS = 2   # власник: розбіжність не біль�
 def classify(r):
     """Повертає (eligible: bool, reason: str|None) для участі у «найкращій ціні»."""
     dt = parse_date(r.get("date"))
-    if dt and (datetime.now(KYIV) - dt).days > MAX_OFFER_AGE_DAYS:
+    if dt and (datetime.now(KYIV).date() - dt.date()).days > MAX_OFFER_AGE_DAYS:   # календарні дні
         return False, f"застаріла ({dt.strftime('%d.%m')})"
     if r.get("ref_kind") == "national_avg":
         return False, "середня по Україні — орієнтир, не оферта"
@@ -302,7 +302,7 @@ def reference_prices(recs):
     """Середні по Україні (GrainTrade) — окремо від оферт; лише продукт культури, не «вис.ол.» тощо."""
     now = datetime.now(KYIV)
     refs = [r for r in recs if r.get("ref_kind") == "national_avg"
-            and (dt := parse_date(r.get("date"))) and (now - dt).days <= REF_MAX_AGE_DAYS
+            and (dt := parse_date(r.get("date"))) and (now.date() - dt.date()).days <= REF_MAX_AGE_DAYS
             and SANITY[r["culture"]][0] <= r["price_uah"] <= SANITY[r["culture"]][1]
             and not (r["culture"] == "соняшник" and re.search(r"високоолеїн|вис\.?\s*ол", str(r.get("quality") or ""), re.I))]
     refs.sort(key=lambda x: -x["price_uah"])
