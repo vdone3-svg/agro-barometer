@@ -62,13 +62,14 @@ def test_news_exclude_zakaz_agro():
 
 def test_summary_context_has_no_offers_or_buyers():
     d = {"best_price": {"price_uah": 8000, "location": "Ізмаїл", "source": "@x"}, "price_median": 7600,
+         "segments": {"market": [{"name": "внутрішній ринок", "median": 7600, "min": 7000, "max": 7700, "n": 9}], "class": []},
          "price_min": 7000, "price_max": 8000, "eligible_count": 9, "records_count": 12,
          "best_net": {"Долинське": {"net_dolynske": 5000, "price_uah": 8000, "location": "Ізмаїл"}}, "top": [], "reference": []}
     ctx, allowed = cs.build_context("пшениця", d, {"med_delta_7": -25}, [], 43.9, "16.11.2026")
     blob = str(ctx)
     for bad in ("найвища_ціна", "найкраща_чиста_виручка", "мін_ціни_для_торгу", "місцеві_покупці", "топ_пропозицій", "Ізмаїл"):
         assert bad not in blob
-    assert ctx["рівень_ринку"]["медіана_₴/т"] == 7600 and 7600 in allowed
+    assert ctx["рівень_ринку"]["за_ринком"][0]["медіана_₴/т"] == 7600 and 7600 in allowed
     for bad in ("кому подзвонити", "Що робити: першим ділом подзвонити"):
         assert bad not in cs.SYSTEM
     s = cs._parse('{"verdict":"hold","label":"Тримати","paragraphs":["a b c.","d e f."],"todo":"Що робити: тримати"}')
@@ -79,3 +80,18 @@ def test_logistics_panel_removed():
     t = pathlib.Path("barometer_template.html").read_text(encoding="utf-8")
     assert "Автомобільний фрахт" not in t and 'class="logistics-panel"' not in t
     assert 'id="fertPanel"' in t
+
+
+def test_segments_split_port_and_inland():
+    recs = bb.enrich([
+        {"source": "a", "culture": "пшениця", "quality": "2 кл", "price_uah": 8000, "location": "Бессарабськам.Ізмаїл", "region": "Одеська", "date": "16.11.2026"},
+        {"source": "a", "culture": "пшениця", "quality": "3 кл", "price_uah": 7900, "location": "Ренійський МП", "basis": "CPT порт", "date": "16.11.2026"},
+        {"source": "b", "culture": "пшениця", "quality": "2 кл", "price_uah": 4750, "location": "Глобинська", "region": "Полтавська", "date": "16.11.2026"},
+        {"source": "b", "culture": "пшениця", "quality": "3 кл", "price_uah": 4650, "location": "Миргород", "region": "Полтавська", "date": "16.11.2026"},
+        {"source": "b", "culture": "пшениця", "quality": "3 кл", "price_uah": 4600, "location": "Прилуки", "region": "Чернігівська", "date": "16.11.2026"},
+    ])
+    seg = bb.best_prices(recs)["пшениця"]["segments"]
+    m = {x["name"]: x for x in seg["market"]}
+    assert m["порт/Дунай"]["n"] == 2 and m["порт/Дунай"]["median"] == 7950
+    assert m["внутрішній ринок"]["n"] == 3 and m["внутрішній ринок"]["median"] == 4650
+    assert {x["name"] for x in seg["class"]} == {"2 клас, порт/Дунай", "3 клас, порт/Дунай", "2 клас, внутрішній ринок", "3 клас, внутрішній ринок"}

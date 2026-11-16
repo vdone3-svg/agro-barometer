@@ -314,6 +314,41 @@ def reference_prices(recs):
     return [_slim(r) for r in refs[:6]]
 
 
+PORT_RX = re.compile(r"(?i)порт|\bмп\b|ізмаїл|измаил|рені|рени|чорноморськ|південн|термінал|орлівк|кілія|одес")
+
+
+def _median(vals):
+    sp = sorted(vals)
+    return sp[len(sp)//2] if len(sp) % 2 else (sp[len(sp)//2 - 1] + sp[len(sp)//2]) / 2
+
+
+def market_segment(r):
+    """Порт/Дунай (Одеська, Миколаївська, Дунай з портовою ознакою) проти внутрішнього ринку — ціни різняться на тисячі ₴/т."""
+    txt = f"{r.get('location') or ''} {r.get('basis') or ''}"
+    return "порт/Дунай" if r.get("region_norm") in ("Одеська", "Дунай", "Миколаївська") and PORT_RX.search(txt) else "внутрішній ринок"
+
+
+def segments(elig):
+    """16.11.2026: загальна медіана змішувала порт (7–8 тис.) і внутрішні елеватори (3,6–4,8 тис.) та класи —
+    непорівнювані ціни. Тепер окремо: ринок (порт / внутрішній) і, де є, клас."""
+    def stat(name, rs):
+        ps = [r["price_uah"] for r in rs]
+        return {"name": name, "n": len(ps), "median": _median(ps), "min": min(ps), "max": max(ps)}
+    out = {"market": [], "class": []}
+    for seg in ("порт/Дунай", "внутрішній ринок"):
+        rs = [r for r in elig if market_segment(r) == seg]
+        if rs:
+            out["market"].append(stat(seg, rs))
+    classes = sorted({m.group(1) for r in elig if (m := re.search(r"([1-6])\s*кл", str(r.get("quality") or "")))})
+    if len(classes) > 1:
+        for k in classes:
+            for seg in ("порт/Дунай", "внутрішній ринок"):
+                rs = [r for r in elig if market_segment(r) == seg and re.search(rf"{k}\s*кл", str(r.get("quality") or ""))]
+                if rs:
+                    out["class"].append(stat(f"{k} клас, {seg}", rs))
+    return out
+
+
 def best_prices(records):
     result = {}
     for c in CULTURES:
@@ -332,8 +367,7 @@ def best_prices(records):
             with_net = [r for r in elig if r.get(key) is not None]
             best_net[farm] = _slim(max(with_net, key=lambda x: x[key])) if with_net else None
         prices = [r["price_uah"] for r in elig]
-        sp = sorted(prices)
-        median = sp[len(sp)//2] if len(sp) % 2 else (sp[len(sp)//2 - 1] + sp[len(sp)//2]) / 2
+        median = _median(prices)
         result[c] = {
             "emoji": CULTURE_EMOJI[c],
             "best_price": _slim(by_price[0]),
@@ -343,6 +377,7 @@ def best_prices(records):
             "sources": sorted({r.get("source","?") for r in elig}),
             "top": [_slim(r) for r in by_price[:6]],
             "reference": refs,
+            "segments": segments(elig),
         }
     return result
 
@@ -547,7 +582,8 @@ INJECTION_JS = r"""
       [...sec.children].forEach(el=>{if(/архів|bestPrice 22/.test(el.textContent)&&el!==g&&!el.classList.contains('charts-title'))el.style.display='none';});}
     const crops=D.cultures.map(c=>{const d=D.prices[c];const x=(D.deltas||{})[c]||{};if(!d||!d.best_price)return `<div class="delta-card-inner"><div class="dc-name-i">${d?d.emoji:'🌾'} ${esc(c)}</div><div class="dc-prev-i">немає порівнюваних пропозицій</div></div>`;
       return `<div class="delta-card-inner"><div class="dc-name-i">${d.emoji} ${esc(c)}</div>
-        <div class="dc-price-i">${fmt(d.price_median)} <span class="dc-unit-i">₴/т медіана</span></div>
+        <div class="dc-price-i">${fmt(d.price_median)} <span class="dc-unit-i">₴/т медіана (усі)</span></div>
+        ${((d.segments||{}).market||[]).map(x=>`<div class="dc-prev-i">${esc(x.name)}: <b>${fmt(x.median)}</b> ₴/т · ${x.n} проп.</div>`).join('')}
         <div class="dc-delta-i">день: ${dl(x.med_delta_1,'₴/т',0)}</div>
         <div class="dc-prev-i">тиждень: ${dl(x.med_delta_7,'₴/т',0)} · місяць: ${dl(x.med_delta_30,'₴/т',0)}</div>
         <div class="dc-prev-i">найвища ${fmt(d.best_price.price_uah)} (день ${x.delta_1==null?'н/д':arr(x.delta_1)+' '+fmt(Math.abs(x.delta_1))})</div></div>`;}).join('');

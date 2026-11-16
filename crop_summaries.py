@@ -100,13 +100,21 @@ def build_context(culture, d, delta, news_items, usd_uah, date_str, now=None):
             f" (знайдено {d['records_count']} записів, жоден не пройшов перевірку)" if d else "")
     else:
         # Лише рівень ринку: конкретні оферти, покупці й net у висновок не йдуть (вони в таблицях оферт нижче)
+        seg = d.get("segments") or {}
         ctx["рівень_ринку"] = {
-            "увага": "Загальний рівень опублікованих закупівельних пропозицій. НЕ називай конкретних покупців, пунктів, «найкращої ціни».",
-            "медіана_₴/т": _num(d.get("price_median")),
-            "діапазон_₴/т": [_num(d["price_min"]), _num(d["price_max"])],
+            "увага": "Загальний рівень опублікованих закупівельних пропозицій. НЕ називай конкретних покупців, пунктів, «найкращої ціни». "
+                     "Порт/Дунай і внутрішній ринок (елеватори в областях), а також різні класи — НЕПОРІВНЮВАНІ: не зводь їх в одну ціну, "
+                     "не називай загальну медіану рівнем ринку; говори про кожен сегмент окремо.",
+            "за_ринком": [{"сегмент": x["name"], "медіана_₴/т": _num(x["median"]), "мін_₴/т": _num(x["min"]),
+                           "макс_₴/т": _num(x["max"]), "пропозицій": x["n"]} for x in seg.get("market", [])],
             "порівнюваних_пропозицій": d.get("eligible_count"),
         }
-        keep(d.get("price_median"), d["price_min"], d["price_max"], d["price_max"] - d["price_min"])
+        if seg.get("class"):
+            ctx["рівень_ринку"]["за_класом"] = [{"сегмент": x["name"], "медіана_₴/т": _num(x["median"]), "пропозицій": x["n"]}
+                                               for x in seg["class"]]
+        for x in seg.get("market", []) + seg.get("class", []):
+            keep(x["median"], x["min"], x["max"])
+        keep(d["price_min"], d["price_max"])
     refs = (d or {}).get("reference") or []
     if refs:
         ctx["орієнтир_середні_по_Україні"] = {
@@ -118,8 +126,9 @@ def build_context(culture, d, delta, news_items, usd_uah, date_str, now=None):
         for r in refs:
             keep(r["price_uah"])
     if delta:
-        ctx["зміна_медіани_пропозицій_₴/т"] = {"за_день": delta.get("med_delta_1"), "за_тиждень": delta.get("med_delta_7"),
-                                              "за_місяць": delta.get("med_delta_30")}
+        ctx["зміна_загальної_медіани_пропозицій_₴/т"] = {"за_день": delta.get("med_delta_1"), "за_тиждень": delta.get("med_delta_7"),
+                                              "за_місяць": delta.get("med_delta_30"),
+                                              "увага": "загальна медіана змішує порт і внутрішній ринок; зміна може бути через інший набір пропозицій, а не рух ринку — подавай обережно"}
         keep(delta.get("delta_1"), delta.get("delta_7"), delta.get("delta_30"),
              delta.get("med_delta_1"), delta.get("med_delta_7"), delta.get("med_delta_30"))
     if now:
@@ -256,8 +265,10 @@ def fallback(culture, d):
                      "; ".join(f"{r.get('basis')}{' (' + r['quality'] + ')' if r.get('quality') else ''} **{round(r['price_uah']):,} ₴/т**".replace(",", " ")
                                for r in refs[:3]) + ". Це не оферта: пункт і фрахт невідомі.")
     else:
-        p = [f"Медіана опублікованих закупівельних пропозицій — **{round(d.get('price_median') or 0):,} ₴/т**, "
-             f"порівнюваних пропозицій: {d.get('eligible_count')}. Конкретні оферти — у таблицях нижче.".replace(",", " ")]
+        segs = (d.get("segments") or {}).get("market") or []
+        p = ["Рівень опублікованих закупівельних пропозицій: " + "; ".join(
+                 f"{x['name']} — медіана **{round(x['median']):,} ₴/т** ({x['n']} проп.)".replace(",", " ") for x in segs)
+             + ". Конкретні оферти — у таблицях нижче."] if segs else ["Конкретні оферти — у таблицях нижче."]
     p.append("Автоматичний висновок сьогодні не сформувався (модель недоступна або відповідь не пройшла перевірку цифр), тому порад продавати чи тримати тут немає.")
     label = VERDICTS["none"][0] if not d or not d.get("best_price") else "Висновок сьогодні не сформовано"
     return {"verdict": "none", "label": label, "paragraphs": p, "todo": "", "model": None, "auto": False}
