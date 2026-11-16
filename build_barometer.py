@@ -445,7 +445,7 @@ INJECTION_JS = r"""
         </div>`:'';
       if(!d||!d.best_price){
         const why=d?(d.reference&&d.reference.length&&d.reference.length===d.records_count?'Є лише середні ціни по Україні, пропозицій конкретних покупців немає':`${d.records_count} знайдених записів, але жоден не пройшов перевірку порівнюваності`):'За 2 дні жодної закупівельної ціни не знайдено';
-        return `<div class="crop-card">${head}<div class="crop-body" style="color:var(--fg3);font-size:12px;padding:6px 0">Немає порівнюваних пропозицій покупців.<br>${esc(why)}.</div>${refBlock}</div>`;
+        return `<div class="crop-card" data-cp="${esc(c)}">${head}<div class="crop-body" style="color:var(--fg3);font-size:12px;padding:6px 0">Немає порівнюваних пропозицій покупців.<br>${esc(why)}.</div>${refBlock}</div>`;
       }
       const b=d.best_price;
       const netRow=(f)=>{const r=d.best_net[f];
@@ -459,7 +459,7 @@ INJECTION_JS = r"""
       const dl=D.deltas&&D.deltas[c]?D.deltas[c]:{};
       const fmtDelta=(v,label)=>{if(v==null)return'';const cls=v>0?'delta-up':v<0?'delta-down':'delta-flat';const ar=v>0?'▲':v<0?'▼':'—';return `<span class="price-delta ${cls}" title="${label}">${ar} ${fmt(Math.abs(v))} ₴/т</span>`;};
       const deltaRow=(dl.delta_7!=null||dl.delta_30!=null)?`<div class="price-row" style="gap:6px;flex-wrap:wrap"><span class="price-label" style="font-size:10px">Зміна:</span>${fmtDelta(dl.delta_7,'За тиждень')}${dl.delta_30!=null?`<span style="font-size:9px;color:var(--fg3)">місяць: ${fmtDelta(dl.delta_30,'За місяць')}</span>`:''}</div>`:'';
-      return `<div class="crop-card">${head}<div class="crop-body">
+      return `<div class="crop-card" data-cp="${esc(c)}">${head}<div class="crop-body">
         <div class="price-row"><span class="price-label">Найвища закупівельна</span><span class="price-val best">${link(b.url,fmt(b.price_uah)+' ₴/т')}</span></div>
         ${deltaRow}
         <div class="price-row"><span class="price-label">${esc(place(b).substring(0,40))}</span><span class="price-label" style="font-size:10px;color:var(--fg3)">${esc(b.source)} · ${esc(b.basis||'базис?')} ${ageFlag(b.ts)}</span></div>
@@ -489,7 +489,7 @@ INJECTION_JS = r"""
     const cls={sell:'v-sell',split:'v-split',hold:'v-hold',none:'v-split'};
     const auto=D.cultures.some(c=>S[c]&&S[c].auto);
     const cards=D.cultures.map(c=>{const s=S[c];if(!s)return'';const d=D.prices[c];const title=c.charAt(0).toUpperCase()+c.slice(1);
-      return `<div class="sum-card"><div class="sum-top"><span class="sum-name">${d?d.emoji:'🌾'} ${esc(title)}</span><span class="sum-verdict ${cls[s.verdict]||'v-split'}">${esc(s.label)}</span></div>
+      return `<div class="sum-card" data-cp="${esc(c)}"><div class="sum-top"><span class="sum-name">${d?d.emoji:'🌾'} ${esc(title)}</span><span class="sum-verdict ${cls[s.verdict]||'v-split'}">${esc(s.label)}</span></div>
         ${(s.paragraphs||[]).map(p=>`<p>${md(p)}</p>`).join('')}
         ${s.todo?`<div class="sum-do">${md(s.todo)}</div>`:''}</div>`;}).join('');
     const sec=document.createElement('div');sec.className='sum-section';sec.id='summaryLive';
@@ -507,12 +507,12 @@ INJECTION_JS = r"""
     const sub=document.querySelector('#tgSection .sec-sub');if(sub)sub.textContent='Живі пости каналів за 2 дні · зібрано '+D.generated_at_kyiv+' · сірим — не порівнюються (експорт, викид тощо)';
     const cs=[...new Set(live.map(r=>r.culture))].filter(Boolean);
     if(tgFilters)tgFilters.innerHTML='<button class="tg-chip active" data-c="">Всі</button>'+cs.map(c=>`<button class="tg-chip" data-c="${esc(c)}">${esc(c)}</button>`).join('');
-    const render=fc=>{tgBody.innerHTML=live.filter(r=>!fc||r.culture===fc).map(r=>`<tr${ra(r.url)} style="${r.eligible?'':'opacity:.5'}" title="${esc(r.excluded_reason||'')}"><td style="color:var(--accent);white-space:nowrap">${link(r.url,esc(r.source))}</td><td>${esc(r.culture)}${r.quality?`<div style="font-size:10px;color:var(--fg3)">${esc(String(r.quality).substring(0,22))}</div>`:''}</td><td class="num">${fmt(r.price_uah)} ₴${r.currency!=='UAH'?`<div style="font-size:10px;color:var(--fg3)">${fmt(r.price_raw)} ${esc(r.currency)}</div>`:''}</td><td style="font-size:11px">${esc(r.vat&&r.vat!=='невідомо'?r.vat:(/ПДВ/.test(r.basis||'')?'з ПДВ':'невідомо'))}</td><td>${esc((r.location&&r.location!=='невідомо'?r.location:(r.buyer||'?')).substring(0,30))}</td><td style="color:var(--fg3);white-space:nowrap">${esc(r.date||'?')}</td><td style="font-size:11px;color:var(--fg3)">${esc(r.basis||'')}${r.region_norm&&r.region_norm!=='невідомо'?' · '+esc(r.region_norm):''}${r.excluded_reason?' · '+esc(r.excluded_reason):''}</td></tr>`).join('');};
+    const render=fc=>{tgBody.innerHTML=live.filter(r=>!fc||r.culture===fc).map(r=>`<tr${ra(r.url)} data-cp="${esc(r.culture||'')}" style="${r.eligible?'':'opacity:.5'}" title="${esc(r.excluded_reason||'')}"><td style="color:var(--accent);white-space:nowrap">${link(r.url,esc(r.source))}</td><td>${esc(r.culture)}${r.quality?`<div style="font-size:10px;color:var(--fg3)">${esc(String(r.quality).substring(0,22))}</div>`:''}</td><td class="num">${fmt(r.price_uah)} ₴${r.currency!=='UAH'?`<div style="font-size:10px;color:var(--fg3)">${fmt(r.price_raw)} ${esc(r.currency)}</div>`:''}</td><td style="font-size:11px">${esc(r.vat&&r.vat!=='невідомо'?r.vat:(/ПДВ/.test(r.basis||'')?'з ПДВ':'невідомо'))}</td><td>${esc((r.location&&r.location!=='невідомо'?r.location:(r.buyer||'?')).substring(0,30))}</td><td style="color:var(--fg3);white-space:nowrap">${esc(r.date||'?')}</td><td style="font-size:11px;color:var(--fg3)">${esc(r.basis||'')}${r.region_norm&&r.region_norm!=='невідомо'?' · '+esc(r.region_norm):''}${r.excluded_reason?' · '+esc(r.excluded_reason):''}</td></tr>`).join('');};
     render('');
     if(tgFilters)tgFilters.onclick=e=>{const b=e.target.closest('.tg-chip');if(!b)return;tgFilters.querySelectorAll('.tg-chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');render(b.dataset.c);};
   }
   if(tgInsights)tgInsights.innerHTML=D.cultures.map(c=>{const d=D.prices[c];if(!d||!d.best_price)return'';const n=d.best_net[farm]||d.best_net['Долинське']||d.best_net['Копані'];
-    return `<div class="tg-insight"><strong>${d.emoji} ${esc(c)}:</strong> найвища ${fmt(d.best_price.price_uah)} ₴/т (${esc(d.best_price.source)})${n?` · найкраща net ${fmt(n.net_dolynske??n.net_kopani)} ₴/т з Долинського — ${esc(n.location)}`:' · net: фрахт невідомий'}</div>`;}).join('');
+    return `<div class="tg-insight" data-cp="${esc(c)}"><strong>${d.emoji} ${esc(c)}:</strong> найвища ${fmt(d.best_price.price_uah)} ₴/т (${esc(d.best_price.source)})${n?` · найкраща net ${fmt(n.net_dolynske??n.net_kopani)} ₴/т з Долинського — ${esc(n.location)}`:' · net: фрахт невідомий'}</div>`;}).join('');
 
   // ── Земля ──
   const land=D.land;
@@ -555,7 +555,7 @@ INJECTION_JS = r"""
     const box=document.getElementById('baroCards');if(!box||!D.now)return;
     box.innerHTML=D.cultures.map(c=>{const n=D.now[c]||{};const i=NOWC(n.score);const d=D.prices[c];const t=c.charAt(0).toUpperCase()+c.slice(1);
       const sig=Object.entries(n.signals||{}).map(([k,v])=>`<div class="baro-sig"><b>${v.score}</b> · ${esc(SIGN[k]||k)}: ${esc(v.note)}</div>`).join('');
-      return `<div class="baro-card expanded${n.score!=null&&n.score>=76?' baro-signal-now':''}">
+      return `<div class="baro-card expanded${n.score!=null&&n.score>=76?' baro-signal-now':''}" data-cp="${esc(c)}">
         <div class="baro-crop-label">${d?d.emoji:'🌾'} ${esc(t)}</div>
         <div class="baro-score-wrap"><span class="baro-score ${i.c}">${n.score==null?'—':n.score}</span><span class="baro-score-max">/100</span></div>
         <div class="baro-signal-label ${i.c}">${n.score==null?'Даних замало':i.l}</div>
@@ -580,8 +580,8 @@ INJECTION_JS = r"""
     if(sec){const t=sec.querySelector('.charts-title');if(t)t.textContent='📊 Трекер дельти — на '+D.generated_at_kyiv;
       const n=sec.querySelector('.charts-note');if(n)n.innerHTML=`Культури — <strong>медіана</strong> порівнюваних пропозицій дня (стабільніше за «найвищу»); пальне — середня по АЗС України (minfin). Історія знімків: ${D.history_days} дн.${D.history_from?' з '+esc(D.history_from):''} — тиждень і місяць з'являться, коли назбирається історія.`;
       [...sec.children].forEach(el=>{if(/архів|bestPrice 22/.test(el.textContent)&&el!==g&&!el.classList.contains('charts-title'))el.style.display='none';});}
-    const crops=D.cultures.map(c=>{const d=D.prices[c];const x=(D.deltas||{})[c]||{};if(!d||!d.best_price)return `<div class="delta-card-inner"><div class="dc-name-i">${d?d.emoji:'🌾'} ${esc(c)}</div><div class="dc-prev-i">немає порівнюваних пропозицій</div></div>`;
-      return `<div class="delta-card-inner"><div class="dc-name-i">${d.emoji} ${esc(c)}</div>
+    const crops=D.cultures.map(c=>{const d=D.prices[c];const x=(D.deltas||{})[c]||{};if(!d||!d.best_price)return `<div class="delta-card-inner" data-cp="${esc(c)}"><div class="dc-name-i">${d?d.emoji:'🌾'} ${esc(c)}</div><div class="dc-prev-i">немає порівнюваних пропозицій</div></div>`;
+      return `<div class="delta-card-inner" data-cp="${esc(c)}"><div class="dc-name-i">${d.emoji} ${esc(c)}</div>
         <div class="dc-price-i">${fmt(d.price_median)} <span class="dc-unit-i">₴/т медіана (усі)</span></div>
         ${((d.segments||{}).market||[]).map(x=>`<div class="dc-prev-i">${esc(x.name)}: <b>${fmt(x.median)}</b> ₴/т · ${x.n} проп.</div>`).join('')}
         <div class="dc-delta-i">день: ${dl(x.med_delta_1,'₴/т',0)}</div>
@@ -627,6 +627,59 @@ INJECTION_JS = r"""
     if(trg)trg.innerHTML=`Джерела: ${link('https://grossdorf.com/price/','Grossdorf')} (оптовий прайс, склади Черкаської, Вінницької, Полтавської, Миколаївської обл.) · ${link('https://e-zerno.com/fertilizer-prices','e-zerno')} (прайси дистриб'юторів, не старші ${F.fresh_days||21} дн.).<br>`+
       `<span style="color:var(--fg3)">Опубліковані прайси, не підтверджені оферти; базис і ПДВ уточнюйте в продавця. Наведіть на рядок — видно склад і дату кожної ціни.</span><br>`+
       `Тригер: селітра <span class="trigger-hit">&lt; 26 тис.</span>, карбамід <span class="trigger-hit">&lt; 29 тис.</span> — форвардна закупка.`;
+  })();
+
+  // ── Вибір культури (вимога власника 16.11.2026): угорі — культура, сторінка лише по ній ──
+  // Кожна культура — своя «сторінка» з адресою #пшениця тощо; «Всі» — загальна стрічка. Вибір запам'ятовується.
+  (function(){
+    const NEWS_KW={'ріпак':/ріпак|рапс|rapeseed|canola/i,'соняшник':/соняшн|подсолн|sunflower/i,'соя':/(^|[^а-яіїєґ])со[яїюєю]([^а-яіїєґ]|$)|соєв|soy/i,
+      'кукурудза':/кукурудз|кукуруз|corn|maize/i,'ячмінь':/ячмін|ячмен|barley/i,'пшениця':/пшениц|wheat/i};
+    document.querySelectorAll('#newsGrid .news-card').forEach(card=>{const t=card.textContent;const hit=D.cultures.filter(c=>NEWS_KW[c]&&NEWS_KW[c].test(t));
+      if(hit.length)card.dataset.cps='|'+hit.join('|')+'|';});   // новини без культури (порти, курс, загальні) — видно завжди
+    if(!document.getElementById('cropPickCss')){const st=document.createElement('style');st.id='cropPickCss';st.textContent=`
+      .crop-pick{position:sticky;z-index:40;background:var(--bg);padding:6px 0;margin:0;border-bottom:1px solid var(--border)}
+      .crop-pick-row{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 2px}
+      .crop-pick-row::-webkit-scrollbar{display:none}
+      .crop-pick button{flex:0 0 auto;border:1.5px solid var(--border);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:600;min-height:38px;cursor:pointer;white-space:nowrap}
+      .crop-pick button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+      .crop-pick-hint{font-size:11px;color:var(--fg3);margin:4px 2px 10px}
+      .tg-empty{color:var(--fg3);font-size:12px;padding:10px 4px}`;document.head.appendChild(st);}
+    const main=document.querySelector('.main');if(!main)return;
+    const bar=document.createElement('div');bar.className='crop-pick';bar.id='cropPick';
+    bar.innerHTML=`<div class="crop-pick-row"><button data-c="">Всі культури</button>${D.cultures.map(c=>{const d=D.prices[c];return `<button data-c="${esc(c)}">${d?d.emoji:'🌾'} ${esc(c.charAt(0).toUpperCase()+c.slice(1))}</button>`;}).join('')}</div>`;
+    const hint=document.createElement('div');hint.className='crop-pick-hint';hint.id='cropPickHint';
+    main.insertBefore(hint,main.firstChild);main.insertBefore(bar,main.firstChild);
+    const hdr=document.querySelector('.header');
+    // шапка на мобільному не завжди «липне» — тримаємо панель під нею, коли видна, і впритул до верху, коли ні
+    const setTop=()=>{bar.style.top=Math.max(0,hdr?Math.round(hdr.getBoundingClientRect().bottom):0)+'px';};
+    setTop();addEventListener('resize',setTop);addEventListener('scroll',setTop,{passive:true});
+    const filt=document.createElement('style');filt.id='cropPickFilter';document.head.appendChild(filt);
+    const q=v=>String(v).replace(/["\\]/g,'\\$&');
+    function apply(c,scroll){
+      if(c&&!D.cultures.includes(c))c='';
+      filt.textContent=c?`[data-cp]:not([data-cp="${q(c)}"]){display:none!important}
+        [data-cps]:not([data-cps*="|${q(c)}|"]){display:none!important}
+        .sum-grid,.crops-grid{grid-template-columns:1fr!important}
+        #tgFilters{display:none!important}`:'';
+      bar.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.c===c));
+      const ab=bar.querySelector('button.active');if(ab&&ab.scrollIntoView)ab.scrollIntoView({block:'nearest',inline:'center'});
+      const h=document.getElementById('cropPickHint');
+      if(h)h.textContent=c?'Лише '+c+': висновок, ціни, бал, дельта, Telegram-оферти, новини по культурі. Пальне, добрива, земля і загальні новини — для всіх.':'Оберіть культуру — на сторінці лишиться інформація тільки по ній.';
+      // Telegram: синхронізуємо чіпи фільтра з вибором
+      const chip=document.querySelector(`#tgFilters .tg-chip[data-c="${q(c)}"]`);if(chip&&!chip.classList.contains('active'))chip.click();
+      const tb=document.getElementById('tgBody'),tw=document.querySelector('#tgSection .tg-table-wrap');
+      if(tb&&tw){const old=document.getElementById('tgEmpty');if(old)old.remove();
+        if(c&&![...tb.querySelectorAll('tr[data-cp]')].some(r=>r.dataset.cp===c))tw.insertAdjacentHTML('afterend',`<div class="tg-empty" id="tgEmpty">По культурі «${esc(c)}» у Telegram-каналах за 2 дні постів немає — ціни дивіться в картці культури вище.</div>`);}
+      try{localStorage.setItem('agroCrop',c);}catch(_){}
+      const want=c?'#'+encodeURIComponent(c):' ';
+      if((location.hash||' ')!==want.trim()&&!(c===''&&!location.hash))history.replaceState(null,'',c?want:location.pathname+location.search);
+      if(scroll)window.scrollTo({top:0,behavior:'smooth'});
+    }
+    bar.addEventListener('click',e=>{const b=e.target.closest('button[data-c]');if(b)apply(b.dataset.c,true);});
+    addEventListener('hashchange',()=>apply(decodeURIComponent(location.hash.slice(1)),false));
+    let init=decodeURIComponent((location.hash||'').slice(1));
+    if(!init){try{init=localStorage.getItem('agroCrop')||'';}catch(_){init='';}}
+    apply(init,false);
   })();
 })();
 """

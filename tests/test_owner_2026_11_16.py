@@ -95,3 +95,11 @@ def test_segments_split_port_and_inland():
     assert m["порт/Дунай"]["n"] == 2 and m["порт/Дунай"]["median"] == 7950
     assert m["внутрішній ринок"]["n"] == 3 and m["внутрішній ринок"]["median"] == 4650
     assert {x["name"] for x in seg["class"]} == {"2 клас, порт/Дунай", "3 клас, порт/Дунай", "2 клас, внутрішній ринок", "3 клас, внутрішній ринок"}
+
+
+def test_crop_picker_tags_every_culture_block():
+    js = bb.INJECTION_JS
+    assert 'id=\'cropPick\'' in js or "bar.id='cropPick'" in js
+    for cls in ('crop-card', 'sum-card', 'tg-insight', 'delta-card-inner'):
+        assert f'class="{cls}" data-cp=' in js, cls
+    assert 'baro-signal-now\':\'\'}" data-cp=' in js
