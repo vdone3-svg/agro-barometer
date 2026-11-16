@@ -6,6 +6,7 @@ AGRO BAROMETER — збірка index.html
   • «Найкраща ціна» — лише з порівнюваних закупівельних оферт (не ціни продавців, не олія/шрот,
     не експортні DAP/DAF/FOB на кордоні, не явні викиди).
   • Net рахується лише коли відомий регіон покупця і для нього є ставка фрахту — ставку не вигадуємо.
+  • Фрахт у net — туди й назад (ставка в один бік × 2): зерновоз оплачується в обидва боки.
   • Статичні дати шаблону НЕ переписуються на сьогоднішню (раніше старий контент видавався за свіжий).
   • Увесь текст із зовнішніх джерел екранується перед вставкою в HTML.
   • prices_history.json — персистентний архів знімків «найкращої ціни» по 6 культурах,
@@ -31,10 +32,14 @@ CULTURE_EMOJI = {"ріпак":"💛","соняшник":"🌻","соя":"🫘","
 # (90,3 → 104,5 ₴/л на 30.10.2026), а ставки на 500+ км у жовтні сягали 3 000–3 700 ₴/т, тож
 # далекі маршрути, ймовірно, занижені. Замінити на підтверджені ставки перевізників (FREIGHT_CONFIRMED).
 # Ізмаїл/Рені (~600 км) винесені в «Дунай» без ставки: net для них не рахується, доки немає реальної ціни.
-FREIGHT = {
+FREIGHT_ONE_WAY = {
     "Долинське":{"Одеська":1620,"Черкаська":570,"Миколаївська":1130,"Кіровоградська":300,"Вінницька":755,"Хмельницька":970,"Полтавська":650},
     "Копані":   {"Одеська":1510,"Черкаська":405,"Миколаївська":1055,"Кіровоградська":115,"Вінницька":650,"Хмельницька":810,"Полтавська":490},
 }
+# Власник (16.11.2026): найманий зерновоз оплачуємо в обидва боки — і завантажений туди, і порожній назад.
+# Тому у net віднімається ставка × 2 (туди й назад), а не лише в один бік.
+ROUND_TRIP = 2
+FREIGHT = {farm: {reg: v * ROUND_TRIP for reg, v in regs.items()} for farm, regs in FREIGHT_ONE_WAY.items()}
 FREIGHT_STATUS = "оцінка"   # "оцінка" | "підтверджено ДД.ММ.РРРР"
 REGION_MAP = {"ізмаїл":"Дунай","измаил":"Дунай","рені":"Дунай","рени":"Дунай","орлівк":"Дунай","кілія":"Дунай","бессараб":"Дунай",
               "одес":"Одеська","тіс ":"Одеська","тис вуг":"Одеська","південн":"Одеська","чорноморськ":"Одеська","черкас":"Черкаська","миколаїв":"Миколаївська","кіровоград":"Кіровоградська","кропивниц":"Кіровоградська","олександрі":"Кіровоградська","знам.янк":"Кіровоградська",
@@ -412,7 +417,7 @@ INJECTION_JS = r"""
         if(!r)return `<div class="net-row"><span class="net-farm">📍 ${f}</span><span class="net-farm" style="color:var(--fg3)">фрахт до покупців невідомий</span></div>`;
         const fr=f==='Копані'?r.freight_kopani:r.freight_dolynske;const net=f==='Копані'?r.net_kopani:r.net_dolynske;
         return `<div class="net-row"><span class="net-farm" style="font-weight:700">📍 ${f}</span><div><span class="net-val">${fmt(net)} ₴/т</span><span class="net-trip">${trip(net)}</span></div></div>
-          <div style="font-size:10px;color:var(--fg3);text-align:right;margin-top:-2px">${link(r.url,esc(r.location)+(safeUrl(r.url)?' ↗':''))} (${esc(r.region_norm)}) ${fmt(r.price_uah)} − фрахт ${fmt(fr)}${D.freight_status==='оцінка'?' <span title="орієнтовна ставка, не оферта перевізника">(оцінка)</span>':''} · ${esc(r.source)}</div>`;};
+          <div style="font-size:10px;color:var(--fg3);text-align:right;margin-top:-2px">${link(r.url,esc(r.location)+(safeUrl(r.url)?' ↗':''))} (${esc(r.region_norm)}) ${fmt(r.price_uah)} − фрахт туди-назад ${fmt(fr)}${D.freight_status==='оцінка'?' <span title="орієнтовна ставка, не оферта перевізника">(оцінка)</span>':''} · ${esc(r.source)}</div>`;};
       const nk=farm==='Копані'?'net_kopani':'net_dolynske';
       const place=r=>{const l=r.location&&r.location!=='невідомо'?r.location:'';const bu=r.buyer&&r.buyer!==l?r.buyer:'';return (bu&&l?bu+' · '+l:(bu||l||'пункт не вказано'));};
       const rows=d.top.map(r=>`<tr${ra(r.url)}><td>${go(r.url)}${esc(place(r).substring(0,40))}<div style="font-size:10px;color:var(--fg3)">${esc(r.source)} · ${esc((r.date||'').substring(0,5))}${r.quality?' · '+esc(String(r.quality).substring(0,18)):''}</div></td><td class="num">${link(r.url,fmt(r.price_uah))}${r.currency!=='UAH'?`<div style="font-size:10px;color:var(--fg3);font-weight:400">${fmt(r.price_raw)} ${esc(r.currency)}</div>`:''}</td><td class="num" style="color:var(--green)">${r[nk]!=null?fmt(r[nk]):'<span style="color:var(--fg3);font-weight:400">—</span>'}</td></tr>`).join('');
@@ -563,6 +568,29 @@ INJECTION_JS = r"""
       return `<div class="fuel-row"><span class="fuel-name">${esc(i.name)}</span><div class="fuel-price-wrap">
         ${u?`<a class="fuel-price${cl}" href="${u}" target="_blank" rel="noopener">${fmt(i.price,2)} ₴/л ↗</a>`:`<span class="fuel-price">${fmt(i.price,2)} ₴/л</span>`}
         ${i.delta_day!=null&&i.delta_day!==0?`<span class="status-badge badge-unconfirmed">${i.delta_day>0?'↑':'↓'} ${fmt(Math.abs(i.delta_day),2)} за день</span>`:''}</div></div>`;}).join('');
+    const trg=rows.parentNode.querySelector('.fuel-trigger');const src=(F.items[0]||{});const ds=F.dates_seen||{};
+    if(trg)trg.innerHTML=`Джерело: ${link(src.url,esc(src.source||'?'))} — середня по АЗС України на ${esc(F.date||'?')}.`+
+      `<br><span style="color:var(--fg3)">Береться найсвіжіше з двох: minfin (${esc(ds.minfin||'н/д')}) · auto.ria (${esc(ds.autoria||'н/д')}). А-95 Консалтинг у вихідні не публікує — тоді дані останнього робочого дня.</span>`+
+      `<br>Тригер закупки ДП: <span class="trigger-watch">≥ 107–110 ₴/л</span> — форвардна закупка.`;
+  })();
+
+  // ── Добрива — живі (Grossdorf опт + e-zerno) ──
+  (function(){const P=document.getElementById('fertPanel'),tt=document.getElementById('fertTitle');const F=D.fert||{};
+    if(!P)return;
+    if(!F.items||!F.items.length){if(tt)tt.insertAdjacentHTML('beforeend',' <span class="status-badge badge-unconfirmed">не оновлено — архів жовтня</span>');return;}
+    const today=D.generated_at_kyiv?String(D.generated_at_kyiv).substring(0,10):'';
+    if(tt)tt.innerHTML=`<span class="panel-title-icon">🧪</span> Добрива (прайси на ${esc(F.items.map(i=>i.date_latest).filter(Boolean).sort((a,b)=>a.split('.').reverse().join('').localeCompare(b.split('.').reverse().join(''))).pop()||'?')})`;
+    const rng=i=>i.min===i.max?fmt(i.min):fmt(i.min)+'–'+fmt(i.max);
+    const rows=F.items.map(i=>{const r0=i.records[0]||{};const u=safeUrl(r0.url);
+      const where=i.records.map(r=>`${r.source}${r.location?' · '+r.location:''}${r.date?' · '+r.date:''}: ${fmt(r.price)}`).join('\n');
+      return `<div class="fert-row" title="${esc(where)}"><span class="fert-name">${esc(i.name)}<div style="font-size:10px;color:var(--fg3)">${esc(i.sources.join(', '))} · ${i.n} ${i.n===1?'ціна':i.n<5?'ціни':'цін'} · ${esc(i.date_latest||'без дати')}</div></span>
+        ${u?`<a class="fert-range" href="${u}" target="_blank" rel="noopener">${rng(i)} ₴/т ↗</a>`:`<span class="fert-range">${rng(i)} ₴/т</span>`}</div>`;}).join('');
+    [...P.querySelectorAll('.fert-row')].forEach(e=>e.remove());
+    tt.insertAdjacentHTML('afterend',rows);
+    const trg=P.querySelector('.fuel-trigger');
+    if(trg)trg.innerHTML=`Джерела: ${link('https://grossdorf.com/price/','Grossdorf')} (оптовий прайс, склади Черкаської, Вінницької, Полтавської, Миколаївської обл.) · ${link('https://e-zerno.com/fertilizer-prices','e-zerno')} (прайси дистриб'юторів, не старші ${F.fresh_days||21} дн.).<br>`+
+      `<span style="color:var(--fg3)">Опубліковані прайси, не підтверджені оферти; базис і ПДВ уточнюйте в продавця. Наведіть на рядок — видно склад і дату кожної ціни.</span><br>`+
+      `Тригер: селітра <span class="trigger-hit">&lt; 26 тис.</span>, карбамід <span class="trigger-hit">&lt; 29 тис.</span> — форвардна закупка.`;
   })();
 })();
 """
@@ -582,6 +610,9 @@ def main():
     land = load_json("land_data.json", {"records": []})
     fuel = load_json("fuel_data.json", {"items": []})
     news = load_json("news_data.json", {"items": []})
+    fert = load_json("fert_data.json", {"items": []})
+    from news_parser import news_excluded   # страховка: виключені джерела (напр. @zakaz_agro) не потрапляють у новини
+    news["items"] = [n for n in news.get("items", []) if not news_excluded(n)]
 
     records = enrich([r for r in tg.get("records", []) + web.get("records", []) if r.get("price_uah")])
     prices = best_prices(records)
@@ -641,7 +672,8 @@ def main():
         "history_days": len(snapshots),
         "history_from": snapshots[0]["date"] if snapshots else None,
         "now": now_scores,
-        "fuel": {"date": fuel.get("date"), "items": fuel_rows},
+        "fuel": {"date": fuel.get("date"), "items": fuel_rows, "dates_seen": fuel.get("dates_seen")},
+        "fert": {"items": fert.get("items", []), "fresh_days": fert.get("fresh_days"), "generated_at": fert.get("generated_at")},
     }
 
     # Шапка: дата збірки і курс — це чесно поточні значення

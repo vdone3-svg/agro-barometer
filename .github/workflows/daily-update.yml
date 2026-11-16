@@ -108,6 +108,9 @@ jobs:
       - name: Fuel prices (minfin, сер. по АЗС України)
         run: python3 fuel_parser.py || echo "⚠️ fuel_parser failed — блок пального покаже «не оновлено»"
 
+      - name: Fertilizer prices (Grossdorf опт + e-zerno)
+        run: python3 fert_parser.py || echo "⚠️ fert_parser failed — блок добрив покаже «не оновлено»"
+
       - name: News parser (latifundist, agroportal, apk-inform, ukragroconsult)
         run: |
           python3 news_parser.py || echo "⚠️ news_parser failed — продовжуємо без новин"
@@ -179,5 +182,7 @@ jobs:
             land_data.json
             web_prices.json
             news_data.json
+            fuel_data.json
+            fert_data.json
             index.html
           retention-days: 7

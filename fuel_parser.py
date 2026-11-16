@@ -3,6 +3,9 @@ AGRO BAROMETER — ціни на пальне (середні по Україн�
 Джерело: index.minfin.com.ua/ua/markets/fuel/ (оновлюється в робочі дні; дані А-95 Консалтинг).
 Запасний шлях: Playwright, якщо urllib заблоковано з IP GitHub.
 Зберігає: fuel_data.json
+16.11.2026: minfin (А-95 Консалтинг) не публікує у вихідні й оновлюється ~14:00, тож ранковий прогін у сб/нд/пн
+показував п'ятницю. Додано auto.ria.com/uk/toplivo/ (середня по Україні, джерело — Мінфін, але дата оновлення
+є й у вихідні). Береться джерело з новішою датою; при однаковій даті — minfin.
 Додано 08.11.2026 — до цього блок «Паливо» на сайті був статичним (29.10) і не оновлювався.
 """
 import asyncio
@@ -80,16 +83,89 @@ def parse_minfin(html: str) -> dict:
     return {"date": date, "items": items}
 
 
-def _fetch_urllib():
+AUTORIA_URL = "https://auto.ria.com/uk/toplivo/"
+AUTORIA_KEYS = {"a-95+": "а95п", "a-95": "а95", "дп": "дизель", "газ": "газ"}
+
+
+def parse_autoria(html: str) -> dict:
+    """auto.ria.com/uk/toplivo/: «Інформація оновлена 2026-11-14», таблиця «Пальне | Ціна, грн/л | Динаміка».
+    Береться перша (загальноукраїнська) таблиця; регіональна має назви областей у першій колонці й не збігається."""
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html or "", "html.parser")
+    text = soup.get_text("\n")
+    date = None
+    m = re.search(r"оновлен\w*\s*:?\s*(\d{4})-(\d{2})-(\d{2})", text)
+    if m:
+        date = f"{m.group(3)}.{m.group(2)}.{m.group(1)}"
+    else:
+        m = re.search(r"оновлен\w*\s*:?\s*(\d{1,2})\.(\d{2})\.(\d{4})", text)
+        if m:
+            date = f"{int(m.group(1)):02d}.{m.group(2)}.{m.group(3)}"
+    label = {k: lab for k, _, lab in FUEL_KEYS}
+    found = {}
+
+    def norm(n):   # «А-95» кирилицею і «A-95» латиницею — однаково
+        return re.sub(r"\s+", "", n).lower().replace("а", "a")
+    keys = {norm(k): v for k, v in AUTORIA_KEYS.items()}
+
+    for row in soup.find_all("tr"):
+        cells = [c.get_text(" ", strip=True) for c in row.find_all(["td", "th"])]
+        if len(cells) < 2:
+            continue
+        key = keys.get(norm(cells[0]))
+        price = _num(cells[1])
+        if not key or key in found or price is None or not (SANITY[0] <= price <= SANITY[1]):
+            continue
+        delta = _num(cells[2]) if len(cells) > 2 and re.search(r"\d", cells[2]) else None
+        found[key] = {"key": key, "name": label[key], "price": price, "delta_day": delta, "pct_day": None,
+                      "unit": "₴/л", "source": "auto.ria.com (дані Мінфіну)", "url": AUTORIA_URL}
+    if not found:   # запасний розбір по тексту
+        for m in re.finditer(r"(?m)^\s*([AА]-95\+?|ДП|Газ)\s*$\s*(\d{2,3}[.,]\d{1,2})", text):
+            key = keys.get(norm(m.group(1)))
+            price = _num(m.group(2))
+            if key and key not in found and price and SANITY[0] <= price <= SANITY[1]:
+                found[key] = {"key": key, "name": label[key], "price": price, "delta_day": None, "pct_day": None,
+                              "unit": "₴/л", "source": "auto.ria.com (дані Мінфіну)", "url": AUTORIA_URL}
+    order = [k for k, _, _ in FUEL_KEYS]
+    return {"date": date, "items": sorted(found.values(), key=lambda i: order.index(i["key"]))}
+
+
+def _ddmmyyyy(s):
     try:
-        with urlopen(Request(URL, headers=HEADERS), timeout=25) as r:
+        return datetime.strptime(s or "", "%d.%m.%Y")
+    except ValueError:
+        return None
+
+
+def pick_fresher(minfin: dict, autoria: dict) -> dict:
+    """Новіша дата перемагає; при рівних — minfin (першоджерело). Позиції, яких бракує, добираються з іншого."""
+    dm, da = _ddmmyyyy(minfin.get("date")), _ddmmyyyy(autoria.get("date"))
+    if autoria.get("items") and (not minfin.get("items") or (da and (not dm or da > dm))):
+        main, other = autoria, minfin
+    else:
+        main, other = minfin, autoria
+    if not main.get("items"):
+        return {"date": None, "items": []}
+    have = {i["key"] for i in main["items"]}
+    if other.get("date") == main.get("date"):
+        main = dict(main, items=main["items"] + [i for i in other.get("items", []) if i["key"] not in have])
+    order = [k for k, _, _ in FUEL_KEYS]
+    main["items"].sort(key=lambda i: order.index(i["key"]))
+    main["source_used"] = main["items"][0]["source"]
+    main["dates_seen"] = {"minfin": minfin.get("date"), "autoria": autoria.get("date")}
+    return main
+
+
+def _fetch_urllib(url=URL):
+    try:
+        with urlopen(Request(url, headers=HEADERS), timeout=25) as r:
             return r.read().decode("utf-8", errors="replace")
     except Exception as e:
         print(f"  [fuel] urllib: {e}")
         return None
 
 
-async def _fetch_playwright():
+async def _fetch_playwright(url=URL):
     try:
         from playwright.async_api import async_playwright
     except ImportError:
@@ -98,7 +174,7 @@ async def _fetch_playwright():
         browser = await pw.chromium.launch(headless=True)
         try:
             page = await (await browser.new_context(user_agent=HEADERS["User-Agent"], locale="uk-UA")).new_page()
-            await page.goto(URL, timeout=45_000, wait_until="domcontentloaded")
+            await page.goto(url, timeout=45_000, wait_until="domcontentloaded")
             await page.wait_for_timeout(1500)
             return await page.content()
         except Exception as e:
@@ -108,17 +184,27 @@ async def _fetch_playwright():
             await browser.close()
 
 
+def _get(url, parser):
+    html = _fetch_urllib(url)
+    data = parser(html) if html else {"date": None, "items": []}
+    if not data["items"]:
+        print(f"  [fuel] {url}: urllib не дав даних — пробую Playwright")
+        html = asyncio.run(_fetch_playwright(url))
+        if html:
+            data = parser(html)
+    print(f"  [fuel] {url}: дата {data['date']}, позицій {len(data['items'])}")
+    return data
+
+
 def main():
     print(f"=== Fuel Parser {datetime.now().strftime('%d.%m.%Y %H:%M')} ===")
-    data = {"date": None, "items": []}
-    html = _fetch_urllib()
-    if html:
-        data = parse_minfin(html)
-    if not data["items"]:
-        print("  [fuel] urllib не дав даних — пробую Playwright")
-        html = asyncio.run(_fetch_playwright())
-        if html:
-            data = parse_minfin(html)
+    minfin = _get(URL, parse_minfin)
+    try:
+        autoria = _get(AUTORIA_URL, parse_autoria)
+    except Exception as e:
+        print(f"  [fuel] auto.ria: {e}")
+        autoria = {"date": None, "items": []}
+    data = pick_fresher(minfin, autoria)
     data["generated_at"] = datetime.now(timezone.utc).isoformat()
     for i in data["items"]:
         print(f"  {i['name']:24s} {i['price']:.2f} ₴/л  ({i['delta_day']:+.2f} за день)" if i["delta_day"] is not None

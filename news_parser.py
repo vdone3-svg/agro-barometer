@@ -35,6 +35,15 @@ NEWS_FILE = "news_data.json"
 MAX_AGE_HOURS = 24
 MAX_ITEMS_TOTAL = 50
 MAX_PER_SOURCE = 10
+# Джерела, повністю виключені з «Новин та аналітики» (і з новин для висновків) — вимога власника 16.11.2026.
+# Ціни з цих каналів (оферти) не зачіпаються — фільтр лише для новин.
+NEWS_EXCLUDE_SOURCES = {"zakaz_agro"}
+
+
+def news_excluded(item: dict) -> bool:
+    src = str(item.get("source") or "").lstrip("@").lower()
+    url = str(item.get("url") or item.get("tg_url") or "").lower()
+    return src in NEWS_EXCLUDE_SOURCES or any(f"t.me/{x}/" in url or url.endswith(f"t.me/{x}") for x in NEWS_EXCLUDE_SOURCES)
 
 HEADERS = {
     "User-Agent": (
@@ -682,6 +691,8 @@ def main():
     seen_titles: set[str] = set()
     unique: list[dict] = []
     for item in all_news:
+        if news_excluded(item):
+            continue
         u = item["url"].rstrip("/")
         t = item.get("title", "")[:60].lower().strip()
         is_tg = u.startswith("https://t.me/")

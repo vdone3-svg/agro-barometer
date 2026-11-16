@@ -983,7 +983,7 @@ a.price-val.best:hover {
     <div class="section-label">Культури — закупівельні ціни та чиста виручка</div>
     <div class="live-note" id="cropsNote">
       Найвища опублікована закупівельна ціна по культурі (Telegram — 3 дні, сайти — не старші 7 днів) (оферта, не підтверджена угода).
-      Net = ціна − орієнтовний фрахт найманим зерновозом 25 т; рахується <strong>лише</strong> коли відомий регіон покупця.
+      Net = ціна − орієнтовний фрахт найманим зерновозом 25 т <strong>туди й назад</strong> (оплачуємо рейс в обидва боки); рахується <strong>лише</strong> коли відомий регіон покупця.
       Не беруться в «найкращу»: ціни продавців, олія/шрот/насіння, експортні DAP/DAF/FOB на кордоні, явні викиди.
     </div>
     <div class="crops-grid" id="cropsGrid"></div>
@@ -1044,8 +1044,8 @@ a.price-val.best:hover {
       </div>
     </div>
 
-    <div class="panel">
-      <div class="panel-title"><span class="panel-title-icon">🧪</span> Добрива (жовт. 2026)</div>
+    <div class="panel" id="fertPanel">
+      <div class="panel-title" id="fertTitle"><span class="panel-title-icon">🧪</span> Добрива (жовт. 2026)</div>
       <div class="fert-row">
         <span class="fert-name">Аміачна селітра N:34</span>
         <a class="fert-range" href="https://latifundist.com/novosti/71407-ostchem-pidvishchiv-tsini-na-amiachnu-selitru-na-900-grn-t-u-zhovtni" target="_blank" rel="noopener">27 500–28 000 ₴/т FCA ↗</a>
@@ -1079,28 +1079,6 @@ a.price-val.best:hover {
         Джерела: <a href="https://grossdorf.com/price/" target="_blank" rel="noopener">Grossdorf</a> (прайс 26.10) · <a href="https://latifundist.com/novosti/71407-ostchem-pidvishchiv-tsini-na-amiachnu-selitru-na-900-grn-t-u-zhovtni" target="_blank" rel="noopener">Latifundist</a> · <a href="https://e-zerno.com/fertilizer-prices" target="_blank" rel="noopener">e-zerno</a><br>
         Тригер: селітра <span class="trigger-hit">&lt; 26 тис.</span>, карбамід <span class="trigger-hit">&lt; 29 тис.</span> — форвардна закупка.
       </div>
-    </div>
-  </div>
-
-  <!-- ── LOGISTICS ── -->
-  <div class="logistics-panel">
-    <div class="panel-title"><span class="panel-title-icon">🚛</span> Автомобільний фрахт — наймані зерновози (~25 т)</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px;">
-      <div>
-        <div style="font-size:11px;font-weight:600;color:var(--fg3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Від Долинського</div>
-        <div class="logi-row"><span class="logi-name">→ Кропивницький (Kernel) ~110 км</span><span class="logi-val">275 ₴/т</span></div>
-        <div class="logi-row"><span class="logi-name">→ Черкаси ~165 км</span><span class="logi-val">525 ₴/т</span></div>
-        <div class="logi-row"><span class="logi-name">→ Одеса / Дунай ~420 км</span><span class="logi-val">1 500 ₴/т</span></div>
-      </div>
-      <div>
-        <div style="font-size:11px;font-weight:600;color:var(--fg3);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;">Від Копань</div>
-        <div class="logi-row"><span class="logi-name">→ Кропивницький (Kernel) ~40 км</span><span class="logi-val">105 ₴/т</span></div>
-        <div class="logi-row"><span class="logi-name">→ Черкаси ~110–130 км</span><span class="logi-val">375 ₴/т</span></div>
-        <div class="logi-row"><span class="logi-name">→ Одеса / Дунай ~400 км</span><span class="logi-val">1 400 ₴/т</span></div>
-      </div>
-    </div>
-    <div class="logi-note">
-      ⚠️ Тарифи орієнтовні — потрібна верифікація у реального перевізника. <a href="https://agtransport.usda.gov/stories/s/nb3e-9fyt" target="_blank" rel="noopener">USDA Transport Dashboard ↗</a> — ставки по областях України.
     </div>
   </div>
 
